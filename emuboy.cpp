@@ -37,7 +37,7 @@ int main(int argv, char** args)
             };
         }
 
-        bus.cpu.fetch_decode_execute();
+        std::cout << bus.cpu.fetch_decode_execute() << "\n";
     }
     // cpu.registers.a = 0xFF;
     // cpu.registers.b = 0xF0;

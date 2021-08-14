@@ -29,7 +29,7 @@ struct Registers
     Word sp = 0;
     Word pc = 0;
 
-    const bool get_flag(enum Flags flag)
+    const bool get_flag(Flags flag)
     {
         return this->f & flag;
     };
@@ -99,7 +99,9 @@ class CPU
         /// Gets Byte from memory at address pointed to by the PC, also increments PC by a byte, better to make it an atomic operation
         /// </summary>
         /// <returns>One byte in memory</returns>
-        Byte get_byte();
+        Byte get_byte_from_pc();
+        
+        Word get_word_from_pc();
 
 
         /// <summary>
@@ -107,6 +109,9 @@ class CPU
         /// </summary>
         /// <returns>The number of CPU cycles used</returns>
         int fetch_decode_execute();
+
+        int ins_LD_nn_n(Byte* registerOne, Byte value);
+        int ins_LD_r1_r2(Byte* registerOne = nullptr, Word address = NULL, Byte* registerTwo = nullptr, Byte value = NULL);
         
 
 
