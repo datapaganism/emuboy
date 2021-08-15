@@ -39,6 +39,9 @@
     <None Include="bios.bin">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="empty.bin">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bus.hpp">

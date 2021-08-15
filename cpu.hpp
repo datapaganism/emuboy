@@ -3,6 +3,8 @@
 #include "config.h"
 #include <iostream>
 
+
+
 // forward declaration, bus.hpp is not included here but in cpu.cpp instead
 class BUS;
 
@@ -18,6 +20,7 @@ enum Flags
 // The registers of the CPU, including SP and PC, access single registers directly, use functions to get combinations of registers as a word, nibble manipulation of single bytes as well.
 struct Registers
 {
+public:
     Byte a = 0;
     Byte b = 0;
     Byte c = 0;
@@ -29,7 +32,14 @@ struct Registers
     Word sp = 0;
     Word pc = 0;
 
-    const bool get_flag(Flags flag)
+
+    //AF, BC, DE, HL
+    const Word get_AF() { return this->get_word(&this->a, &this->f); };
+    const Word get_BC() { return this->get_word(&this->b, &this->c); };
+    const Word get_DE() { return this->get_word(&this->d, &this->e); };
+    const Word get_HL() { return this->get_word(&this->h, &this->l); };
+
+    bool get_flag(Flags flag)
     {
         return this->f & flag;
     };
@@ -39,19 +49,9 @@ struct Registers
         (value) ? this->f |= flag : this->f &= ~flag;
     };
 
-    const Word get_word(Byte *registerOne, Byte *registerTwo)
-    {
-        return ((*registerOne << 8) | *registerTwo);
-    };
-
-    void set_word(Byte *registerOne, Byte *registerTwo, Word value)
-    {
-        *registerOne = ((value & 0xFF00) >> 8);
-        *registerTwo = (value & 0xFF);
-    };
 
     
-    const Byte get_nibble(Byte *registerOne, bool getHi)
+    Byte get_nibble(Byte *registerOne, bool getHi)
     {
         Byte result = 0;
         (getHi) ? result = (*registerOne & 0xF0) >> 4 : result = *registerOne & 0x0F;
@@ -62,6 +62,21 @@ struct Registers
     {
         (setHi) ? *registerOne = ((*registerOne & 0x0F) | (value << 4)) : *registerOne = ((*registerOne & 0xF0) | value);
     };
+
+private:
+    Word get_word(Byte* registerOne, Byte* registerTwo)
+    {
+        return ((*registerOne << 8) | *registerTwo);
+    };
+
+    void set_word(Byte* registerOne, Byte* registerTwo, Word value)
+    {
+        *registerOne = ((value & 0xFF00) >> 8);
+        *registerTwo = (value & 0xFF);
+    };
+
+
+
 };
 
 

@@ -12,9 +12,11 @@ public:
 
 
 	std::vector<Byte> rom;
+	bool gamepakLoaded = false;
 private:
 	
 	std::string filename;
+
 
 };
 

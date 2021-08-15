@@ -22,6 +22,8 @@
 #define Byte_s sint8_t
 #define Word_s sint16_t
 
+#define WORKRAMOFFSET 0xc000
+
 // convert to gb register freq
 // gb = 2048 - (131072 / hz) 
 

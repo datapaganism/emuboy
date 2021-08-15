@@ -28,7 +28,8 @@ CPU::CPU()
 
 Byte CPU::get_byte_from_pc()
 {
-    return this->bus->get_memory(this->registers.pc++);
+    Word addr = this->registers.pc++;
+    return this->bus->get_memory(addr);
 }
 
 Word CPU::get_word_from_pc()
@@ -57,7 +58,7 @@ int CPU::fetch_decode_execute()
     {
         case 0x00:{ } break;
         case 0x01:{ } break;
-        case 0x02:{ this->ins_LD_r1_r2(nullptr, this->registers.get_word(&this->registers.b, &this->registers.c), &this->registers.a); } break;
+        case 0x02:{ this->ins_LD_r1_r2(nullptr, this->registers.get_BC(), &this->registers.a); } break;
         case 0x03:{ } break;
         case 0x04:{ } break;
         case 0x05:{ } break;
@@ -65,7 +66,7 @@ int CPU::fetch_decode_execute()
         case 0x07:{ } break;
         case 0x08:{ } break;
         case 0x09:{ } break;
-        case 0x0A:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, this->registers.get_word(&this->registers.b, &this->registers.c)); } break;
+        case 0x0A:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, this->registers.get_BC()); } break;
         case 0x0B:{ } break;
         case 0x0C:{ } break;
         case 0x0D:{ } break;
@@ -74,7 +75,7 @@ int CPU::fetch_decode_execute()
         
         case 0x10:{ } break;
         case 0x11:{ } break;
-        case 0x12:{ this->ins_LD_r1_r2(nullptr, this->registers.get_word(&this->registers.d, &this->registers.e), &this->registers.a); } break;
+        case 0x12:{ this->ins_LD_r1_r2(nullptr, this->registers.get_DE(), &this->registers.a); } break;
         case 0x13:{ } break;
         case 0x14:{ } break;
         case 0x15:{ } break;
@@ -82,7 +83,7 @@ int CPU::fetch_decode_execute()
         case 0x17:{ } break;
         case 0x18:{ } break;
         case 0x19:{ } break;
-        case 0x1A:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, this->registers.get_word(&this->registers.d, &this->registers.e)); } break;
+        case 0x1A:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, this->registers.get_DE()); } break;
         case 0x1B:{ } break;
         case 0x1C:{ } break;
         case 0x1D:{ } break;
@@ -128,7 +129,7 @@ int CPU::fetch_decode_execute()
         case 0x43:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.e); } break;
         case 0x44:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.h); } break;
         case 0x45:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.l); } break;
-        case 0x46:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.b, this->registers.get_word(&this->registers.h, &this->registers.l)); } break;
+        case 0x46:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.b, this->registers.get_HL()); } break;
         case 0x47:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.a); } break;
         case 0x48:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.b); } break;
         case 0x49:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.c); } break;
@@ -136,7 +137,7 @@ int CPU::fetch_decode_execute()
         case 0x4B:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.e); } break;
         case 0x4C:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.h); } break;
         case 0x4D:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.l); } break;
-        case 0x4E:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.c, this->registers.get_word(&this->registers.h, &this->registers.l)); } break;
+        case 0x4E:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.c, this->registers.get_HL()); } break;
         case 0x4F:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.a); } break;
 
         case 0x50:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.b); } break;
@@ -145,7 +146,7 @@ int CPU::fetch_decode_execute()
         case 0x53:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.e); } break;
         case 0x54:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.h); } break;
         case 0x55:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.l); } break;
-        case 0x56:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.d, this->registers.get_word(&this->registers.h, &this->registers.l)); } break;
+        case 0x56:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.d, this->registers.get_HL()); } break;
         case 0x57:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.a); } break;
         case 0x58:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.b); } break;
         case 0x59:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.c); } break;
@@ -153,7 +154,7 @@ int CPU::fetch_decode_execute()
         case 0x5B:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.e); } break;
         case 0x5C:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.h); } break;
         case 0x5D:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.l); } break;
-        case 0x5E:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.e, this->registers.get_word(&this->registers.h, &this->registers.l)); } break;
+        case 0x5E:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.e, this->registers.get_HL()); } break;
         case 0x5F:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.a); } break;
         case 0x60:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.b); } break;
         case 0x61:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.c); } break;
@@ -161,7 +162,7 @@ int CPU::fetch_decode_execute()
         case 0x63:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.e); } break;
         case 0x64:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.h); } break;
         case 0x65:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.l); } break;
-        case 0x66:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.h, this->registers.get_word(&this->registers.h, &this->registers.l)); } break;
+        case 0x66:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.h, this->registers.get_HL()); } break;
         case 0x67:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.a); } break;
         case 0x68:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.b); } break;
         case 0x69:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.c); } break;
@@ -169,24 +170,24 @@ int CPU::fetch_decode_execute()
         case 0x6B:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.e); } break;
         case 0x6C:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.h); } break;
         case 0x6D:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.l); } break;
-        case 0x6E:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.l, this->registers.get_word(&this->registers.h, &this->registers.l)); } break;
+        case 0x6E:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.l, this->registers.get_HL()); } break;
         case 0x6F:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.a); } break;
 
-        case 0x70:{ cyclesUsed = this->ins_LD_r1_r2(nullptr, this->registers.get_word(&this->registers.h, &this->registers.l), &this->registers.b); } break;
-        case 0x71:{ cyclesUsed = this->ins_LD_r1_r2(nullptr, this->registers.get_word(&this->registers.h, &this->registers.l), &this->registers.c); } break;
-        case 0x72:{ cyclesUsed = this->ins_LD_r1_r2(nullptr, this->registers.get_word(&this->registers.h, &this->registers.l), &this->registers.d); } break;
-        case 0x73:{ cyclesUsed = this->ins_LD_r1_r2(nullptr, this->registers.get_word(&this->registers.h, &this->registers.l), &this->registers.e); } break;
-        case 0x74:{ cyclesUsed = this->ins_LD_r1_r2(nullptr, this->registers.get_word(&this->registers.h, &this->registers.l), &this->registers.h); } break;
-        case 0x75:{ cyclesUsed = this->ins_LD_r1_r2(nullptr, this->registers.get_word(&this->registers.h, &this->registers.l), &this->registers.l); } break;
+        case 0x70:{ cyclesUsed = this->ins_LD_r1_r2(nullptr,this->registers.get_HL(), &this->registers.b); } break;
+        case 0x71:{ cyclesUsed = this->ins_LD_r1_r2(nullptr,this->registers.get_HL(), &this->registers.c); } break;
+        case 0x72:{ cyclesUsed = this->ins_LD_r1_r2(nullptr,this->registers.get_HL(), &this->registers.d); } break;
+        case 0x73:{ cyclesUsed = this->ins_LD_r1_r2(nullptr,this->registers.get_HL(), &this->registers.e); } break;
+        case 0x74:{ cyclesUsed = this->ins_LD_r1_r2(nullptr,this->registers.get_HL(), &this->registers.h); } break;
+        case 0x75:{ cyclesUsed = this->ins_LD_r1_r2(nullptr,this->registers.get_HL(), &this->registers.l); } break;
         case 0x76:{ } break;
-        case 0x77:{ this->ins_LD_r1_r2(nullptr, this->registers.get_word(&this->registers.h, &this->registers.l), &this->registers.a); } break;
+        case 0x77:{ this->ins_LD_r1_r2(nullptr,this->registers.get_HL(), &this->registers.a); } break;
         case 0x78:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.b); } break;
         case 0x79:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.c); } break;
         case 0x7A:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.d); } break;
         case 0x7B:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.e); } break;
         case 0x7C:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.h); } break;
         case 0x7D:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.l); } break;
-        case 0x7E:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, this->registers.get_word(&this->registers.h, &this->registers.l)); } break;
+        case 0x7E:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.a,this->registers.get_HL()); } break;
         case 0x7F:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.a); } break;
 
         case 0x80:{ } break;

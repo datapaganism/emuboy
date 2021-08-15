@@ -68,7 +68,7 @@ Byte BUS::get_memory(Word address)
     if (address <= 0xDFFF)
     {
         // working ram
-        return this->work_ram[address - 0xC000];
+        return this->work_ram.at(address - 0xC000);
     }
 
     if (address <= 0xFDFF)
@@ -150,7 +150,7 @@ void BUS::set_memory(Word address, Byte data)
     if (address <= 0xDFFF)
     {
         // working ram
-        this->work_ram[address - 0xC000] = data;
+        this->work_ram.at(address - 0xC000) = data;
         return;
     }
 

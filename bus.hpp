@@ -11,8 +11,8 @@ public:
 
     CPU cpu;
     GAMEPAK gamepak;
-    std::array<Byte, 0x2000> work_ram;
-    std::array<Byte, 0x0100> bios;
+    std::array<Byte, 0x2000> work_ram = {0,};
+    std::array<Byte, 0x0100> bios = { 0, };
 
     BUS();
     BUS(const std::string game_name, const std::string bios_name);

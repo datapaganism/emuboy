@@ -11,9 +11,17 @@
 int main(int argv, char** args)
 {
 
-    BUS bus("gamepak.bin", "bios.bin");
+    BUS bus("gamepak.b in", "bios.b in");
     RENDERER renderer;
 
+    int testnumber = 0xff;
+    int wrAddr = WORKRAMOFFSET;
+    bus.cpu.registers.pc = wrAddr;
+    bus.set_memory(wrAddr, 0x06);
+    bus.set_memory(wrAddr + 1, testnumber);
+    bus.cpu.fetch_decode_execute();
+    if (bus.cpu.registers.b == testnumber)
+        std::cout << "it works";
    
 
     //bus.set_memory(0xc000, 0xff);

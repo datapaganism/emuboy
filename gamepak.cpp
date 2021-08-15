@@ -13,6 +13,8 @@ GAMEPAK::GAMEPAK(const std::string filename) : GAMEPAK::GAMEPAK()
 
 		file.seekg(0, std::ios::beg);
 		file.read((char*)this->rom.data(), pos);		
+
+		this->gamepakLoaded = true;
 	}
 	file.close();
 }
