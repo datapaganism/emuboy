@@ -113,6 +113,11 @@ class CPU
         
         Word get_word_from_pc();
 
+        /// <summary>
+        /// returns two bytes from memory pointed to by PC, returned in least significant byte first (lsbf)
+        /// </summary>
+        Word get_word_from_pc_lsbf();
+
 
         /// <summary>
         /// A function that emulates the execution of the CPU in one go
@@ -120,10 +125,13 @@ class CPU
         /// <returns>The number of CPU cycles used</returns>
         int fetch_decode_execute();
 
+private:
+
         int ins_LD_nn_n(Byte* registerOne, Byte value);
         int ins_LD_r1_r2(Byte* registerOne = nullptr, Word address = NULL, Byte* registerTwo = nullptr, Byte value = NULL);
-        
 
+        int ins_LD_r1_nn(Byte* registerOne, Word address);
+        int ins_LD_nn_r1(Word address, Byte* registerOne);
 
-
+       
 };

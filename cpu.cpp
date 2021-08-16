@@ -31,10 +31,17 @@ Byte CPU::get_byte_from_pc()
     return this->bus->get_memory(this->registers.pc++);
 }
 
+
+
 Word CPU::get_word_from_pc()
 {
     Byte temp = this->get_byte_from_pc();
     return (temp << 8) | this->get_byte_from_pc();
+}
+
+Word CPU::get_word_from_pc_lsbf()
+{
+    return (this->get_byte_from_pc()) | (this->get_byte_from_pc() << 8);
 }
 
 void CPU::connect_to_bus(BUS *pBus)
@@ -74,6 +81,23 @@ int CPU::ins_LD_r1_r2(Byte* registerOne, Word address, Byte* registerTwo, Byte v
     return -1;
 }
 
+int CPU::ins_LD_r1_nn(Byte* registerOne, Word address)
+{
+    //take value pointed to by nn and put into register one,
+    // LD a,(nn), mem byte eg: FA 34 12, ld a,(1234)
+    // check memory at address 0x1234, put that data into register one
+
+    *registerOne = this->bus->get_memory(address);
+    return 16;
+};
+
+
+// Take value from registerOne, place at memory location 
+int CPU::ins_LD_nn_r1(Word address, Byte* registerOne)
+{
+    this->bus->set_memory(address,*registerOne);
+    return 16;
+};
 
 
 
@@ -84,14 +108,13 @@ int CPU::fetch_decode_execute()
     int cyclesUsed = 0;
 
     //skipped
-    // 0xfa lda a,(nn) : 16
     // 0xea lda (nn),a : 16
 
     switch (opcode) 
     {
         case 0x00:{ } break;
         case 0x01:{ } break;
-        case 0x02:{ this->ins_LD_r1_r2(nullptr, this->registers.get_BC(), &this->registers.a); } break;
+        case 0x02:{ cyclesUsed = this->ins_LD_r1_r2(nullptr, this->registers.get_BC(), &this->registers.a); } break;
         case 0x03:{ } break;
         case 0x04:{ } break;
         case 0x05:{ } break;
@@ -108,7 +131,7 @@ int CPU::fetch_decode_execute()
         
         case 0x10:{ } break;
         case 0x11:{ } break;
-        case 0x12:{ this->ins_LD_r1_r2(nullptr, this->registers.get_DE(), &this->registers.a); } break;
+        case 0x12:{ cyclesUsed = this->ins_LD_r1_r2(nullptr, this->registers.get_DE(), &this->registers.a); } break;
         case 0x13:{ } break;
         case 0x14:{ } break;
         case 0x15:{ } break;
@@ -213,7 +236,7 @@ int CPU::fetch_decode_execute()
         case 0x74:{ cyclesUsed = this->ins_LD_r1_r2(nullptr,this->registers.get_HL(), &this->registers.h); } break;
         case 0x75:{ cyclesUsed = this->ins_LD_r1_r2(nullptr,this->registers.get_HL(), &this->registers.l); } break;
         case 0x76:{ } break;
-        case 0x77:{ this->ins_LD_r1_r2(nullptr,this->registers.get_HL(), &this->registers.a); } break;
+        case 0x77:{ cyclesUsed = this->ins_LD_r1_r2(nullptr,this->registers.get_HL(), &this->registers.a); } break;
         case 0x78:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.b); } break;
         case 0x79:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.c); } break;
         case 0x7A:{ cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.d); } break;
@@ -327,7 +350,7 @@ int CPU::fetch_decode_execute()
 
         case 0xE0:{ } break;
         case 0xE1:{ } break;
-        case 0xE2:{ } break;
+        case 0xE2: { cyclesUsed = this->ins_LD_r1_r2(nullptr, 0xFF00 + this->registers.c, &this->registers.a); } break;
         case 0xE3:{ } break;
         case 0xE4:{ } break;
         case 0xE5:{ } break;
@@ -335,7 +358,7 @@ int CPU::fetch_decode_execute()
         case 0xE7:{ } break;
         case 0xE8:{ } break;
         case 0xE9:{ } break;
-        case 0xEA:{ } break;
+        case 0xEA: { cyclesUsed = this->ins_LD_nn_r1(this->get_word_from_pc_lsbf(), &this->registers.a); } break;
         case 0xEB:{ } break;
         case 0xEC:{ } break;
         case 0xED:{ } break;
@@ -344,7 +367,7 @@ int CPU::fetch_decode_execute()
 
         case 0xF0:{ } break;
         case 0xF1:{ } break;
-        case 0xF2:{ } break;
+        case 0xF2: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, 0xFF00+this->registers.c); } break;
         case 0xF3:{ } break;
         case 0xF4:{ } break;
         case 0xF5:{ } break;
@@ -352,7 +375,7 @@ int CPU::fetch_decode_execute()
         case 0xF7:{ } break;
         case 0xF8:{ } break;
         case 0xF9:{ } break;
-        case 0xFA:{ } break;
+        case 0xFA:{ cyclesUsed = this->ins_LD_r1_nn(&this->registers.a, this->get_word_from_pc_lsbf()); } break;
         case 0xFB:{ } break;
         case 0xFC:{ } break;
         case 0xFD:{ } break;
