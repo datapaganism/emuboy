@@ -11,7 +11,7 @@
 int main(int argv, char** args)
 {
 
-    BUS bus("gamepak.bin", "bios.bin");
+    BUS bus("./roms/TETRIS.gb", "bios.bin");
     RENDERER renderer;
 
 

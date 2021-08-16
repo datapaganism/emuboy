@@ -32,16 +32,14 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="gamepak.bin">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="Pokemon - Yellow Version %28UE%29 [C][!].bin" />
+    <None Include="roms\Pokemon - Yellow Version %28UE%29 [C][!].bin" />
     <None Include="bios.bin">
       <Filter>Resource Files</Filter>
     </None>
     <None Include="empty.bin">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="roms\TETRIS.gb" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bus.hpp">

@@ -216,8 +216,8 @@
   <ItemGroup>
     <None Include="bios.bin" />
     <None Include="empty.bin" />
-    <None Include="gamepak.bin" />
-    <None Include="Pokemon - Yellow Version %28UE%29 [C][!].bin" />
+    <None Include="roms\Pokemon - Yellow Version %28UE%29 [C][!].bin" />
+    <None Include="roms\TETRIS.gb" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bus.hpp" />
