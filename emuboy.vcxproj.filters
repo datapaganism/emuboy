@@ -59,5 +59,8 @@
     <ClInclude Include="gamepak.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\..\SOURCE\REPOS\DATAPAGANISM\EMUBOY\INCLUDE\CPU.HPP">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

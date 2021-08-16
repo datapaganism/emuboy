@@ -28,8 +28,7 @@ CPU::CPU()
 
 Byte CPU::get_byte_from_pc()
 {
-    Word addr = this->registers.pc++;
-    return this->bus->get_memory(addr);
+    return this->bus->get_memory(this->registers.pc++);
 }
 
 Word CPU::get_word_from_pc()
@@ -42,6 +41,67 @@ void CPU::connect_to_bus(BUS *pBus)
 {
     this->bus = pBus;
 }
+
+int CPU::ins_LD_nn_n(Byte* registerOne, Byte value)
+{
+    //LD nn,n
+    *registerOne = value;
+    return 8;
+}
+
+int CPU::ins_LD_r1_r2(Byte* registerOne, Word address, Byte* registerTwo, Byte value)
+{
+    if (registerOne && registerTwo)
+    {
+        *registerOne = *registerTwo;
+        return 4;
+    }
+    if (registerOne && address)
+    {
+        *registerOne = this->bus->get_memory(address);
+        return 8;
+    }
+    if (address && registerTwo)
+    {
+        this->bus->set_memory(address, *registerTwo);
+        return 8;
+    }
+    if (address && value)
+    {
+        this->bus->set_memory(address, value);
+        return 12;
+    }
+    return -1;
+}
+
+inline void Registers::set_flag(Flags flag, bool value)
+{
+    (value) ? this->f |= flag : this->f &= ~flag;
+}
+
+inline Byte Registers::get_nibble(Byte* registerOne, bool getHi)
+{
+    Byte result = 0;
+    (getHi) ? result = (*registerOne & 0xF0) >> 4 : result = *registerOne & 0x0F;
+    return result;
+}
+
+inline void Registers::set_nibble(Byte* registerOne, Byte value, bool setHi)
+{
+    (setHi) ? *registerOne = ((*registerOne & 0x0F) | (value << 4)) : *registerOne = ((*registerOne & 0xF0) | value);
+}
+
+inline Word Registers::get_word(Byte* registerOne, Byte* registerTwo)
+{
+    return ((*registerOne << 8) | *registerTwo);
+}
+
+inline void Registers::set_word(Byte* registerOne, Byte* registerTwo, Word value)
+{
+    *registerOne = ((value & 0xFF00) >> 8);
+    *registerTwo = (value & 0xFF);
+}
+
 
 
 int CPU::fetch_decode_execute()
@@ -332,34 +392,3 @@ int CPU::fetch_decode_execute()
 }
 
 
-int CPU::ins_LD_nn_n(Byte* registerOne, Byte value)
-{
-    //LD nn,n
-    *registerOne = value;
-    return 8;
-}
-
-int CPU::ins_LD_r1_r2(Byte* registerOne, Word address, Byte* registerTwo, Byte value)
-{
-    if (registerOne && registerTwo)
-    {
-        *registerOne = *registerTwo;
-        return 4;
-    }
-    if (registerOne && address)
-    {
-        *registerOne = this->bus->get_memory(address);
-        return 8;
-    }
-    if (address && registerTwo)
-    {
-        this->bus->set_memory(address, *registerTwo);
-        return 8;
-    }
-    if (address && value)
-    {
-        this->bus->set_memory(address, value);
-        return 12;
-    }
-    return -1;
-}

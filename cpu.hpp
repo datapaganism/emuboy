@@ -39,41 +39,18 @@ public:
     const Word get_DE() { return this->get_word(&this->d, &this->e); };
     const Word get_HL() { return this->get_word(&this->h, &this->l); };
 
-    bool get_flag(Flags flag)
-    {
-        return this->f & flag;
-    };
+    bool get_flag(Flags flag);
 
-    void set_flag(enum Flags flag, bool value)
-    {
-        (value) ? this->f |= flag : this->f &= ~flag;
-    };
+    void set_flag(enum Flags flag, bool value);
 
+    Byte get_nibble(Byte* registerOne, bool getHi);
 
-    
-    Byte get_nibble(Byte *registerOne, bool getHi)
-    {
-        Byte result = 0;
-        (getHi) ? result = (*registerOne & 0xF0) >> 4 : result = *registerOne & 0x0F;
-        return result;
-    };
-
-    void set_nibble(Byte *registerOne, Byte value, bool setHi)
-    {
-        (setHi) ? *registerOne = ((*registerOne & 0x0F) | (value << 4)) : *registerOne = ((*registerOne & 0xF0) | value);
-    };
+    void set_nibble(Byte* registerOne, Byte value, bool setHi);
 
 private:
-    Word get_word(Byte* registerOne, Byte* registerTwo)
-    {
-        return ((*registerOne << 8) | *registerTwo);
-    };
+    Word get_word(Byte* registerOne, Byte* registerTwo);
 
-    void set_word(Byte* registerOne, Byte* registerTwo, Word value)
-    {
-        *registerOne = ((value & 0xFF00) >> 8);
-        *registerTwo = (value & 0xFF);
-    };
+    void set_word(Byte* registerOne, Byte* registerTwo, Word value);
 
 
 
