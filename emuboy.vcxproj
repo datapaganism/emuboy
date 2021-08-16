@@ -220,7 +220,6 @@
     <None Include="Pokemon - Yellow Version %28UE%29 [C][!].bin" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\SOURCE\REPOS\DATAPAGANISM\EMUBOY\INCLUDE\CPU.HPP" />
     <ClInclude Include="bus.hpp" />
     <ClInclude Include="config.h" />
     <ClInclude Include="cpu.hpp" />

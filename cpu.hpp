@@ -44,6 +44,11 @@ public:
     void set_DE(Word value) { this->set_word(&this->d, &this->e, value); };
     void set_HL(Word value) { this->set_word(&this->h, &this->l, value); };
 
+    bool get_flag(Flags flag)
+    {
+        return this->f & flag;
+    }
+
     void set_flag(Flags flag, bool value)
     {
         (value) ? this->f |= flag : this->f &= ~flag;
