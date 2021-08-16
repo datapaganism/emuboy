@@ -74,33 +74,6 @@ int CPU::ins_LD_r1_r2(Byte* registerOne, Word address, Byte* registerTwo, Byte v
     return -1;
 }
 
-inline void Registers::set_flag(Flags flag, bool value)
-{
-    (value) ? this->f |= flag : this->f &= ~flag;
-}
-
-inline Byte Registers::get_nibble(Byte* registerOne, bool getHi)
-{
-    Byte result = 0;
-    (getHi) ? result = (*registerOne & 0xF0) >> 4 : result = *registerOne & 0x0F;
-    return result;
-}
-
-inline void Registers::set_nibble(Byte* registerOne, Byte value, bool setHi)
-{
-    (setHi) ? *registerOne = ((*registerOne & 0x0F) | (value << 4)) : *registerOne = ((*registerOne & 0xF0) | value);
-}
-
-inline Word Registers::get_word(Byte* registerOne, Byte* registerTwo)
-{
-    return ((*registerOne << 8) | *registerTwo);
-}
-
-inline void Registers::set_word(Byte* registerOne, Byte* registerTwo, Word value)
-{
-    *registerOne = ((value & 0xFF00) >> 8);
-    *registerTwo = (value & 0xFF);
-}
 
 
 
@@ -172,7 +145,7 @@ int CPU::fetch_decode_execute()
         case 0x33:{ } break;
         case 0x34:{ } break;
         case 0x35:{ } break;
-        case 0x36:{ cyclesUsed = this->ins_LD_r1_r2(nullptr, this->get_word_from_pc(), nullptr, this->get_byte_from_pc()); } break;
+        case 0x36:{ cyclesUsed = this->ins_LD_r1_r2(nullptr, this->registers.get_HL(), nullptr, this->get_byte_from_pc()); } break;
         case 0x37:{ } break;
         case 0x38:{ } break;
         case 0x39:{ } break;

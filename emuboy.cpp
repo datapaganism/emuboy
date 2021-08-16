@@ -22,6 +22,26 @@ int main(int argv, char** args)
     bus.cpu.fetch_decode_execute();
     if (bus.cpu.registers.b == testnumber)
         std::cout << "it works";
+
+    Byte opcode = 0x7e;
+    Word HLaddr = WORKRAMOFFSET + 10;
+
+    testnumber = 0xf5;
+
+    //auto pRegister = &this->bus.get()->cpu.registers.l;
+
+    bus.cpu.registers.set_HL(HLaddr);
+    bus.set_memory(HLaddr, testnumber);
+
+
+
+    bus.cpu.registers.pc = WORKRAMOFFSET;
+    //*pRegister = testnumber;
+    bus.set_memory(WORKRAMOFFSET, opcode);
+
+    bus.cpu.fetch_decode_execute();
+    if (bus.cpu.registers.a == testnumber)
+        std::cout << "it works";
    
 
     //bus.set_memory(0xc000, 0xff);
