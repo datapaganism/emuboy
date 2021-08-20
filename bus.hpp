@@ -13,14 +13,16 @@ public:
     GAMEPAK gamepak;
     std::array<Byte, 0x2000> work_ram = {0,};
     std::array<Byte, 0x0100> bios = { 0, };
+    std::array<Byte, 0x004C> io = { 0, };
+    std::array<Byte, 0x007F> high_ram = { 0, };
 
     BUS();
     BUS(const std::string game_name, const std::string bios_name);
     void init();
-    Byte get_memory(Word address);
-    void set_memory(Word address,Byte data);
+    Byte get_memory(const Word address);
+    void set_memory(const Word address, const Byte data);
+    void set_memory_word(const Word address, const Word data);
 
-    bool biosPostComplete = false;
     bool biosLoaded = false;
 
 private:

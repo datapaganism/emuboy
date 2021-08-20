@@ -16,29 +16,26 @@ BUS::BUS(const std::string game_name, const std::string bios_name) : BUS::BUS()
 // The gameboy is a memory mapped system, components are mapped
 // to indiviudial parts of the addressable memory, we can specify
 // what hardware we are reading from using if guards
-Byte BUS::get_memory(Word address)
+Byte BUS::get_memory(const Word address)
 {
     // boot rom area, or rom bank 0
-    if (address <= 0x00ff)
+    if (address <= 0x00ff) //from 0x0000
     {
-        // if the bios has not been loaded or the post sequence is successful then we need to read from the cartridge's interrupt and reset vectors
-        if (this->biosPostComplete || !this->biosLoaded)
+        // if the bios has never been loaded or if the register at 0xFF50 is set 1 (which is done by the bios program) we need to access the cartridge bank
+        if (this->get_memory(0xFF50) == 0x1|| !this->biosLoaded)
             return this->gamepak.rom[address];
         
         return this->bios[address];
     }
 
-    if (address <= 0x3fff)
+    if (address <= 0x3fff) //from 0x0100
     {
-        //if we read at address 0x0100 the bios was loaded, then it means that we have successfully 
-        if (this->biosLoaded && this->cpu.registers.pc == 0x100)
-            this->biosPostComplete = true;
 
         // game rom bank 0
         return this->gamepak.rom[address];
     }
 
-    if (address <= 0x7fff)
+    if (address <= 0x7fff) // from 0x4000
     {
         // game rom bank N
 
@@ -47,58 +44,63 @@ Byte BUS::get_memory(Word address)
         return 0b0;
     }
 
-    if (address <= 0x97ff)
+    if (address <= 0x97ff) // from 0x8000         
     {
         // Tile Ram region
         return 0b0;
     }
 
-    if (address <= 0x9FFF)
+    if (address <= 0x9FFF) // from 0x9800
     {
         // background map region
         return 0b0;
     }
 
-    if (address <= 0xBFFF)
+    if (address <= 0xBFFF) // from 0xA000
     {
         // cartridge ram
         return 0b0;
     }
 
-    if (address <= 0xDFFF)
+    if (address <= 0xDFFF) // from 0xC000
     {
         // working ram
         return this->work_ram.at(address - 0xC000);
     }
 
-    if (address <= 0xFDFF)
+    if (address <= 0xFDFF) // from 0xE000
     {
         // echo ram, it is a copy of the ram above, we will just read memory 2000 addresses above instead
         return this->get_memory(address - 0x2000);
     }
 
-    if (address <= 0xFE9F)
+    if (address <= 0xFE9F) // from 0xFE00
     {
         // object attribute memory
         return 0b0;
     }
 
-    if (address <= 0xFEFF)
+    if (address <= 0xFEFF) // from 0xFEA0
     {
         // unused part of the map, must retun 0
         return 0;
     }
-    if (address <= 0xFF7F)
+    if (address <= 0xFF4B) // from 0xFF00
     {
         // i/o registers
+        return this->io.at(address - 0xFF00);
+    }
+    if (address <= 0xFF7F) // from 0xFF4C
+    {
+        // unused part of the map, just return
         return 0b0;
     }
-    if (address <= 0xFFFE)
+    if (address <= 0xFFFE) // from 0xFF80
     {
         // high ram area
-        return 0b0;
+        return this->high_ram.at(address-0xFF80);
     }
-    if (address <= 0xFFFF)
+    if (address <= 0xFFFF) // from 0xFFFF, yep
     {
         // interrupt enabled register
         return 0b0;
@@ -109,7 +111,7 @@ Byte BUS::get_memory(Word address)
 };
 
 
-void BUS::set_memory(Word address, Byte data)
+void BUS::set_memory(const Word address, const Byte data)
 {
     if (address <= 0x00ff)
     {
@@ -168,17 +170,25 @@ void BUS::set_memory(Word address, Byte data)
 
     if (address <= 0xFEFF)
     {
-        // unused part of the map, must retun 0
+        // unused part of the map, just return
+        return;
+    }
+    if (address <= 0xFF4B)
+    {
+        // i/o registers
+
+        this->io.at(address - 0xFF00) = data;
         return;
     }
     if (address <= 0xFF7F)
     {
-        // i/o registers
+        // unused part of the map, just return
         return;
     }
     if (address <= 0xFFFE)
     {
         // high ram area
+        this->high_ram.at(address - 0xFF80) = data;
         return;
     }
     if (address <= 0xFFFF)
@@ -186,7 +196,14 @@ void BUS::set_memory(Word address, Byte data)
         // interrupt enabled register
         return;
     }
-};
+}
+void BUS::set_memory_word(const Word address, const Word data)
+{
+    //store in little endian byte order 
+    this->set_memory(address, (data & 0x00ff));
+    this->set_memory(address + 1, ((data & 0xff00) >> 8));
+}
+;
 
 /// <summary>
 /// A function to load the bios into memory, as the bios is property of Nintendo, we can not legally release this emulator with the bios,
