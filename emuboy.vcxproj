@@ -210,12 +210,14 @@
     <ClCompile Include="bus.cpp" />
     <ClCompile Include="cpu.cpp" />
     <ClCompile Include="emuboy.cpp" />
+    <ClCompile Include="fetch_decode_execute.cpp" />
     <ClCompile Include="gamepak.cpp" />
     <ClCompile Include="renderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="bios.bin" />
     <None Include="empty.bin" />
+    <None Include="roms\blargg cpu.gb" />
     <None Include="roms\Pokemon - Yellow Version %28UE%29 [C][!].bin" />
     <None Include="roms\TETRIS.gb" />
   </ItemGroup>

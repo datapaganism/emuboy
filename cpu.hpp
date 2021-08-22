@@ -16,6 +16,14 @@ enum Flags
     c = 0b00001000, // Carry
 };
 
+enum JumpCondition
+{
+    NZ,
+    Z,
+    NC,
+    C,
+};
+
 
 // The registers of the CPU, including SP and PC, access single registers directly, use functions to get combinations of registers as a word, nibble manipulation of single bytes as well.
 struct Registers
@@ -54,17 +62,6 @@ public:
         (value) ? this->f |= flag : this->f &= ~flag;
     }
 
-    Byte get_nibble(Byte* registerOne, const bool getHi)
-    {
-        Byte result = 0;
-        (getHi) ? result = (*registerOne & 0xF0) >> 4 : result = *registerOne & 0x0F;
-        return result;
-    }
-
-    void set_nibble(Byte* registerOne, const Byte value, const bool setHi)
-    {
-        (setHi) ? *registerOne = ((*registerOne & 0x0F) | (value << 4)) : *registerOne = ((*registerOne & 0xF0) | value);
-    }
 
     const Word get_word(Byte* registerOne, Byte* registerTwo)
     {
@@ -129,14 +126,31 @@ class CPU
         /// <returns>The number of CPU cycles used</returns>
         int fetch_decode_execute();
 
+        int CB_instruction_handler();
+
+        int STOP_instruction_handler();
+
 private:
+
+    bool DI_triggered = false;
+    bool EI_triggered = false;
+
+    void interrupt_DI_EI_handler();
+
         /// <summary>
         /// Takes two integers, evaluates whether the sum of the lower nibble carries over to the high nibble, sets flag accordingly.
         /// </summary>
+      
         void checkHalfCarry(const int a, const int b);
         void checkCarry(const int a, const int b);
         void checkHalfBorrow(const int a, const int b);
         void checkBorrow(const int a, const int b);
+
+        Byte get_nibble(const Byte input, const bool getHi);
+       
+
+        void set_nibble(Byte* registerOne, const Byte value, const bool setHi);
+       
 
         int ins_LD_nn_n(Byte* registerOne, const Byte value);
         int ins_LD_r1_r2(Byte* registerOne = nullptr, const Word address = NULL, Byte* registerTwo = nullptr, const Byte value = NULL);
@@ -170,4 +184,57 @@ private:
 
         int ins_INC_n(Byte* registerOne = nullptr, Word address = NULL);
         int ins_DEC_n(Byte* registerOne = nullptr, Word address = NULL);
+
+        int ins_ADD_HL_n(const Word value);
+        int ins_ADD_SP_n(const Byte_s value);
+
+        int ins_INC_nn(Byte* registerOne = nullptr, Byte* registerTwo = nullptr, Word* stackPointer = nullptr);
+        int ins_DEC_nn(Byte* registerOne = nullptr, Byte* registerTwo = nullptr, Word* stackPointer = nullptr);
+
+        int ins_SWAP_nn(Byte* registerOne = nullptr,const Word address = NULL);
+
+        int ins_DAA();
+        int ins_CPL();
+
+        int ins_CCF();
+        int ins_SCF();
+
+        int ins_RCLA();
+        int ins_RLA();
+        
+        int ins_RRCA();
+        int ins_RRA();
+
+        int ins_RLC(Byte* registerOne = nullptr, const Word address = NULL);
+        int ins_RL(Byte* registerOne = nullptr, const Word address = NULL);
+        
+        int ins_RRC(Byte* registerOne = nullptr, const Word address = NULL);
+        int ins_RR(Byte* registerOne = nullptr, const Word address = NULL);
+        
+        int ins_SLA(Byte* registerOne = nullptr, const Word address = NULL);
+        int ins_SRA_n(Byte* registerOne = nullptr, const Word address = NULL);
+
+        int ins_SRL_n(Byte* registerOne = nullptr, const Word address = NULL);
+        int ins_BIT_b_r(const Byte bit, Byte* registerOne = nullptr, const Word address = NULL);
+
+        int ins_SET_b_r(const Byte bit, Byte* registerOne = nullptr, const Word address = NULL);
+        int ins_RES_b_r(const Byte bit, Byte* registerOne = nullptr, const Word address = NULL);
+
+        int ins_JP_nn(const Word address);
+        int ins_JP_cc_nn(const enum JumpCondition condition, const Word address);
+
+        int ins_JP_HL();
+        int ins_JR_n(const Byte_s jumpOffset);
+
+        int ins_JR_cc_n(const enum JumpCondition condition, const Byte_s jumpOffset);
+        int ins_CALL_nn(const Word address);
+        
+        int ins_CALL_cc_nn(const enum JumpCondition condition, const Word address);
+
+        int ins_RST_n(const Byte addrOffset);
+
+        int ins_RET();
+        int ins_RET_cc(const enum JumpCondition condition);
+
+        int ins_RETI();
 };

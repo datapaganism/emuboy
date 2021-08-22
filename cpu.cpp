@@ -49,10 +49,45 @@ void CPU::connect_to_bus(BUS *pBus)
     this->bus = pBus;
 }
 
+void CPU::interrupt_DI_EI_handler()
+{
+    if (this->DI_triggered)
+    {
+        this->bus->set_memory(0xffff, 0);
+        this->DI_triggered = false;
+        return;
+    }
+    if (this->EI_triggered)
+    {
+        this->bus->set_memory(0xffff, 1);
+        this->EI_triggered = false;
+        return;
+    }
+
+
+}
+
 void CPU::checkHalfCarry(int a, int b)
 {
+    int sum = 0;
+
+    //16 bit half carry check
+    if (a > 0xff || b > 0xff)
+    {  
+        //make sum of lower bytes
+         sum = (a & 0xFF) + (b & 0xFF);
+
+         if ((sum & 0x100) == 0x100)
+         {
+             this->registers.set_flag(h, 1);
+             return;
+         }
+         this->registers.set_flag(h, 0);
+         return;
+    }
+  
     //add only the lower nibbles of the sum to each other
-    int sum = (a & 0xf) + (b & 0xf);
+     sum = (a & 0xf) + (b & 0xf);
 
     // if the 5th bit is set then we have had a carry over the nibble
     if ((sum & 0x10) == 0x10)
@@ -113,6 +148,18 @@ void CPU::checkBorrow(const int a, const int b)
     this->registers.set_flag(c, 1);
     return;
     
+}
+
+Byte CPU::get_nibble(const Byte input, const bool getHi)
+{
+    Byte result = 0;
+    (getHi) ? result = (input & 0xF0) >> 4 : result = input & 0x0F;
+    return result;
+}
+
+void CPU::set_nibble(Byte* registerOne, const Byte value, const bool setHi)
+ {
+            (setHi) ? *registerOne = ((*registerOne & 0x0F) | (value << 4)) : *registerOne = ((*registerOne & 0xF0) | value);
 }
 
 int CPU::ins_LD_nn_n(Byte* registerOne, Byte value)
@@ -489,295 +536,657 @@ int CPU::ins_DEC_n(Byte* registerOne, Word address)
     return 12;
 }
 
-
-
-
-int CPU::fetch_decode_execute()
+int CPU::ins_ADD_HL_n(const Word value)
 {
-    // the program counter holds the address in memory for either instruction or data for an instruction.
-    Byte opcode = this->get_byte_from_pc();
-    int cyclesUsed = 0;
+    this->checkCarry(this->registers.get_HL(), value);
+    this->checkHalfCarry(this->registers.get_HL(), value);
 
-    //skipped
-    // 0xea lda (nn),a : 16
+    this->registers.set_HL(value);
+    
+    this->registers.set_flag(n, 0);
+    return 8;
+}
 
-    switch (opcode) 
+int CPU::ins_ADD_SP_n(const Byte_s value)
+{
+    //if negative
+    if (value < 0)
     {
-        case 0x00:{ } break;
-        case 0x01: { cyclesUsed = this->ins_LD_n_nn(nullptr, &this->registers.b, &this->registers.c, this->get_word_from_pc_lsbf()); } break;
-        case 0x02: { cyclesUsed = this->ins_LD_r1_r2(nullptr, this->registers.get_BC(), &this->registers.a); } break;
-        case 0x03:{ } break;
-        case 0x04:{ cyclesUsed = this->ins_INC_n(&this->registers.b); } break;
-        case 0x05:{ cyclesUsed = this->ins_DEC_n(&this->registers.b); } break;
-        case 0x06: { cyclesUsed = this->ins_LD_nn_n(&this->registers.b, this->get_byte_from_pc()); } break;
-        case 0x07:{ } break;
-        case 0x08: { cyclesUsed = this->ins_LD_nn_SP(this->get_word_from_pc_lsbf(), this->registers.sp); } break;
-        case 0x09:{ } break;
-        case 0x0A: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, this->registers.get_BC()); } break;
-        case 0x0B:{ } break;
-        case 0x0C:{ cyclesUsed = this->ins_INC_n(&this->registers.c); } break;
-        case 0x0D:{ cyclesUsed = this->ins_DEC_n(&this->registers.c); } break;
-        case 0x0E: { cyclesUsed = this->ins_LD_nn_n(&this->registers.c, this->get_byte_from_pc()); } break;
-        case 0x0F:{ } break;
-        
-        case 0x10:{ } break;
-        case 0x11: { cyclesUsed = this->ins_LD_n_nn(nullptr, &this->registers.d, &this->registers.e, this->get_word_from_pc_lsbf()); } break;
-        case 0x12: { cyclesUsed = this->ins_LD_r1_r2(nullptr, this->registers.get_DE(), &this->registers.a); } break;
-        case 0x13:{ } break;
-        case 0x14:{ cyclesUsed = this->ins_INC_n(&this->registers.d); } break;
-        case 0x15:{ cyclesUsed = this->ins_DEC_n(&this->registers.d); } break;
-        case 0x16: { cyclesUsed = this->ins_LD_nn_n(&this->registers.d, this->get_byte_from_pc()); } break;
-        case 0x17:{ } break;
-        case 0x18:{ } break;
-        case 0x19:{ } break;
-        case 0x1A: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, this->registers.get_DE()); } break;
-        case 0x1B:{ } break;
-        case 0x1C:{ cyclesUsed = this->ins_INC_n(&this->registers.e); } break;
-        case 0x1D:{ cyclesUsed = this->ins_DEC_n(&this->registers.e); } break;
-        case 0x1E: { cyclesUsed = this->ins_LD_nn_n(&this->registers.e, this->get_byte_from_pc()); } break;
-        case 0x1F:{ } break;
-          
-        case 0x20:{ } break;
-        case 0x21: { cyclesUsed = this->ins_LD_n_nn(nullptr, &this->registers.h, &this->registers.l, this->get_word_from_pc_lsbf()); } break;
-        case 0x22: { cyclesUsed = this->ins_LDDI_nn_r1(this->registers.get_HL(), &this->registers.a, &this->registers.h, &this->registers.l, +1); } break;
-        case 0x23:{ } break;
-        case 0x24: { cyclesUsed = this->ins_INC_n(&this->registers.h); } break;
-        case 0x25:{ cyclesUsed = this->ins_DEC_n(&this->registers.h); } break;
-        case 0x26: { cyclesUsed = this->ins_LD_nn_n(&this->registers.h, this->get_byte_from_pc()); } break;
-        case 0x27:{ } break;
-        case 0x28:{ } break;
-        case 0x29:{ } break;
-        case 0x2A: { cyclesUsed = this->ins_LDDI_r1_nn(&this->registers.a, this->registers.get_HL(), &this->registers.h, &this->registers.l, +1); } break;
-        case 0x2B:{ } break;
-        case 0x2C:{ cyclesUsed = this->ins_INC_n(&this->registers.l); } break;
-        case 0x2D:{ cyclesUsed = this->ins_DEC_n(&this->registers.l); } break;
-        case 0x2E: { cyclesUsed = this->ins_LD_nn_n(&this->registers.l, this->get_byte_from_pc()); } break;
-        case 0x2F:{ } break;
+        this->checkBorrow(this->registers.sp, value);
+        this->checkHalfBorrow(this->registers.sp, value);
+        this->registers.sp += value;
+        this->registers.set_flag(z, 0);
+        this->registers.set_flag(n, 0);
+        return 16;
+    }
+    this->checkCarry(this->registers.sp, value);
+    this->checkHalfCarry(this->registers.sp, value);
+    this->registers.sp += value;
+    this->registers.set_flag(z, 0);
+    this->registers.set_flag(n, 0);
+    return 16;
 
-        case 0x30:{ } break;
-        case 0x31: { cyclesUsed = this->ins_LD_n_nn(&this->registers.sp, nullptr,nullptr, this->get_word_from_pc_lsbf()); } break;
-        case 0x32: { cyclesUsed = this->ins_LDDI_nn_r1(this->registers.get_HL(), &this->registers.a, &this->registers.h, &this->registers.l, -1); } break;
-        case 0x33:{ } break;
-        case 0x34:{ cyclesUsed = this->ins_INC_n(nullptr, this->registers.get_HL()); } break;
-        case 0x35:{ cyclesUsed = this->ins_DEC_n(nullptr, this->registers.get_HL()); } break;
-        case 0x36: { cyclesUsed = this->ins_LD_r1_r2(nullptr, this->registers.get_HL(), nullptr, this->get_byte_from_pc()); } break;
-        case 0x37:{ } break;
-        case 0x38:{ } break;
-        case 0x39:{ } break;
-        case 0x3A:{ } break;
-        case 0x3B:{ } break;
-        case 0x3C: { cyclesUsed = this->ins_INC_n(&this->registers.a); } break;
-        case 0x3D: { cyclesUsed = this->ins_DEC_n(&this->registers.a); } break;
-        case 0x3E: { cyclesUsed = this->ins_LD_nn_n(&this->registers.a, this->get_byte_from_pc()); } break;
-        case 0x3F:{ } break;
-         
-        case 0x40: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.b); } break;
-        case 0x41: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.c); } break;
-        case 0x42: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.d); } break;
-        case 0x43: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.e); } break;
-        case 0x44: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.h); } break;
-        case 0x45: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.l); } break;
-        case 0x46: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.b, this->registers.get_HL()); } break;
-        case 0x47: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.a); } break;
-        case 0x48: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.b); } break;
-        case 0x49: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.c); } break;
-        case 0x4A: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.d); } break;
-        case 0x4B: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.e); } break;
-        case 0x4C: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.h); } break;
-        case 0x4D: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.l); } break;
-        case 0x4E: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.c, this->registers.get_HL()); } break;
-        case 0x4F: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.a); } break;
+}
 
-        case 0x50: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.b); } break;
-        case 0x51: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.c); } break;
-        case 0x52: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.d); } break;
-        case 0x53: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.e); } break;
-        case 0x54: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.h); } break;
-        case 0x55: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.l); } break;
-        case 0x56: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.d, this->registers.get_HL()); } break;
-        case 0x57: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.a); } break;
-        case 0x58: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.b); } break;
-        case 0x59: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.c); } break;
-        case 0x5A: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.d); } break;
-        case 0x5B: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.e); } break;
-        case 0x5C: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.h); } break;
-        case 0x5D: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.l); } break;
-        case 0x5E: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.e, this->registers.get_HL()); } break;
-        case 0x5F: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.a); } break;
-        
-        case 0x60: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.b); } break;
-        case 0x61: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.c); } break;
-        case 0x62: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.d); } break;
-        case 0x63: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.e); } break;
-        case 0x64: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.h); } break;
-        case 0x65: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.l); } break;
-        case 0x66: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.h, this->registers.get_HL()); } break;
-        case 0x67: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.a); } break;
-        case 0x68: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.b); } break;
-        case 0x69: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.c); } break;
-        case 0x6A: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.d); } break;
-        case 0x6B: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.e); } break;
-        case 0x6C: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.h); } break;
-        case 0x6D: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.l); } break;
-        case 0x6E: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.l, this->registers.get_HL()); } break;
-        case 0x6F: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.a); } break;
 
-        case 0x70: { cyclesUsed = this->ins_LD_r1_r2(nullptr,this->registers.get_HL(), &this->registers.b); } break;
-        case 0x71: { cyclesUsed = this->ins_LD_r1_r2(nullptr,this->registers.get_HL(), &this->registers.c); } break;
-        case 0x72: { cyclesUsed = this->ins_LD_r1_r2(nullptr,this->registers.get_HL(), &this->registers.d); } break;
-        case 0x73: { cyclesUsed = this->ins_LD_r1_r2(nullptr,this->registers.get_HL(), &this->registers.e); } break;
-        case 0x74: { cyclesUsed = this->ins_LD_r1_r2(nullptr,this->registers.get_HL(), &this->registers.h); } break;
-        case 0x75: { cyclesUsed = this->ins_LD_r1_r2(nullptr,this->registers.get_HL(), &this->registers.l); } break;
-        case 0x76:{ } break;
-        case 0x77: { cyclesUsed = this->ins_LD_r1_r2(nullptr,this->registers.get_HL(), &this->registers.a); } break;
-        case 0x78: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.b); } break;
-        case 0x79: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.c); } break;
-        case 0x7A: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.d); } break;
-        case 0x7B: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.e); } break;
-        case 0x7C: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.h); } break;
-        case 0x7D: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.l); } break;
-        case 0x7E: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.a,this->registers.get_HL()); } break;
-        case 0x7F: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.a); } break;
-            
-        case 0x80: { cyclesUsed = this->ins_ADD_A_n(&this->registers.b); } break;
-        case 0x81: { cyclesUsed = this->ins_ADD_A_n(&this->registers.c); } break;
-        case 0x82: { cyclesUsed = this->ins_ADD_A_n(&this->registers.d); } break;
-        case 0x83: { cyclesUsed = this->ins_ADD_A_n(&this->registers.e); } break;
-        case 0x84: { cyclesUsed = this->ins_ADD_A_n(&this->registers.h); } break;
-        case 0x85: { cyclesUsed = this->ins_ADD_A_n(&this->registers.l); } break;
-        case 0x86: { cyclesUsed = this->ins_ADD_A_n(nullptr, this->bus->get_memory(this->registers.get_HL())); } break;
-        case 0x87: { cyclesUsed = this->ins_ADD_A_n(&this->registers.a); } break;
-        case 0x88: { cyclesUsed = this->ins_ADC_A_n(&this->registers.b); } break;
-        case 0x89: { cyclesUsed = this->ins_ADC_A_n(&this->registers.c); } break;
-        case 0x8A: { cyclesUsed = this->ins_ADC_A_n(&this->registers.d); } break;
-        case 0x8B: { cyclesUsed = this->ins_ADC_A_n(&this->registers.e); } break;
-        case 0x8C: { cyclesUsed = this->ins_ADC_A_n(&this->registers.h); } break;
-        case 0x8D: { cyclesUsed = this->ins_ADC_A_n(&this->registers.l); } break;
-        case 0x8E: { cyclesUsed = this->ins_ADC_A_n(nullptr, this->bus->get_memory(this->registers.get_HL())); } break;
-        case 0x8F: { cyclesUsed = this->ins_ADC_A_n(&this->registers.a); } break;
 
-        case 0x90: { cyclesUsed = this->ins_SUB_n(&this->registers.b); } break;
-        case 0x91: { cyclesUsed = this->ins_SUB_n(&this->registers.c); } break;
-        case 0x92: { cyclesUsed = this->ins_SUB_n(&this->registers.d); } break;
-        case 0x93: { cyclesUsed = this->ins_SUB_n(&this->registers.e); } break;
-        case 0x94: { cyclesUsed = this->ins_SUB_n(&this->registers.h); } break;
-        case 0x95: { cyclesUsed = this->ins_SUB_n(&this->registers.l); } break;
-        case 0x96: { cyclesUsed = this->ins_SUB_n(nullptr, this->bus->get_memory(this->registers.get_HL())); } break;
-        case 0x97: { cyclesUsed = this->ins_SUB_n(&this->registers.a); } break;
-        case 0x98: { cyclesUsed = this->ins_SBC_A_n(&this->registers.b); } break;
-        case 0x99: { cyclesUsed = this->ins_SBC_A_n(&this->registers.c); } break;
-        case 0x9A: { cyclesUsed = this->ins_SBC_A_n(&this->registers.d); } break;
-        case 0x9B: { cyclesUsed = this->ins_SBC_A_n(&this->registers.e); } break;
-        case 0x9C: { cyclesUsed = this->ins_SBC_A_n(&this->registers.h); } break;
-        case 0x9D: { cyclesUsed = this->ins_SBC_A_n(&this->registers.l); } break;
-        case 0x9E: { cyclesUsed = this->ins_SBC_A_n(nullptr, this->bus->get_memory(this->registers.get_HL())); } break;
-        case 0x9F: { cyclesUsed = this->ins_SBC_A_n(&this->registers.a); } break;
+int CPU::ins_INC_nn(Byte* registerOne, Byte* registerTwo, Word* stackPointer)
+{
+    if (stackPointer)
+    {
+        this->registers.sp++;
+        return 8;
+    }
+    this->registers.set_word(registerOne, registerTwo, (this->registers.get_word(registerOne, registerTwo)+1));
+    return 8;
+}
 
-        case 0xA0: { cyclesUsed = this->ins_AND_n(&this->registers.b); } break;
-        case 0xA1: { cyclesUsed = this->ins_AND_n(&this->registers.c); } break;
-        case 0xA2: { cyclesUsed = this->ins_AND_n(&this->registers.d); } break;
-        case 0xA3: { cyclesUsed = this->ins_AND_n(&this->registers.e); } break;
-        case 0xA4: { cyclesUsed = this->ins_AND_n(&this->registers.h); } break;
-        case 0xA5: { cyclesUsed = this->ins_AND_n(&this->registers.l); } break;
-        case 0xA6: { cyclesUsed = this->ins_AND_n(nullptr, this->bus->get_memory(this->registers.get_HL())); } break;
-        case 0xA7: { cyclesUsed = this->ins_AND_n(&this->registers.a); } break;
-        case 0xA8: { cyclesUsed = this->ins_XOR_n(&this->registers.b); } break;
-        case 0xA9: { cyclesUsed = this->ins_XOR_n(&this->registers.c); } break;
-        case 0xAA: { cyclesUsed = this->ins_XOR_n(&this->registers.d); } break;
-        case 0xAB: { cyclesUsed = this->ins_XOR_n(&this->registers.e); } break;
-        case 0xAC: { cyclesUsed = this->ins_XOR_n(&this->registers.h); } break;
-        case 0xAD: { cyclesUsed = this->ins_XOR_n(&this->registers.l); } break;
-        case 0xAE: { cyclesUsed = this->ins_XOR_n(nullptr, this->bus->get_memory(this->registers.get_HL())); } break;
-        case 0xAF: { cyclesUsed = this->ins_XOR_n(&this->registers.a); } break;
+int CPU::ins_DEC_nn(Byte* registerOne, Byte* registerTwo, Word* stackPointer)
+{
+    if (stackPointer)
+    {
+        this->registers.sp--;
+        return 8;
+    }
+    this->registers.set_word(registerOne, registerTwo, (this->registers.get_word(registerOne, registerTwo)-1));
+    return 8;
+}
 
-        case 0xB0: { cyclesUsed = this->ins_OR_n(&this->registers.b); } break;
-        case 0xB1: { cyclesUsed = this->ins_OR_n(&this->registers.c); } break;
-        case 0xB2: { cyclesUsed = this->ins_OR_n(&this->registers.d); } break;
-        case 0xB3: { cyclesUsed = this->ins_OR_n(&this->registers.e); } break;
-        case 0xB4: { cyclesUsed = this->ins_OR_n(&this->registers.h); } break;
-        case 0xB5: { cyclesUsed = this->ins_OR_n(&this->registers.l); } break;
-        case 0xB6: { cyclesUsed = this->ins_OR_n(nullptr, this->bus->get_memory(this->registers.get_HL())); } break;
-        case 0xB7: { cyclesUsed = this->ins_OR_n(&this->registers.a); } break;
-        case 0xB8: { cyclesUsed = this->ins_CP_n(&this->registers.b); } break;
-        case 0xB9: { cyclesUsed = this->ins_CP_n(&this->registers.c); } break;
-        case 0xBA: { cyclesUsed = this->ins_CP_n(&this->registers.d); } break;
-        case 0xBB: { cyclesUsed = this->ins_CP_n(&this->registers.e); } break;
-        case 0xBC: { cyclesUsed = this->ins_CP_n(&this->registers.h); } break;
-        case 0xBD: { cyclesUsed = this->ins_CP_n(&this->registers.l); } break;
-        case 0xBE: { cyclesUsed = this->ins_CP_n(nullptr, this->bus->get_memory(this->registers.get_HL())); } break;
-        case 0xBF: { cyclesUsed = this->ins_CP_n(&this->registers.a); } break;
+int CPU::ins_SWAP_nn(Byte* registerOne, Word address)
+{
+    if (registerOne)
+    {
+        *registerOne = (this->get_nibble(*registerOne, false) << 4) + this->get_nibble(*registerOne, true);
+        return 8;
+    }
+    this->bus->set_memory(address, (this->get_nibble(this->bus->get_memory(address), false) << 4) + this->get_nibble(this->bus->get_memory(address), true));
+    return 16;
+}
 
-        case 0xC0:{ } break;
-        case 0xC1:{ cyclesUsed = this->ins_POP_nn(&this->registers.b, &this->registers.c); } break;
-        case 0xC2:{ } break;
-        case 0xC3:{ } break;
-        case 0xC4:{ } break;
-        case 0xC5:{ cyclesUsed = this->ins_PUSH_nn(this->registers.get_BC()); } break;
-        case 0xC6:{ cyclesUsed = this->ins_ADD_A_n(nullptr, this->get_byte_from_pc()); } break;
-        case 0xC7:{ } break;
-        case 0xC8:{ } break;
-        case 0xC9:{ } break;
-        case 0xCA:{ } break;
-        case 0xCB:{ } break;
-        case 0xCC:{ } break;
-        case 0xCD:{ } break;
-        case 0xCE: { cyclesUsed = this->ins_ADC_A_n(nullptr, this->get_byte_from_pc()); } break;
-        case 0xCF:{ } break;
+int CPU::ins_DAA()
+{
+    // this is a weird one, take whatever is in register a and re shuffle it to a packed binary coded decimal
+    // since we only have 1 byte of space to work with then we can only display upto 99 using BCD
+    // which would require to set the overflow flag.
 
-        case 0xD0:{ } break;
-        case 0xD1: { cyclesUsed = this->ins_POP_nn(&this->registers.d, &this->registers.e); } break;
-        case 0xD2:{ } break;
-        case 0xD3: {  cyclesUsed = this->ins_SBC_A_n(nullptr, this->get_byte_from_pc()); } break;
-        case 0xD4:{ } break;
-        case 0xD5: { cyclesUsed = this->ins_PUSH_nn(this->registers.get_DE()); } break;
-        case 0xD6:{ cyclesUsed = this->ins_SUB_n(nullptr, this->get_byte_from_pc());  } break;
-        case 0xD7:{ } break;
-        case 0xD8:{ } break;
-        case 0xD9:{ } break;
-        case 0xDA:{ } break;
-        case 0xDB:{ } break;
-        case 0xDC:{ } break;
-        case 0xDD:{ } break;
-        case 0xDE:{ } break;
-        case 0xDF:{ } break;
+    // to actually convert binary to binary coded decimal, its fairly simple
+    // an order of magnitude is represented by a nibble, if a nibble in binary is larger than 9, then
+    // we just add 0x06 to register A and it will be converted
+    // the same is true for the 10s nibble, if it is over 9 then we add 0x60 to A and set carry.
+    // however we need to check if the value in register A actually means a negative which we check N flag and then subract 6 instead of adding it
+    
+    // temp store of offset we will use
+    Byte nibbleOfset = 0x0;
+    
+    // temp store of value of the carry bit, set to reset
+    bool carry = false;
 
-        case 0xE0: { cyclesUsed = this->ins_LD_r1_r2(nullptr, 0xFF00 + this->get_byte_from_pc(), nullptr, this->registers.a); } break;
-        case 0xE1:{  cyclesUsed = this->ins_POP_nn(&this->registers.h, &this->registers.l); } break;
-        case 0xE2: { cyclesUsed = this->ins_LD_r1_r2(nullptr, 0xFF00 + this->registers.c, &this->registers.a); } break;
-        case 0xE3:{ } break;
-        case 0xE4:{ } break;
-        case 0xE5: { cyclesUsed = this->ins_PUSH_nn(this->registers.get_HL()); } break;
-        case 0xE6: { cyclesUsed = this->ins_AND_n(nullptr, this->get_byte_from_pc()); } break;
-        case 0xE7:{ } break;
-        case 0xE8:{ } break;
-        case 0xE9:{ } break;
-        case 0xEA: { cyclesUsed = this->ins_LD_nn_r1(this->get_word_from_pc_lsbf(), &this->registers.a); } break;
-        case 0xEB:{ } break;
-        case 0xEC:{ } break;
-        case 0xED:{ } break;
-        case 0xEE:{ } break;
-        case 0xEF:{ } break;
-      
-        case 0xF0: { cyclesUsed = this->ins_LD_r1_nn(&this->registers.a, 0xFF00 + this->get_byte_from_pc(), 12); } break;
-        case 0xF1: { cyclesUsed = this->ins_POP_nn(&this->registers.a, &this->registers.f); } break;
-        case 0xF2: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, 0xFF00+this->registers.c); } break;
-        case 0xF3:{ } break;
-        case 0xF4:{ } break;
-        case 0xF5: { cyclesUsed = this->ins_PUSH_nn(this->registers.get_AF()); } break;
-        case 0xF6:{ cyclesUsed = this->ins_OR_n(nullptr, this->get_byte_from_pc()); } break;
-        case 0xF7:{ } break;
-        case 0xF8: { cyclesUsed = this->ins_LDHL_SP_n(&this->registers.h, &this->registers.l, this->registers.sp, this->get_byte_from_pc()); } break;
-        case 0xF9: { cyclesUsed = this->ins_LD_nn_nn(&this->registers.sp, this->registers.get_HL()); } break;
-        case 0xFA: { cyclesUsed = this->ins_LD_r1_nn(&this->registers.a, this->get_word_from_pc_lsbf(), 16); } break;
-        case 0xFB:{ } break;
-        case 0xFC:{ } break;
-        case 0xFD:{ } break;
-        case 0xFE:{ } break;
-        case 0xFF:{ } break;
-
+    // check if lower nibble is bigger than 9
+    if ((this->registers.a & 0x0F) > 9)
+    {
+        nibbleOfset += 6;
     }
 
-    return cyclesUsed;
+    // check if higher nibble is bigger than 90, set carry to true
+    if ((this->registers.a & 0xF0) > 90)
+    {
+        nibbleOfset += 60;
+        carry = true;
+    }
+
+    // check state of the n flag
+    if (this->registers.get_flag(n))
+        nibbleOfset *= -1;
+
+    // perfrom bcd conversion
+    this->registers.a += nibbleOfset;
+
+    // set carry flag and half to 0
+    this->registers.set_flag(c,carry);
+    this->registers.set_flag(h, 0);
+
+    // check z flag status
+    if (this->registers.a == 0)
+        this->registers.set_flag(z, 1);
+
+
+    return 4;
 }
+
+int CPU::ins_CPL()
+{
+    this->registers.a = ~this->registers.a;
+
+    this->registers.set_flag(n, true);
+    this->registers.set_flag(h, true);
+    return 4;
+}
+
+int CPU::ins_CCF()
+{
+    this->registers.set_flag(n,0);
+    this->registers.set_flag(h,0);
+
+    (this->registers.get_flag(c))? this->registers.set_flag(c,0) : this->registers.set_flag(c, 1);
+    return 4;
+}
+
+int CPU::ins_SCF()
+{
+    this->registers.set_flag(n,0);
+    this->registers.set_flag(h,0);
+    this->registers.set_flag(c,1);
+    return 4;
+}
+
+int CPU::ins_RCLA()
+{
+    //set c flag to whatever is the value of the leftest bit from register a
+    this->registers.set_flag(c, (this->registers.a & 0x80 >> 7));
+    this->registers.set_flag(n, 0);
+    this->registers.set_flag(h, 0);
+    this->registers.set_flag(z, 0);
+
+    // move everything to the left by one, toggle bit 0 with bit 7 shifted right 7 places
+    this->registers.a = (this->registers.a << 1) | (this->registers.a >> (7));
+
+
+    return 4;
+}
+
+int CPU::ins_RLA()
+{
+    // swap leftest most bit with the carry flag, then rotate to the left
+    
+    Byte flagCarry = this->registers.get_flag(c);
+    bool registerCarry = (this->registers.a & 0x80 >> 7);
+
+    this->registers.a = (this->registers.a << 1) | (flagCarry);
+
+    this->registers.set_flag(c, registerCarry);
+    this->registers.set_flag(n, 0);
+    this->registers.set_flag(h, 0);
+    this->registers.set_flag(z, 0);
+    
+    return 4;
+}
+
+int CPU::ins_RRCA()
+{
+    this->registers.set_flag(c, this->registers.a & 0x1);
+
+    this->registers.a = (this->registers.a >> 1) | (this->registers.a << (7));
+
+    this->registers.set_flag(n, 0);
+    this->registers.set_flag(h, 0);
+    this->registers.set_flag(z, 0);
+
+    return 4;
+}
+
+int CPU::ins_RRA()
+{
+    Byte flagCarry = this->registers.get_flag(c);
+    bool registerCarry = (this->registers.a & 0x1);
+
+    this->registers.a = (this->registers.a >> 1) | (flagCarry << (7));
+
+    this->registers.set_flag(c, registerCarry);
+    this->registers.set_flag(n, 0);
+    this->registers.set_flag(h, 0);
+    this->registers.set_flag(z, 0);
+
+    return 4;
+}
+
+int CPU::ins_RLC(Byte* registerOne, Word address)
+{
+    if (registerOne)
+    {
+        this->registers.set_flag(c, (*registerOne & 0x80 >> 7));
+        *registerOne = ((*registerOne << 1) | (*registerOne >> 7));
+
+        this->registers.set_flag(n,0);
+        this->registers.set_flag(h,0);
+
+        if (*registerOne == 0x0)
+            this->registers.set_flag(z, 1);
+
+        return 8;
+    }
+
+    Byte temp = this->bus->get_memory(address);
+
+    this->registers.set_flag(c, (temp & 0x80 >> 7));
+    this->bus->set_memory(address,((temp << 1) | (temp >> 7)));
+
+    this->registers.set_flag(n, 0);
+    this->registers.set_flag(h, 0);
+
+    if (temp == 0x0)
+        this->registers.set_flag(z, 1);
+
+    return 16;
+}
+
+int CPU::ins_RL(Byte* registerOne, Word address)
+{
+    Byte flagCarry = this->registers.get_flag(c);
+    bool newCarry = 0;
+
+    if (registerOne)
+    {
+        newCarry = (*registerOne & 0x80 >> 7);
+        *registerOne = ((*registerOne << 1) | (flagCarry));
+
+        this->registers.set_flag(c, newCarry);
+        this->registers.set_flag(n, 0);
+        this->registers.set_flag(h, 0);
+
+        if (*registerOne == 0x0)
+            this->registers.set_flag(z, 1);
+
+        return 8;
+    }
+
+    Byte temp = this->bus->get_memory(address);
+
+    newCarry = (temp & 0x80 >> 7);
+    this->bus->set_memory(address, ((temp << 1) | (flagCarry)));
+
+    this->registers.set_flag(c, newCarry);
+    this->registers.set_flag(n, 0);
+    this->registers.set_flag(h, 0);
+
+    if (temp == 0x0)
+        this->registers.set_flag(z, 1);
+
+    return 16;
+}
+
+int CPU::ins_RRC(Byte* registerOne, Word address)
+{
+    if (registerOne)
+    {
+        this->registers.set_flag(c, (*registerOne & 0x1));
+        *registerOne = ((*registerOne >> 1) | (*registerOne << 7));
+
+        this->registers.set_flag(n, 0);
+        this->registers.set_flag(h, 0);
+
+        if (*registerOne == 0x0)
+            this->registers.set_flag(z, 1);
+
+        return 8;
+    }
+
+    Byte temp = this->bus->get_memory(address);
+
+    this->registers.set_flag(c, (temp & 0x1));
+    this->bus->set_memory(address, ((temp >> 1) | (temp << 7)));
+
+    this->registers.set_flag(n, 0);
+    this->registers.set_flag(h, 0);
+
+    if (temp == 0x0)
+        this->registers.set_flag(z, 1);
+
+    return 16;
+}
+
+int CPU::ins_RR(Byte* registerOne, Word address)
+{
+    Byte flagCarry = this->registers.get_flag(c);
+    bool newCarry = 0;
+
+    if (registerOne)
+    {
+        newCarry = (*registerOne & 0x1);
+        *registerOne = ((*registerOne >> 1) | (flagCarry << 7 ));
+
+        this->registers.set_flag(c, newCarry);
+        this->registers.set_flag(n, 0);
+        this->registers.set_flag(h, 0);
+
+        if (*registerOne == 0x0)
+            this->registers.set_flag(z, 1);
+
+        return 8;
+    }
+
+    Byte temp = this->bus->get_memory(address);
+
+    newCarry = (temp & 0x01);
+    this->bus->set_memory(address, ((temp >> 1) | (flagCarry << 7)));
+
+    this->registers.set_flag(c, newCarry);
+    this->registers.set_flag(n, 0);
+    this->registers.set_flag(h, 0);
+
+    if (temp == 0x0)
+        this->registers.set_flag(z, 1);
+
+    return 16;
+}
+
+int CPU::ins_SLA(Byte* registerOne, Word address)
+{
+    if (registerOne)
+    {
+        this->registers.set_flag(c,*registerOne & 0x80 >> 7);
+        *registerOne = *registerOne << 1;
+
+        this->registers.set_flag(n, 0);
+        this->registers.set_flag(h, 0);
+
+        if (*registerOne == 0x0)
+            this->registers.set_flag(z, 1);
+
+        return 8;
+    }
+    Byte temp = this->bus->get_memory(address);
+
+    this->registers.set_flag(c, temp & 0x80 >> 7);
+    this->bus->set_memory(address, temp << 1);
+
+    this->registers.set_flag(n, 0);
+    this->registers.set_flag(h, 0);
+
+    if (temp == 0x0)
+        this->registers.set_flag(z, 1);
+
+    return 16;
+}
+
+int CPU::ins_SRA_n(Byte* registerOne, Word address)
+{
+    Byte bit7 = 0;
+    // shift right into carry, msb does not change
+    if (registerOne)
+    {
+        this->registers.set_flag(c, *registerOne & 0x1);
+        bit7 = *registerOne >> 7;
+
+        *registerOne = *registerOne >> 1 | (bit7 << 7);
+
+        this->registers.set_flag(n, 0);
+        this->registers.set_flag(h, 0);
+
+        if (*registerOne == 0x0)
+            this->registers.set_flag(z, 1);
+
+        return 8;
+    }
+    Byte temp = this->bus->get_memory(address);
+
+    this->registers.set_flag(c, temp & 0x1);
+    bit7 = temp >> 7;
+    this->bus->set_memory(address, temp >> 1 | (bit7 << 7));
+
+    this->registers.set_flag(n, 0);
+    this->registers.set_flag(h, 0);
+
+    if (temp == 0x0)
+        this->registers.set_flag(z, 1);
+
+    return 16;
+}
+
+int CPU::ins_SRL_n(Byte* registerOne, Word address)
+{
+    // shift right into carry, msb does not change
+    if (registerOne)
+    {
+        this->registers.set_flag(c, *registerOne & 0x1);
+
+        *registerOne = *registerOne >> 1;
+
+        this->registers.set_flag(n, 0);
+        this->registers.set_flag(h, 0);
+
+        if (*registerOne == 0x0)
+            this->registers.set_flag(z, 1);
+
+        return 8;
+    }
+    Byte temp = this->bus->get_memory(address);
+
+    this->registers.set_flag(c, temp & 0x1);
+
+    this->bus->set_memory(address, temp >> 1);
+
+    this->registers.set_flag(n, 0);
+    this->registers.set_flag(h, 0);
+
+    if (temp == 0x0)
+        this->registers.set_flag(z, 1);
+
+    return 16;
+}
+
+int CPU::ins_BIT_b_r(Byte bit, Byte* registerOne, Word address)
+{
+    if (registerOne)
+    {
+        if ((*registerOne & (1 << bit)) == 0)
+            this->registers.set_flag(n, 1);
+
+        this->registers.set_flag(n,0);
+        this->registers.set_flag(h,1);
+
+        return 8;
+    }
+
+    if ((this->bus->get_memory(address) & (1 << bit)) == 0)
+        this->registers.set_flag(n, 1);
+
+    this->registers.set_flag(n, 0);
+    this->registers.set_flag(h, 1);
+
+    return 16;
+}
+
+int CPU::ins_SET_b_r(Byte bit, Byte* registerOne, Word address)
+{
+    if (registerOne)
+    {
+        *registerOne |=  (1 << bit);
+        return 8;
+    }
+
+    this->bus->set_memory(address, this->bus->get_memory(address) | (1 << bit));
+    return 16;
+}
+
+int CPU::ins_RES_b_r(Byte bit, Byte* registerOne, Word address)
+{
+    if (registerOne)
+    {
+        *registerOne &= ~(1 << bit);
+        return 8;
+    }
+
+    this->bus->set_memory(address, this->bus->get_memory(address) & ~(1 << bit));
+    return 16;
+}
+
+int CPU::ins_JP_nn(Word address)
+{
+    this->registers.pc = address;
+    return 12;
+}
+
+int CPU::ins_JP_cc_nn(enum JumpCondition condition, Word address)
+{
+    switch (condition)
+    {
+        case NZ:
+        {
+            if (this->registers.get_flag(z) == 0)
+                this->ins_JP_nn(address);
+        } break;
+    
+        case Z:
+        {
+            if (this->registers.get_flag(z) == 1)
+                this->ins_JP_nn(address);
+        } break;
+    
+        case NC:
+        {
+            if (this->registers.get_flag(c) == 0)
+                this->ins_JP_nn(address);
+        } break;
+    
+        case C:
+        {
+            if (this->registers.get_flag(c) == 1)
+                this->ins_JP_nn(address);
+        } break;
+    }
+    return 12;
+}
+
+int CPU::ins_JP_HL()
+{
+    this->registers.pc = this->registers.get_HL();
+    return 4;
+}
+
+int CPU::ins_JR_n(Byte_s jumpOffset)
+{
+    this->registers.pc += jumpOffset;
+
+    return 8;
+}
+
+int CPU::ins_JR_cc_n(JumpCondition condition, Byte_s jumpOffset)
+{
+    switch (condition)
+    {
+    case NZ:
+    {
+        if (this->registers.get_flag(z) == 0)
+            this->ins_JR_n(jumpOffset);
+    } break;
+
+    case Z:
+    {
+        if (this->registers.get_flag(z) == 1)
+            this->ins_JR_n(jumpOffset);
+    } break;
+
+    case NC:
+    {
+        if (this->registers.get_flag(c) == 0)
+            this->ins_JR_n(jumpOffset);
+    } break;
+
+    case C:
+    {
+        if (this->registers.get_flag(c) == 1)
+            this->ins_JR_n(jumpOffset);
+    } break;
+    }
+    return 8;
+}
+
+
+int CPU::ins_CALL_nn(Word address)
+{
+    this->ins_PUSH_nn(this->registers.pc+1);
+    this->ins_JP_nn(address);
+    return 12;
+}
+
+int CPU::ins_CALL_cc_nn(enum JumpCondition condition, Word address)
+{
+    switch (condition)
+    {
+    case NZ:
+    {
+        if (this->registers.get_flag(z) == 0)
+            this->ins_CALL_nn(address);
+    } break;
+
+    case Z:
+    {
+        if (this->registers.get_flag(z) == 1)
+            this->ins_CALL_nn(address);
+    } break;
+
+    case NC:
+    {
+        if (this->registers.get_flag(c) == 0)
+            this->ins_CALL_nn(address);
+    } break;
+
+    case C:
+    {
+        if (this->registers.get_flag(c) == 1)
+            this->ins_CALL_nn(address);
+    } break;
+    }
+    return 12;
+}
+
+int CPU::ins_RST_n(const Byte addrOffset)
+{
+    this->ins_PUSH_nn(this->registers.pc);
+    this->ins_JP_nn(0x0000 + addrOffset);
+    return 32;
+}
+
+int CPU::ins_RET()
+{
+    this->registers.sp -= 2;
+    this->registers.pc = this->registers.sp;
+    return 8;
+}
+
+int CPU::ins_RETI()
+{
+    this->ins_RET();
+    this->bus->set_memory(0xffff, 1);
+    return 12;
+}
+
+int CPU::ins_RET_cc(const JumpCondition condition)
+{
+    switch (condition)
+    {
+    case NZ:
+    {
+        if (this->registers.get_flag(z) == 0)
+            this->ins_RET();
+    } break;
+
+    case Z:
+    {
+        if (this->registers.get_flag(z) == 1)
+            this->ins_RET();
+    } break;
+
+    case NC:
+    {
+        if (this->registers.get_flag(c) == 0)
+            this->ins_RET();
+    } break;
+
+    case C:
+    {
+        if (this->registers.get_flag(c) == 1)
+            this->ins_RET();
+    } break;
+    }
+    return 12;
+}
+
+
+
+
+
+
+
 
 

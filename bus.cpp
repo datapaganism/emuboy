@@ -102,7 +102,7 @@ Byte BUS::get_memory(const Word address)
     }
     if (address <= 0xFFFF) // from 0xFFFF, yep
     {
-        // interrupt enabled register
+        // interrupt enabled register, cannot be accessed
         return 0b0;
     }
 
@@ -193,7 +193,8 @@ void BUS::set_memory(const Word address, const Byte data)
     }
     if (address <= 0xFFFF)
     {
-        // interrupt enabled register
+        // interrupt enabled register, write only data
+        this->interrupt_enable_register = data;
         return;
     }
 }

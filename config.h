@@ -19,8 +19,8 @@
 #define Byte uint8_t
 #define Word uint16_t
 
-#define Byte_s sint8_t
-#define Word_s sint16_t
+#define Byte_s int8_t
+#define Word_s int16_t
 
 #define WORKRAMOFFSET 0xc000
 

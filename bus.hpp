@@ -15,6 +15,7 @@ public:
     std::array<Byte, 0x0100> bios = { 0, };
     std::array<Byte, 0x004C> io = { 0, };
     std::array<Byte, 0x007F> high_ram = { 0, };
+    Byte interrupt_enable_register = 0;
 
     BUS();
     BUS(const std::string game_name, const std::string bios_name);
