@@ -24,6 +24,26 @@
 
 #define WORKRAMOFFSET 0xc000
 
+
+
+#define LCDC 0xFF40  //LCD Control R/W Register //ff40
+#define STAT 0xFF41 //LCDC Status R/W Register //ff41
+
+#define SCY 0xFF42  //scroll y r/w //ff42
+#define SCX 0xFF43 //scroll x r/w //ff43
+
+#define LY 0xFF44 //lcdc y coordinate read only //ff44
+#define LYC 0xFF45 //ly compare r/w //
+
+#define DMA 0xFF46 //dma transfer and start
+#define BGP 0xFF47 //bg palette r/w
+
+#define OBP0 0xFF48 //object palette 0 r/w
+#define OBP1 0xFF49 //object palette 1 r/w
+
+#define WY 0xFF4A // window y position r/w
+#define WX 0xFF4B // window x position r/w
+
 // convert to gb register freq
 // gb = 2048 - (131072 / hz) 
 

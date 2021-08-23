@@ -9,10 +9,11 @@ int CPU::fetch_decode_execute()
 {
     // the program counter holds the address in memory for either instruction or data for an instruction.
     Byte opcode = this->get_byte_from_pc();
+    //std::cout << std::hex << opcode << std::dec <<" ";
+   
     int cyclesUsed = 0;
 
-    //skipped
-    // 0xea lda (nn),a : 16
+    
 
     switch (opcode)
     {
@@ -312,6 +313,18 @@ int CPU::fetch_decode_execute()
 
     this->interrupt_DI_EI_handler();
 
+#ifdef DEBUG
+
+#define BREAKPOINTPC 0x020F
+   
+    this->DEBUG_printCurrentState();
+    if (this->registers.pc == BREAKPOINTPC)
+    {
+        this->registers.pc = BREAKPOINTPC;
+    }
+#endif // DEBUG
+
+    
     return cyclesUsed;
 }
 
@@ -319,6 +332,8 @@ int CPU::CB_instruction_handler()
 {
     Byte opcode = this->get_byte_from_pc();
     int cyclesUsed = 0;
+
+    
 
     switch (opcode)
     {
@@ -611,6 +626,7 @@ int CPU::CB_instruction_handler()
     case 0xFF: { cyclesUsed = this->ins_SET_b_r(7, &this->registers.a); } break;
     }
 
+    
     return cyclesUsed;
 }
 

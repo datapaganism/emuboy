@@ -3,17 +3,17 @@
 #include "config.h"
 #include <iostream>
 
-
+#define DEBUG
 
 // forward declaration, bus.hpp is not included here but in cpu.cpp instead
 class BUS;
 
 enum Flags 
 {
-    z = 0b01000000, // Zero
-    n = 0b00100000, // Subtraction
-    h = 0b00010000, // Half Carry
-    c = 0b00001000, // Carry
+    z = 0b10000000, // Zero
+    n = 0b01000000, // Subtraction
+    h = 0b00100000, // Half Carry
+    c = 0b00010000, // Carry
 };
 
 enum JumpCondition
@@ -79,24 +79,29 @@ public:
 class CPU
 {
 
+    
     private:
         
         BUS* bus = nullptr;
 
-        
+
+  
         
         /// <summary>
         /// sets up the CPU registers to fresh boot state.
         /// </summary>
         void init();
+        void init2();
         
         // The way I want the system to be emulated is to have master class where all the components are accessed, the address bus is how are going to achieve this,
         // the address bus has a cpu attached to it but the cpu itself needs to be connected to the bus to access other devices.
         
     public:
         Registers registers;
+
         CPU();
 
+        void DEBUG_printCurrentState();
 
 
         /// <summary>

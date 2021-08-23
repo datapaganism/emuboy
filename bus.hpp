@@ -2,6 +2,7 @@
 
 #include "cpu.hpp"
 #include "gamepak.hpp"
+#include "ppu.hpp"
 #include "config.h"
 #include <array>
 
@@ -9,12 +10,14 @@ class BUS
 {
 public:
 
+    PPU ppu;
     CPU cpu;
     GAMEPAK gamepak;
     std::array<Byte, 0x2000> work_ram = {0,};
     std::array<Byte, 0x0100> bios = { 0, };
     std::array<Byte, 0x004C> io = { 0, };
     std::array<Byte, 0x007F> high_ram = { 0, };
+    std::array<Byte, 0x2000> video_ram = { 0, };
     Byte interrupt_enable_register = 0;
 
     BUS();

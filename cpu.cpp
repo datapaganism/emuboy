@@ -3,6 +3,24 @@
 
 #include <iostream>
 
+void CPU::DEBUG_printCurrentState()
+{
+
+    printf("op:0x%.2X | ", this->bus->get_memory(this->registers.pc));
+    printf("%s:0x%.2X%.2X  ","AF", this->registers.a,this->registers.f);
+    printf("%s:0x%.2X%.2X  ","BC", this->registers.b,this->registers.c);
+    printf("%s:0x%.2X%.2X  ","DE", this->registers.d,this->registers.e);
+    printf("%s:0x%.2X%.2X  ","HL", this->registers.h,this->registers.l);
+    printf("%s:0x%.4X  ","SP", this->registers.sp);
+    printf("%s:0x%.4X  ","pc", this->registers.pc);
+    printf("%s:%i  ","z", this->registers.get_flag(z));
+    printf("%s:%i  ","n", this->registers.get_flag(n));
+    printf("%s:%i  ","h", this->registers.get_flag(h));
+    printf("%s:%i  ","c", this->registers.get_flag(c));
+
+    printf("\n");
+}
+
 /// <summary>
 /// sets the registers of the cpu to their initial power up state, program counter is set to skip the bios program by default
 /// </summary>
@@ -20,9 +38,29 @@ void CPU::init()
     this->registers.sp = 0xFFFE;
 }
 
+void CPU::init2()
+{
+    this->registers.pc = 0x100;
+    this->registers.a = 0x11;
+    this->registers.b = 0x00;
+    this->registers.c = 0x00;
+    this->registers.d = 0xff;
+    this->registers.e = 0x56;
+    this->registers.f = 0x80;
+    this->registers.h = 0x00;
+    this->registers.l = 0x0d;
+    this->registers.sp = 0xFFFE;
+}
+
+
+
 CPU::CPU()
 {
     this->init();
+#ifdef DEBUG
+    this->init2();
+#endif
+
 }
 
 
@@ -487,7 +525,7 @@ int CPU::ins_INC_n(Byte* registerOne, Word address)
         (*registerOne)++;
 
         //evaluate z flag an clear the n flag
-        (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+        (*registerOne == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
         this->registers.set_flag(n, 0);
 
         return 4;
@@ -500,7 +538,7 @@ int CPU::ins_INC_n(Byte* registerOne, Word address)
     // perform addition
     this->bus->set_memory(address, (this->bus->get_memory(address) + 1));
     //evaluate z flag an clear the n flag
-    (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+    (*registerOne == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
     this->registers.set_flag(n, 0);
 
     return 12;
@@ -517,7 +555,7 @@ int CPU::ins_DEC_n(Byte* registerOne, Word address)
         (*registerOne)--;
 
         //evaluate z flag an clear the n flag
-        (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+        (*registerOne == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
         this->registers.set_flag(n, 1);
 
         return 4;
@@ -530,7 +568,7 @@ int CPU::ins_DEC_n(Byte* registerOne, Word address)
     // perform addition
     this->bus->set_memory(address, (this->bus->get_memory(address) - 1 ));
     //evaluate z flag an clear the n flag
-    (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+    (*registerOne == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
     this->registers.set_flag(n, 1);
 
     return 12;

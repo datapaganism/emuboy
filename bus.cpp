@@ -3,6 +3,7 @@
 BUS::BUS()
 {
     this->cpu.connect_to_bus(this);
+    this->ppu.connect_to_bus(this);
     this->init();
 }
 
@@ -47,12 +48,14 @@ Byte BUS::get_memory(const Word address)
     if (address <= 0x97ff) // from 0x8000         
     {
         // Tile Ram region
+        return this->video_ram.at(address - 0x8000);
         return 0b0;
     }
 
     if (address <= 0x9FFF) // from 0x9800
     {
         // background map region
+        return this->video_ram.at(address - 0x8000);
         return 0b0;
     }
 
@@ -134,12 +137,14 @@ void BUS::set_memory(const Word address, const Byte data)
     if (address <= 0x97ff)
     {
         // Tile Ram region
+        this->video_ram.at(address - 0x8000) = data;
         return;
     }
 
     if (address <= 0x9FFF)
     {
         // background map region
+        this->video_ram.at(address - 0x8000) = data;
         return;
     }
 
@@ -176,6 +181,10 @@ void BUS::set_memory(const Word address, const Byte data)
     if (address <= 0xFF4B)
     {
         // i/o registers
+
+        // LY register is read only
+        if (address == LY)
+            return;
 
         this->io.at(address - 0xFF00) = data;
         return;
