@@ -642,3 +642,4 @@ int CPU::STOP_instruction_handler()
 
     return cyclesUsed;
 }
+

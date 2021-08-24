@@ -8,14 +8,14 @@
 #include <bitset>
 #include <memory>
 
-#define DEBUG
+
 
 int main(int argv, char** args)
 {
 
     //BUS bus("./roms/blargg/full.gb", "bios.bin");
     std::unique_ptr<BUS> bus;
-    bus = std::make_unique<BUS>("./roms/blargg/03-op sp,hl.gb", "biods.bin");
+    bus = std::make_unique<BUS>("./roms/TETRIS.gb", "bio 5s.bin");
     // BUS bus("./roms/TETRIS.gb", "bios.bin");
     RENDERER renderer;
     
@@ -55,6 +55,12 @@ int main(int argv, char** args)
 
 
     bus->cpu.DEBUG_printCurrentState();
+    
+    
+    unsigned int ticksNow = 0, ticksPrevious = 0;
+    
+    double tickDelta = 0;
+
     while (renderer.isRunning)
     {
         SDL_Event event;
@@ -68,8 +74,27 @@ int main(int argv, char** args)
             };
         }
 
+        ticksNow = SDL_GetTicks();
+        tickDelta = ticksNow - ticksPrevious;
+
+#ifdef TURBO
+        bus->emulate();
+#else
+        if (tickDelta > VSYNC)
+        {
+            std::cout << "fps: " << 1000 / tickDelta << std::endl;
+            ticksPrevious = ticksNow;
+
+            bus->emulate();
+        }
+#endif // TURBO
+
+        
+
+
         //std::cout << bus->cpu.fetch_decode_execute() << "\n";
-        bus->cpu.fetch_decode_execute();
+        /*bus->cpu.fetch_decode_execute();
+        bus->cpu.do_interrupts();*/
     }
    
     return 0;

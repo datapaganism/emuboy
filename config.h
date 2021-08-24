@@ -2,6 +2,10 @@
 
 #include <cstdint>
 
+#define DEBUG 1
+#define TURBO 1
+
+
 #define GB_CLOCKSPEED  4194304 // Hz
 #define GBC_CLOCKSPEED 8388000 // Hz, Color model, maybe implement in the future.
 
@@ -12,7 +16,7 @@
 #define XRES 160
 #define YRES 144
 
-#define RES_SCALING 5 // defined integer scaling
+#define RES_SCALING 1 // defined integer scaling
 
 #define EMULATOR_WINDOW_TITLE "emulator"
 
@@ -24,7 +28,17 @@
 
 #define WORKRAMOFFSET 0xc000
 
+#define IF_REGISTER 0xFF0F
+#define IE_REGISTER 0xFFFF
 
+
+// timer register addresses
+#define DIV  0xFF04
+#define TIMA 0xFF05
+#define TMA  0xFF06
+#define TAC  0xFF07
+
+#define DIVinit GB_CLOCKSPEED / 16382
 
 #define LCDC 0xFF40  //LCD Control R/W Register //ff40
 #define STAT 0xFF41 //LCDC Status R/W Register //ff41
@@ -43,6 +57,8 @@
 
 #define WY 0xFF4A // window y position r/w
 #define WX 0xFF4B // window x position r/w
+
+
 
 // convert to gb register freq
 // gb = 2048 - (131072 / hz) 

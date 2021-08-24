@@ -38,7 +38,7 @@ void CPU::init()
     this->registers.sp = 0xFFFE;
 }
 
-void CPU::init2()
+void CPU::DEBUG_init()
 {
     this->registers.pc = 0x100;
     this->registers.a = 0x11;
@@ -58,7 +58,7 @@ CPU::CPU()
 {
     this->init();
 #ifdef DEBUG
-    this->init2();
+    this->DEBUG_init();
 #endif
 
 }
@@ -68,8 +68,6 @@ const Byte CPU::get_byte_from_pc()
 {
     return this->bus->get_memory(this->registers.pc++);
 }
-
-
 
 const Word CPU::get_word_from_pc()
 {
@@ -91,13 +89,13 @@ void CPU::interrupt_DI_EI_handler()
 {
     if (this->DI_triggered)
     {
-        this->bus->set_memory(0xffff, 0);
+        this->interrupt_master_enable = 0;
         this->DI_triggered = false;
         return;
     }
     if (this->EI_triggered)
     {
-        this->bus->set_memory(0xffff, 1);
+        this->interrupt_master_enable = 1;
         this->EI_triggered = false;
         return;
     }
@@ -200,6 +198,111 @@ void CPU::set_nibble(Byte* registerOne, const Byte value, const bool setHi)
             (setHi) ? *registerOne = ((*registerOne & 0x0F) | (value << 4)) : *registerOne = ((*registerOne & 0xF0) | value);
 }
 
+int CPU::do_interrupts()
+{
+    int cyclesUsed = 0;
+    //check master to see if interrupts are enabled
+    if (this->interrupt_master_enable == true)
+    {
+        // iterate through all types, this allows us to check each interrupt and also service them in order of priority
+        for (const auto type : InterruptTypes_all)
+        {
+            
+            // if it has been requested and its corresponding flag is enabled
+            if (this->get_interrupt_flag(type, IF_REGISTER) && this->get_interrupt_flag(type, IE_REGISTER))
+            {
+                //disable interrupts in general and for this type
+                this->set_interrupt_flag(type, 0, IF_REGISTER);
+                this->interrupt_master_enable = 0;
+
+                //push the current pc to the stack
+                this->ins_PUSH_nn(this->registers.pc);
+
+                // jump
+                switch (type)
+                {
+                case InterruptTypes::vblank  : { this->registers.pc = 0x0040; } break;
+                case InterruptTypes::lcdstat : { this->registers.pc = 0x0048; } break;
+                case InterruptTypes::timer   : { this->registers.pc = 0x0050; } break;
+                case InterruptTypes::serial  : { this->registers.pc = 0x0058; } break;
+                case InterruptTypes::joypad  : { this->registers.pc = 0x0060; } break;
+                }
+
+                //cyclesUsed += 20;
+            }
+        }
+    }
+    return cyclesUsed;
+}
+
+void CPU::update_timers(const int cycles)
+{
+    //run the DIV timer, every 256cpu cycles we need to increment the DIV register once,
+    this->divTimerIncrement -= cycles;
+    if (this->divTimerIncrement <= 0)
+    {
+        this->divTimerIncrement = DIVinit;
+        //register is read only to gameboy
+        this->bus->io.at(DIV - 0xFF00)++;
+    }
+
+    // if TMC bit 2 is set, this means that the timer is enabled
+    if (this->bus->get_memory(TAC) & (0b00000100))
+    {
+        //the timer increment holds the amount of cycles needed to tick TIMA register up one, we can decrement it and see if it has hit 0
+        this->timerIncrement -= cycles;
+
+        // if the TIMA needs updating
+        if (this->timerIncrement <= 0)
+        {
+            if (this->bus->get_memory(TIMA) == 0xFF)
+            {
+                this->bus->set_memory(TIMA, this->bus->get_memory(TMA));
+                this->request_interrupt(timer);
+            }
+
+            this->bus->set_memory(TIMA, this->bus->get_memory(TIMA)+1);
+        }
+    }
+}
+
+Byte CPU::get_TMC_frequency()
+{
+    return this->bus->get_memory(TAC) & 0x3;
+}
+
+void CPU::update_timerIncrement()
+{
+    switch (this->get_TMC_frequency())
+    {
+    case 0: { this->timerIncrement = GB_CLOCKSPEED / 4096; } break;
+    case 1: { this->timerIncrement = GB_CLOCKSPEED / 262144; } break;
+    case 2: { this->timerIncrement = GB_CLOCKSPEED / 65536; } break;
+    case 3: { this->timerIncrement = GB_CLOCKSPEED / 16382; } break;
+    }
+}
+
+
+void CPU::request_interrupt(const InterruptTypes type)
+{
+    this->set_interrupt_flag(type, 1, IF_REGISTER);
+}
+
+Byte CPU::get_interrupt_flag(const enum InterruptTypes type, Word address)
+{
+    return this->bus->get_memory(address) & type;
+}
+
+void CPU::set_interrupt_flag(const enum InterruptTypes type, const bool value, Word address)
+{
+    (value) ? this->bus->set_memory(address, this->bus->get_memory(address) | type) : this->bus->set_memory(address, this->bus->get_memory(address) & ~type);
+}
+
+
+
+
+
+//INSTRUCTION HANDLING
 int CPU::ins_LD_nn_n(Byte* registerOne, Byte value)
 {
     //LD nn,n
@@ -241,26 +344,27 @@ int CPU::ins_LD_r1_nn(Byte* registerOne, const Word address, const int cyclesUse
     *registerOne = this->bus->get_memory(address);
     return cyclesUsed;
 };
-
-
 // Take value from registerOne, place at memory location 
 int CPU::ins_LD_nn_r1(Word address, Byte* registerOne)
 {
     this->bus->set_memory(address, *registerOne);
     return 16;
 };
+
 int CPU::ins_LDDI_nn_r1(Word address, const Byte* registerOne, Byte* registerTwo, Byte* registerThree, const int addSubValue)
 {
     this->bus->set_memory(address, *registerOne);
     this->registers.set_word(registerTwo, registerThree, (this->registers.get_word(registerTwo, registerThree) + addSubValue));
     return 8;
 };
+
 int CPU::ins_LDDI_r1_nn(Byte* registerOne, const Word address, Byte* registerTwo, Byte* registerThree, const int addSubValue)
 {
     *registerOne = this->bus->get_memory(address);
     this->registers.set_word(registerTwo, registerThree, (this->registers.get_word(registerTwo, registerThree) + addSubValue));
     return 8;
 }
+
 int CPU::ins_LD_n_nn(Word* wordRegister, Byte* registerOne, Byte* registerTwo, const Word value)
 {
     if (wordRegister)
@@ -272,11 +376,13 @@ int CPU::ins_LD_n_nn(Word* wordRegister, Byte* registerOne, Byte* registerTwo, c
     this->registers.set_word(registerOne, registerTwo, value);
     return 12;
 }
+
 int CPU::ins_LD_nn_nn(Word* wordRegisterOne, const Word value)
 {
     *wordRegisterOne = value;
     return 8;
 }
+
 int CPU::ins_LDHL_SP_n(Byte* wordRegisterNibbleHi, Byte* wordRegisterNibbleLo, const Word stackPointerValue, const Byte value)
 {
     Word sum = stackPointerValue + value;
@@ -458,6 +564,7 @@ int CPU::ins_OR_n(const Byte* registerOne, const Byte immediateValue)
 
     return 8;
 }
+
 int CPU::ins_XOR_n(const Byte* registerOne, const Byte immediateValue)
 {
     if (registerOne)
@@ -605,8 +712,6 @@ int CPU::ins_ADD_SP_n(const Byte_s value)
     return 16;
 
 }
-
-
 
 int CPU::ins_INC_nn(Byte* registerOne, Byte* registerTwo, Word* stackPointer)
 {
@@ -1129,7 +1234,6 @@ int CPU::ins_JR_cc_n(JumpCondition condition, Byte_s jumpOffset)
     return 8;
 }
 
-
 int CPU::ins_CALL_nn(Word address)
 {
     this->ins_PUSH_nn(this->registers.pc+1);
@@ -1185,7 +1289,7 @@ int CPU::ins_RET()
 int CPU::ins_RETI()
 {
     this->ins_RET();
-    this->bus->set_memory(0xffff, 1);
+    this->interrupt_master_enable = 1;
     return 12;
 }
 

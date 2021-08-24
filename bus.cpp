@@ -106,13 +106,13 @@ Byte BUS::get_memory(const Word address)
     if (address <= 0xFFFF) // from 0xFFFF, yep
     {
         // interrupt enabled register, cannot be accessed
+        return this->interrupt_enable_register;
         return 0b0;
     }
 
     // temp return
     return 0;
 };
-
 
 void BUS::set_memory(const Word address, const Byte data)
 {
@@ -180,6 +180,19 @@ void BUS::set_memory(const Word address, const Byte data)
     }
     if (address <= 0xFF4B)
     {
+        //if changing timers
+        if (address == TAC)
+        {
+            this->io.at(address - 0xFF00) = data;
+            this->cpu.update_timerIncrement();
+            return;
+        }
+        if (address == DIV)
+        {
+            this->io.at(address - 0xFF00) = 0;
+            return;
+        }
+
         // i/o registers
 
         // LY register is read only
@@ -204,6 +217,7 @@ void BUS::set_memory(const Word address, const Byte data)
     {
         // interrupt enabled register, write only data
         this->interrupt_enable_register = data;
+
         return;
     }
 }
@@ -213,7 +227,25 @@ void BUS::set_memory_word(const Word address, const Word data)
     this->set_memory(address, (data & 0x00ff));
     this->set_memory(address + 1, ((data & 0xff00) >> 8));
 }
-;
+
+void BUS::emulate()
+{
+    int currentCycles = 0;
+
+    while (currentCycles < CYCLES_PER_FRAME)
+    {
+        int cyclesUsed = this->cpu.fetch_decode_execute();
+        currentCycles += cyclesUsed;
+        this->cpu.update_timers(cyclesUsed);
+        //updategraphics
+        this->cpu.do_interrupts();
+    }
+
+    //update emulator screen
+}
+
+
+
 
 /// <summary>
 /// A function to load the bios into memory, as the bios is property of Nintendo, we can not legally release this emulator with the bios,
@@ -276,6 +308,7 @@ void BUS::init()
     this->set_memory(0xFF42,0x00); // LY
     this->set_memory(0xFF43,0x00); // LYC
     this->set_memory(0xFF44,0x00); // DMA
+    //this->set_memory(0xFF44,0x90); // DMA
     this->set_memory(0xFF45,0x00); // BGP
     this->set_memory(0xFF46,0xFF); // 0BP0
     this->set_memory(0xFF47,0xFC); // 0BP1

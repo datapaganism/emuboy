@@ -3,7 +3,6 @@
 #include "config.h"
 #include <iostream>
 
-#define DEBUG
 
 // forward declaration, bus.hpp is not included here but in cpu.cpp instead
 class BUS;
@@ -13,7 +12,7 @@ enum Flags
     z = 0b10000000, // Zero
     n = 0b01000000, // Subtraction
     h = 0b00100000, // Half Carry
-    c = 0b00010000, // Carry
+    c = 0b00010000  // Carry
 };
 
 enum JumpCondition
@@ -21,8 +20,19 @@ enum JumpCondition
     NZ,
     Z,
     NC,
-    C,
+    C
 };
+
+enum InterruptTypes
+{
+    vblank  = 0b00000001,
+    lcdstat = 0b00000010,
+    timer   = 0b00000100,
+    serial  = 0b00001000,
+    joypad  = 0b00010000,
+    
+};
+static const InterruptTypes InterruptTypes_all[] = { vblank, lcdstat, timer, serial, joypad };
 
 
 // The registers of the CPU, including SP and PC, access single registers directly, use functions to get combinations of registers as a word, nibble manipulation of single bytes as well.
@@ -84,14 +94,11 @@ class CPU
         
         BUS* bus = nullptr;
 
-
-  
-        
         /// <summary>
         /// sets up the CPU registers to fresh boot state.
         /// </summary>
         void init();
-        void init2();
+        void DEBUG_init();
         
         // The way I want the system to be emulated is to have master class where all the components are accessed, the address bus is how are going to achieve this,
         // the address bus has a cpu attached to it but the cpu itself needs to be connected to the bus to access other devices.
@@ -99,10 +106,14 @@ class CPU
     public:
         Registers registers;
 
+        
+
         CPU();
 
         void DEBUG_printCurrentState();
 
+
+        bool interrupt_master_enable = 0;
 
         /// <summary>
         /// Allows a CPU to access any device on the BUS
@@ -134,6 +145,22 @@ class CPU
         int CB_instruction_handler();
 
         int STOP_instruction_handler();
+
+        int do_interrupts();
+
+        
+        void request_interrupt(const enum InterruptTypes type);
+        Byte get_interrupt_flag(const enum InterruptTypes type, Word address);
+        void set_interrupt_flag(const enum InterruptTypes type, const bool value, Word address);
+ 
+
+        int timerIncrement = 0;
+        int divTimerIncrement = DIVinit;
+        void update_timers(const int cycles);
+        Byte get_TMC_frequency();
+        void update_timerIncrement();
+
+
 
 private:
 
