@@ -16,7 +16,7 @@
 #define XRES 160
 #define YRES 144
 
-#define RES_SCALING 1 // defined integer scaling
+#define RES_SCALING 3 // defined integer scaling
 
 #define EMULATOR_WINDOW_TITLE "emulator"
 
@@ -27,6 +27,7 @@
 #define Word_s int16_t
 
 #define WORKRAMOFFSET 0xc000
+#define IOOFFSET 0xFF00
 
 #define IF_REGISTER 0xFF0F
 #define IE_REGISTER 0xFFFF

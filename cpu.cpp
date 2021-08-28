@@ -2,6 +2,7 @@
 #include "bus.hpp"
 
 #include <iostream>
+#include <bitset>
 
 void CPU::DEBUG_printCurrentState()
 {
@@ -17,6 +18,8 @@ void CPU::DEBUG_printCurrentState()
     printf("%s:%i  ","n", this->registers.get_flag(n));
     printf("%s:%i  ","h", this->registers.get_flag(h));
     printf("%s:%i  ","c", this->registers.get_flag(c));
+    printf("%s:","0xFF00");
+    std::cout << std::bitset<8>(this->bus->io[0]);
 
     printf("\n");
 }
@@ -57,7 +60,7 @@ void CPU::DEBUG_init()
 CPU::CPU()
 {
     this->init();
-#ifdef DEBUG
+#if DEBUG 1
     this->DEBUG_init();
 #endif
 
@@ -198,6 +201,15 @@ void CPU::set_nibble(Byte* registerOne, const Byte value, const bool setHi)
             (setHi) ? *registerOne = ((*registerOne & 0x0F) | (value << 4)) : *registerOne = ((*registerOne & 0xF0) | value);
 }
 
+/// <summary>
+/// This is the master interrupt function, we need to emulate interrupts, There is a master switch for interrupt enable which takes prority over all interrupts, this is being modelled as a boolean inside the CPU class.
+/// The only way this bool is ever modified is during the DI and EI instructions of the processor.
+/// 
+/// interrupts need to be requested externally to the CPU, this is done with request_interrupt function, there are only 5 types of interrupts that can be requested, so when we enter an interrupt period in a different part of hardware we write to a special register stating the type of interrupt.
+/// Interrupts per type can be enabled or disabled accordingly modifiying using the IE register, if the master is enabled, then we need to check through each type of interrupt to see if it has been requested (and enabled, since if it has been requested but disabled then that interrupt will need to wait the next cpu cycle)
+/// if it has been requested then we aknowledge the interrupt by turning off the request flag and disabling the master interrupt switch, at that point we push the current program counter onto the stack and depending on the interrupt type set the program counter to its corresponding interrupt vector.
+/// </summary>
+/// <returns></returns>
 int CPU::do_interrupts()
 {
     int cyclesUsed = 0;
@@ -228,32 +240,45 @@ int CPU::do_interrupts()
                 case InterruptTypes::joypad  : { this->registers.pc = 0x0060; } break;
                 }
 
-                //cyclesUsed += 20;
+                cyclesUsed += 20;
             }
         }
     }
     return cyclesUsed;
 }
 
+/// <summary>
+/// This is the master function for handling the CPU timers, timers do not increment every CPU cycle but after a specified amount of cycles.
+/// Since there are two types of timers (normal timer and div timer) we need to store a rolling counter of how many cycles have been executed before the timer needs to advance.
+/// this is done in the divTimerCounter and timerCounter respectively, each hold the amount of cycles it takes for the counter to increment.
+/// 
+/// the div counter increments once every 256 counters, we remove the mount of cycles done this CPU 'tick' from divTimerCounter and when that reaches 0 or less then we increment the register at position DIV, however the Gameboy cannot directly write to postion DIV since every write will reset the register.
+/// so we access the io regsiters directly and increment the register.
+/// divCounter is reset back to its initial value and we can continue all over again.
+/// 
+/// the TAC, timer controller is responsible for two things, enabling the timer and setting the rate of increment, the 2nd bit of the TAC shows if it is enabled. we modify timerCounter and check if the register needs incrementing, of the value of the TIMA register is 0xFF (TIMA is like DIV) then we need to overfllow
+/// and when the TIMA overflows we set to the value of TMA and request an interrupt of type timer.
+/// </summary>
+/// <param name="cycles"></param>
 void CPU::update_timers(const int cycles)
 {
     //run the DIV timer, every 256cpu cycles we need to increment the DIV register once,
-    this->divTimerIncrement -= cycles;
-    if (this->divTimerIncrement <= 0)
+    this->divTimerCounter -= cycles;
+    if (this->divTimerCounter <= 0)
     {
-        this->divTimerIncrement = DIVinit;
+        this->divTimerCounter = DIVinit;
         //register is read only to gameboy
-        this->bus->io.at(DIV - 0xFF00)++;
+        this->bus->io.at(DIV - IOOFFSET)++;
     }
 
     // if TMC bit 2 is set, this means that the timer is enabled
     if (this->bus->get_memory(TAC) & (0b00000100))
     {
         //the timer increment holds the amount of cycles needed to tick TIMA register up one, we can decrement it and see if it has hit 0
-        this->timerIncrement -= cycles;
+        this->timerCounter -= cycles;
 
         // if the TIMA needs updating
-        if (this->timerIncrement <= 0)
+        if (this->timerCounter <= 0)
         {
             if (this->bus->get_memory(TIMA) == 0xFF)
             {
@@ -271,14 +296,14 @@ Byte CPU::get_TMC_frequency()
     return this->bus->get_memory(TAC) & 0x3;
 }
 
-void CPU::update_timerIncrement()
+void CPU::update_timerCounter()
 {
     switch (this->get_TMC_frequency())
     {
-    case 0: { this->timerIncrement = GB_CLOCKSPEED / 4096; } break;
-    case 1: { this->timerIncrement = GB_CLOCKSPEED / 262144; } break;
-    case 2: { this->timerIncrement = GB_CLOCKSPEED / 65536; } break;
-    case 3: { this->timerIncrement = GB_CLOCKSPEED / 16382; } break;
+    case 0: { this->timerCounter = GB_CLOCKSPEED / 4096; } break;
+    case 1: { this->timerCounter = GB_CLOCKSPEED / 262144; } break;
+    case 2: { this->timerCounter = GB_CLOCKSPEED / 65536; } break;
+    case 3: { this->timerCounter = GB_CLOCKSPEED / 16382; } break;
     }
 }
 
@@ -1159,7 +1184,7 @@ int CPU::ins_JP_nn(Word address)
     return 12;
 }
 
-int CPU::ins_JP_cc_nn(enum JumpCondition condition, Word address)
+int CPU::ins_JP_cc_nn(const enum JumpCondition condition, Word address)
 {
     switch (condition)
     {
@@ -1203,7 +1228,7 @@ int CPU::ins_JR_n(Byte_s jumpOffset)
     return 8;
 }
 
-int CPU::ins_JR_cc_n(JumpCondition condition, Byte_s jumpOffset)
+int CPU::ins_JR_cc_n(const enum JumpCondition condition, Byte_s jumpOffset)
 {
     switch (condition)
     {
@@ -1293,7 +1318,7 @@ int CPU::ins_RETI()
     return 12;
 }
 
-int CPU::ins_RET_cc(const JumpCondition condition)
+int CPU::ins_RET_cc(const enum JumpCondition condition)
 {
     switch (condition)
     {

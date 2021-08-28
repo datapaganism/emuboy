@@ -8,8 +8,9 @@ class RENDERER
         RENDERER();
         ~RENDERER();
         bool isRunning = true;
+        SDL_Renderer* renderer = nullptr;
+        SDL_Window* window = nullptr;
 
     private:
-        SDL_Renderer *renderer = nullptr;
-        SDL_Window *window = nullptr;
+        
 };

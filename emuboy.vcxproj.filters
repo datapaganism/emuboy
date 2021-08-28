@@ -67,5 +67,8 @@
     <ClInclude Include="ppu.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="joypad_mapping.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

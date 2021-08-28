@@ -306,14 +306,14 @@ int CPU::fetch_decode_execute()
     case 0xFF: { cyclesUsed = this->ins_RST_n(0xFF); } break;
     default:
     {
-        std::cout << "ILLEGAL OPCODE CALL " << opcode << "\n";
+        printf("ILLEGAL OPCODE CALL %0.2X \n", opcode);
         cyclesUsed = 4;
     }
     }
 
     this->interrupt_DI_EI_handler();
 
-#ifdef DEBUG
+#if DEBUG 1
 
 #define BREAKPOINTPC 0x020F
    

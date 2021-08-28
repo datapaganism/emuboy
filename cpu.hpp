@@ -142,32 +142,40 @@ class CPU
         /// <returns>The number of CPU cycles used</returns>
         int fetch_decode_execute();
 
-        int CB_instruction_handler();
-
-        int STOP_instruction_handler();
-
         int do_interrupts();
+        void update_timers(const int cycles);
+        void update_timerCounter();
+
+
+        void request_interrupt(const InterruptTypes type);
+
+private:
+
+      
 
         
-        void request_interrupt(const enum InterruptTypes type);
+        
+        
         Byte get_interrupt_flag(const enum InterruptTypes type, Word address);
         void set_interrupt_flag(const enum InterruptTypes type, const bool value, Word address);
  
 
-        int timerIncrement = 0;
-        int divTimerIncrement = DIVinit;
-        void update_timers(const int cycles);
+        int timerCounter = 0;
+        int divTimerCounter = DIVinit;
+
         Byte get_TMC_frequency();
-        void update_timerIncrement();
+        
 
 
 
-private:
+
 
     bool DI_triggered = false;
     bool EI_triggered = false;
 
     void interrupt_DI_EI_handler();
+    int CB_instruction_handler();
+    int STOP_instruction_handler();
 
         /// <summary>
         /// Takes two integers, evaluates whether the sum of the lower nibble carries over to the high nibble, sets flag accordingly.

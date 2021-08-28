@@ -1,5 +1,6 @@
 #include "bus.hpp"
 
+
 BUS::BUS()
 {
     this->cpu.connect_to_bus(this);
@@ -11,6 +12,45 @@ BUS::BUS(const std::string game_name, const std::string bios_name) : BUS::BUS()
 {
     this->gamepak = GAMEPAK(game_name);
     this->load_bios(bios_name);
+}
+
+
+void BUS::depressButton(const enum JoypadButtons button)
+{
+    switch (button)
+    {
+    case dRight:
+    case bA: { this->io.at(0xFF00 - IOOFFSET) |= (0b1 << 0) ; } break;
+    
+    case dLeft:
+    case bB: { this->io.at(0xFF00 - IOOFFSET) |= (0b1 << 1) ; } break;
+    
+    case dUp:
+    case bSelect: { this->io.at(0xFF00 - IOOFFSET) |= (0b1 << 2) ; } break;
+    
+    case dDown:
+    case bStart: { this->io.at(0xFF00 - IOOFFSET) |= (0b1 << 3) ; } break;
+    }
+}
+
+void BUS::pressButton(const enum JoypadButtons button)
+{
+    switch (button)
+    {
+    case dRight:
+    case bA: { this->io.at(0xFF00 - IOOFFSET) &= ~(0b1 << 0) ; } break;
+    
+    case dLeft:
+    case bB: { this->io.at(0xFF00 - IOOFFSET) &= ~(0b1 << 1) ; } break;
+    
+    case dUp:
+    case bSelect: { this->io.at(0xFF00 - IOOFFSET) &= ~(0b1 << 2) ; } break;
+    
+    case dDown:
+    case bStart: { this->io.at(0xFF00 - IOOFFSET) &= ~(0b1 << 3) ; } break;
+    }
+
+    this->cpu.request_interrupt(joypad);
 }
 
 
@@ -184,7 +224,7 @@ void BUS::set_memory(const Word address, const Byte data)
         if (address == TAC)
         {
             this->io.at(address - 0xFF00) = data;
-            this->cpu.update_timerIncrement();
+            this->cpu.update_timerCounter();
             return;
         }
         if (address == DIV)
@@ -238,7 +278,7 @@ void BUS::emulate()
         currentCycles += cyclesUsed;
         this->cpu.update_timers(cyclesUsed);
         //updategraphics
-        this->cpu.do_interrupts();
+        currentCycles += this->cpu.do_interrupts();
     }
 
     //update emulator screen
@@ -275,6 +315,7 @@ void BUS::load_bios(const std::string bios_name)
 void BUS::init()
 {
     this->set_memory(0xFF00,0xCF); // P1
+    //this->set_memory(0xFF00,0x00); // P1
     this->set_memory(0xFF01,0x00); // SB
     this->set_memory(0xFF02,0x7E); // SC
     this->set_memory(0xFF04,0xAB); // DIV

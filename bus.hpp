@@ -5,8 +5,11 @@
 #include "ppu.hpp"
 #include "config.h"
 #include <array>
+#include "joypad_mapping.h"
 
 
+//forward declaration of JoypadButtons mapping
+//enum JoypadButtons : int;
 
 
 
@@ -39,6 +42,9 @@ public:
     
 
     bool biosLoaded = false;
+
+    void pressButton(const enum JoypadButtons button);
+    void depressButton(const enum JoypadButtons button);
 
 
 

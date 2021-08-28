@@ -7,7 +7,7 @@
 #include <iostream>
 #include <bitset>
 #include <memory>
-
+#include "joypad_mapping.h"
 
 
 int main(int argv, char** args)
@@ -15,7 +15,7 @@ int main(int argv, char** args)
 
     //BUS bus("./roms/blargg/full.gb", "bios.bin");
     std::unique_ptr<BUS> bus;
-    bus = std::make_unique<BUS>("./roms/TETRIS.gb", "bio 5s.bin");
+    bus = std::make_unique<BUS>("./ROMS/TETRIS.gb", "bios .bin");
     // BUS bus("./roms/TETRIS.gb", "bios.bin");
     RENDERER renderer;
     
@@ -61,9 +61,16 @@ int main(int argv, char** args)
     
     double tickDelta = 0;
 
+    //mapping from sdl physical keys to virtual buttons for gameboy
+   
+    // the steps of emulation during the while loop
+    // 1. modify input registers as SDL polls for an event
+    // 2. run cpu, update timers, run graphics and sound chips, and do interrupts
+    // 3. renderer displays graphics from emulated state
+    // rinse and repeat
     while (renderer.isRunning)
     {
-        SDL_Event event;
+         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
             switch (event.type)
@@ -71,13 +78,58 @@ int main(int argv, char** args)
             case SDL_QUIT:
                 renderer.isRunning = false;
                 break;
+
+            case SDL_KEYDOWN:
+            {
+                int keyPressed = event.key.keysym.sym;
+                enum JoypadButtons pressed = keyToEnum(keyPressed);
+                if (pressed != UNKNOWN)
+                    bus->pressButton(pressed);
+               
+
+            } break;
+            case SDL_KEYUP:
+            {
+                int keyPressed = event.key.keysym.sym;
+                enum JoypadButtons pressed = keyToEnum(keyPressed);
+                if (pressed != UNKNOWN)
+                    bus->depressButton(pressed);
+
+            } break;
             };
+
+            
         }
+
+        SDL_RenderClear(renderer.renderer);
+        if ((bus->io[0] & 0xf))
+        {
+
+
+            SDL_Rect rect;
+            rect.x = 250;
+            rect.y = 150;
+            rect.w = 200;
+            rect.h = 200;
+
+            SDL_SetRenderDrawColor(renderer.renderer, 255, 255, 255, 255);
+            SDL_RenderDrawRect(renderer.renderer, &rect);
+
+            SDL_SetRenderDrawColor(renderer.renderer, 0, 0, 0, 255);
+
+            
+        }
+        SDL_RenderPresent(renderer.renderer);
+
 
         ticksNow = SDL_GetTicks();
         tickDelta = ticksNow - ticksPrevious;
 
-#ifdef TURBO
+
+
+
+
+#if TURBO 1
         bus->emulate();
 #else
         if (tickDelta > VSYNC)
