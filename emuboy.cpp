@@ -18,6 +18,10 @@ int main(int argv, char** args)
     bus = std::make_unique<BUS>("./ROMS/TETRIS.gb", "bios .bin");
     // BUS bus("./roms/TETRIS.gb", "bios.bin");
     RENDERER renderer;
+
+    int i = 1;
+    TILE tile0(bus.get(), 0x8000+(16*i));
+    tile0.consolePrint();
     
     //bus->ppu.tile.bytes_per_tile.at(0) = 0x02;
     //bus->ppu.tile.bytes_per_tile.at(1) = 0xFF;

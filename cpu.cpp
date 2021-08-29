@@ -429,16 +429,21 @@ int CPU::ins_LD_nn_SP(const Word address, const Word stackPointerValue)
 
 int CPU::ins_PUSH_nn(const Word wordRegisterValue)
 {
-    this->bus->set_memory_word(this->registers.sp, wordRegisterValue);
-    this->registers.sp -= 2;
+    this->bus->set_memory(this->registers.sp, ((wordRegisterValue & 0xff00) >> 8));
+    this->registers.sp--;
+    this->bus->set_memory(this->registers.sp, (wordRegisterValue & 0x00ff));
+    this->registers.sp--;
+
     return 16;
 }
 
 int CPU::ins_POP_nn(Byte* registerOne, Byte* registerTwo)
 {
-    *registerOne = (this->registers.sp & 0x00ff);
-    *registerTwo = ((this->registers.sp & 0xff00) >> 8);
-    this->registers.sp += 2;
+    this->registers.sp++;
+    *registerTwo = this->bus->get_memory(this->registers.sp);
+    this->registers.sp++;
+    *registerOne = this->bus->get_memory(this->registers.sp);
+
     return 12;
 }
 

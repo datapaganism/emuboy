@@ -314,7 +314,6 @@ int CPU::fetch_decode_execute()
     this->interrupt_DI_EI_handler();
 
 #if DEBUG 1
-
 #define BREAKPOINTPC 0x020F
    
     this->DEBUG_printCurrentState();
@@ -322,6 +321,7 @@ int CPU::fetch_decode_execute()
     {
         this->registers.pc = BREAKPOINTPC;
     }
+
 #endif // DEBUG
 
     

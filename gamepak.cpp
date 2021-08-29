@@ -23,3 +23,4 @@ GAMEPAK::GAMEPAK()
 {
 }
 
+// is gamepak even loaded into the bus???

@@ -88,7 +88,7 @@ Byte BUS::get_memory(const Word address)
     if (address <= 0x97ff) // from 0x8000         
     {
         // Tile Ram region
-        return this->video_ram.at(address - 0x8000);
+        //return this->video_ram.at(address - 0x8000);
         return 0b0;
     }
 
@@ -96,7 +96,7 @@ Byte BUS::get_memory(const Word address)
     {
         // background map region
         return this->video_ram.at(address - 0x8000);
-        return 0b0;
+        //return 0b0;
     }
 
     if (address <= 0xBFFF) // from 0xA000
@@ -176,13 +176,16 @@ void BUS::set_memory(const Word address, const Byte data)
 
     if (address <= 0x97ff)
     {
+
         // Tile Ram region
         this->video_ram.at(address - 0x8000) = data;
+        
         return;
     }
 
     if (address <= 0x9FFF)
     {
+
         // background map region
         this->video_ram.at(address - 0x8000) = data;
         return;
@@ -268,6 +271,11 @@ void BUS::set_memory_word(const Word address, const Word data)
     this->set_memory(address + 1, ((data & 0xff00) >> 8));
 }
 
+const Word BUS::get_memory_word_lsbf(const Word address)
+{
+        return (this->get_memory(address) | (this->get_memory(address + 1) << 8));
+}
+
 void BUS::emulate()
 {
     int currentCycles = 0;
@@ -315,7 +323,6 @@ void BUS::load_bios(const std::string bios_name)
 void BUS::init()
 {
     this->set_memory(0xFF00,0xCF); // P1
-    //this->set_memory(0xFF00,0x00); // P1
     this->set_memory(0xFF01,0x00); // SB
     this->set_memory(0xFF02,0x7E); // SC
     this->set_memory(0xFF04,0xAB); // DIV
@@ -349,7 +356,6 @@ void BUS::init()
     this->set_memory(0xFF42,0x00); // LY
     this->set_memory(0xFF43,0x00); // LYC
     this->set_memory(0xFF44,0x00); // DMA
-    //this->set_memory(0xFF44,0x90); // DMA
     this->set_memory(0xFF45,0x00); // BGP
     this->set_memory(0xFF46,0xFF); // 0BP0
     this->set_memory(0xFF47,0xFC); // 0BP1

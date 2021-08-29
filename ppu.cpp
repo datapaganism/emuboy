@@ -7,6 +7,19 @@ void PPU::connect_to_bus(BUS* pBus)
 	this->bus = pBus;
 }
 
+void TILE::consolePrint()
+{    
+	for (int y = 0; y < 8; y++)
+	{
+	    for (int x = 0; x < 8; x++)
+	    {
+	        this->getPixelColour(x, y);
+	        std::cout << " ";
+	    }
+	    std::cout << "\n";
+	}
+}
+
 void TILE::getPixelColour(int x, int y)
 {
 	int offset = (0b1 << (7 - x));
@@ -18,4 +31,18 @@ void TILE::getPixelColour(int x, int y)
 	std::cout << std::bitset<2>{result};
 
 	//return result;
+}
+
+TILE::TILE(BUS* bus, Word address) : TILE()
+{
+	for (int i = 0; i < 16; i++)
+	{
+		this->bytes_per_tile[0] = bus->get_memory(address + i);
+	}
+	
+}
+
+TILE::TILE()
+{
+	this->bytes_per_tile.fill(0x00);
 }

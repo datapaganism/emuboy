@@ -34,6 +34,9 @@ public:
     Byte get_memory(const Word address);
     void set_memory(const Word address, const Byte data);
     void set_memory_word(const Word address, const Word data);
+
+    const Word get_memory_word_lsbf(const Word address);
+    
     
     /// <summary>
     /// emulates an entire frame cycle of the system
