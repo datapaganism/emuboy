@@ -10,14 +10,18 @@
 #include "joypad_mapping.h"
 
 
+
 int main(int argv, char** args)
 {
+
+    
 
     //BUS bus("./roms/blargg/full.gb", "bios.bin");
     std::unique_ptr<BUS> bus;
     bus = std::make_unique<BUS>("./ROMS/TETRIS.gb", "bios .bin");
     // BUS bus("./roms/TETRIS.gb", "bios.bin");
     RENDERER renderer;
+
 
     int i = 1;
     TILE tile0(bus.get(), 0x8000+(16*i));

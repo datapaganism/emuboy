@@ -1,5 +1,73 @@
 #include "bus.hpp"
 
+Byte BUS::DEBUG_ascii_to_hex(char character)
+{
+    Byte temp = 0x0;
+    switch (character)
+    {
+    case '0': case '1': case '2':case '3':    case '4':    case '5':    case '6':    case '7':    case '8':    case '9': 
+    {
+        temp = character - '0';
+        return temp;
+        break;
+    }
+    case 'A':case 'B':case 'C':case 'D':case 'E':case 'F':
+    {
+        temp = (character - 'A') + 0xA;
+        return temp;
+        break;
+    }
+    default:
+        return 0;
+    }
+}
+
+// 3E 18 06 FF 90
+int BUS::DEBUG_opcode_program(Word address, std::string byteString, int cycles)
+{
+#include <iterator>
+    std::vector<Byte> byteArray;
+
+    Word temp = 0x0;
+
+    
+    for (auto itr = byteString.begin(); itr != byteString.end(); itr++)
+    {
+        auto character = *(itr);
+    
+        if (character == ' ' || itr == byteString.end() - 1)
+        {
+            // edge case handling but its bad
+            if (itr == byteString.end() - 1)
+            {
+                temp += this->DEBUG_ascii_to_hex(character);
+                temp = temp << 4;
+            }
+
+            byteArray.push_back(temp >> 4);
+            temp = 0x0;
+            continue;
+        }
+        temp += this->DEBUG_ascii_to_hex(character);
+        temp = temp << 4;
+    }
+
+    int i = 0;
+    for (Byte byte : byteArray)
+    {
+        this->set_memory(address + i, byte);
+        i++;
+    }
+
+    this->cpu.registers.pc = address;
+
+    int cyclesUsed = 0;
+    for (int i = 0; i < cycles; i++)
+    {
+        cyclesUsed = this->cpu.fetch_decode_execute();
+    }
+    return cyclesUsed;
+}
 
 BUS::BUS()
 {

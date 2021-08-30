@@ -47,6 +47,7 @@
     </None>
     <None Include="roms\TETRIS.gb" />
     <None Include="roms\blargg cpu.gb" />
+    <None Include="cpp.hint" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bus.hpp">

@@ -173,6 +173,10 @@
     <PostBuildEvent>
       <Command>lib /NOLOGO /OUT:"$(TargetPath).lib" "$(ProjectDir)$(IntDir)*.obj"</Command>
     </PostBuildEvent>
+    <PreLinkEvent>
+      <Command>
+      </Command>
+    </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Testing|x64'">
     <ClCompile>
@@ -217,6 +221,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="bios.bin" />
+    <None Include="cpp.hint" />
     <None Include="empty.bin" />
     <None Include="roms\blargg cpu.gb" />
     <None Include="roms\Pokemon - Yellow Version %28UE%29 [C][!].bin" />

@@ -40,20 +40,20 @@ void CPU::init()
     this->registers.l = 0x4d;
     this->registers.sp = 0xFFFE;
 }
-
-void CPU::DEBUG_init()
-{
-    this->registers.pc = 0x100;
-    this->registers.a = 0x11;
-    this->registers.b = 0x00;
-    this->registers.c = 0x00;
-    this->registers.d = 0xff;
-    this->registers.e = 0x56;
-    this->registers.f = 0x80;
-    this->registers.h = 0x00;
-    this->registers.l = 0x0d;
-    this->registers.sp = 0xFFFE;
-}
+//
+//void CPU::DEBUG_init()
+//{
+//    this->registers.pc = 0x100;
+//    this->registers.a = 0x11;
+//    this->registers.b = 0x00;
+//    this->registers.c = 0x00;
+//    this->registers.d = 0xff;
+//    this->registers.e = 0x56;
+//    this->registers.f = 0x80;
+//    this->registers.h = 0x00;
+//    this->registers.l = 0x0d;
+//    this->registers.sp = 0xFFFE;
+//}
 
 
 
@@ -532,10 +532,12 @@ int CPU::ins_SBC_A_n(const Byte* registerOne, const Byte immediateValue)
 {
     if (registerOne)
     {
-        this->ins_SUB_n(nullptr, *registerOne + this->registers.get_flag(c));
+        this->ins_SUB_n(nullptr, *registerOne);
+        this->registers.a -= +this->registers.get_flag(c);
         return 4;
     }
-    this->ins_SUB_n(nullptr, immediateValue + this->registers.get_flag(c));
+    this->ins_SUB_n(nullptr, immediateValue);
+    this->registers.a -= +this->registers.get_flag(c);
     return 8;
 }
 

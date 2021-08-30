@@ -1,5 +1,6 @@
 #pragma once
 
+
 #include "cpu.hpp"
 #include "gamepak.hpp"
 #include "ppu.hpp"
@@ -27,6 +28,14 @@ public:
     std::array<Byte, 0x2000> video_ram = { 0, };
     Byte interrupt_enable_register = 0;
     
+    Byte DEBUG_ascii_to_hex(char character);
+    /// <summary>
+    /// replaces area of memory with opcode string, useful for writing quick debugging programs
+    /// </summary>
+    /// <param name="address"></param>
+    /// <param name="byteString"></param>
+    int DEBUG_opcode_program(Word address, std::string byteString, int cycles);
+
 
     BUS();
     BUS(const std::string game_name, const std::string bios_name);

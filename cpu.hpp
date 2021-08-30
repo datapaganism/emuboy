@@ -98,7 +98,7 @@ class CPU
         /// sets up the CPU registers to fresh boot state.
         /// </summary>
         void init();
-        void DEBUG_init();
+        //void DEBUG_init();
         
         // The way I want the system to be emulated is to have master class where all the components are accessed, the address bus is how are going to achieve this,
         // the address bus has a cpu attached to it but the cpu itself needs to be connected to the bus to access other devices.
