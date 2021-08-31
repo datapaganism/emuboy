@@ -284,7 +284,7 @@ int CPU::fetch_decode_execute()
     //case 0xEB: { } break;
     //case 0xEC: { } break;
     //case 0xED: { } break;
-    case 0xEE: { this->ins_XOR_n(&this->registers.a, this->get_byte_from_pc()); } break;
+    case 0xEE: { cyclesUsed = this->ins_XOR_n(nullptr, this->get_byte_from_pc()); } break;
     case 0xEF: { cyclesUsed = this->ins_RST_n(0x28); } break;
 
     case 0xF0: { cyclesUsed = this->ins_LD_r1_nn(&this->registers.a, 0xFF00 + this->get_byte_from_pc(), 12); } break;
@@ -299,10 +299,10 @@ int CPU::fetch_decode_execute()
     case 0xF8: { cyclesUsed = this->ins_LDHL_SP_n(&this->registers.h, &this->registers.l, this->registers.sp, this->get_byte_from_pc()); } break;
     case 0xF9: { cyclesUsed = this->ins_LD_nn_nn(&this->registers.sp, this->registers.get_HL()); } break;
     case 0xFA: { cyclesUsed = this->ins_LD_r1_nn(&this->registers.a, this->get_word_from_pc_lsbf(), 16); } break;
-    case 0xFB: { this->EI_triggered = true; return 4; } break; // EI is set to trigger, finish instruction
+    case 0xFB: { cyclesUsed = this->EI_triggered = true; return 4; } break; // EI is set to trigger, finish instruction
     //case 0xFC: { } break;
     //case 0xFD: { } break;
-    case 0xFE: { this->ins_CP_n(&this->registers.a, this->get_byte_from_pc()); } break;
+    case 0xFE: { cyclesUsed = this->ins_CP_n(&this->registers.a, this->get_byte_from_pc()); } break;
     case 0xFF: { cyclesUsed = this->ins_RST_n(0xFF); } break;
     default:
     {
