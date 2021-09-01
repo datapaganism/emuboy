@@ -61,7 +61,7 @@ CPU::CPU()
 {
     this->init();
 #if DEBUG 1
-    this->DEBUG_init();
+    //this->DEBUG_init();
 #endif
 
 }

@@ -302,7 +302,7 @@ int CPU::fetch_decode_execute()
     case 0xFB: { cyclesUsed = this->EI_triggered = true; return 4; } break; // EI is set to trigger, finish instruction
     //case 0xFC: { } break;
     //case 0xFD: { } break;
-    case 0xFE: { cyclesUsed = this->ins_CP_n(&this->registers.a, this->get_byte_from_pc()); } break;
+    case 0xFE: { cyclesUsed = this->ins_CP_n(nullptr, this->get_byte_from_pc()); } break;
     case 0xFF: { cyclesUsed = this->ins_RST_n(0xFF); } break;
     default:
     {
