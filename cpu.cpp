@@ -108,25 +108,8 @@ void CPU::interrupt_DI_EI_handler()
 
 void CPU::checkHalfCarry(int a, int b)
 {
-    int sum = 0;
-
-    //16 bit half carry check
-    if (a > 0xff || b > 0xff)
-    {  
-        //make sum of lower bytes
-         sum = (a & 0xFF) + (b & 0xFF);
-
-         if ((sum & 0x100) == 0x100)
-         {
-             this->registers.set_flag(h, 1);
-             return;
-         }
-         this->registers.set_flag(h, 0);
-         return;
-    }
-  
     //add only the lower nibbles of the sum to each other
-     sum = (a & 0xf) + (b & 0xf);
+    int sum = (a & 0xf) + (b & 0xf);
 
     // if the 5th bit is set then we have had a carry over the nibble
     if ((sum & 0x10) == 0x10)
@@ -138,25 +121,40 @@ void CPU::checkHalfCarry(int a, int b)
     return;   
 }
 
-void CPU::checkCarry(const int a, const int b)
+void CPU::checkHalfCarryWord(int a, int b)
 {
-    
-    uint32_t sum = a + b;
+    //make sum of lower bytes
+    int sum = (a & 0xFF) + (b & 0xFF);
 
-    //check if we have Word addition
-    if (a > 0xff || b > 0xff)
-    {
-        if ((sum & 0x10000) == 0x10000)
+        if ((sum & 0x1000) == 0x1000)
         {
-            this->registers.set_flag(c, 1);
+            this->registers.set_flag(h, 1);
             return;
         }
-        this->registers.set_flag(c, 0);
+        this->registers.set_flag(h, 0);
         return;
-    }
 
+}
+
+void CPU::checkCarry(const int a, const int b)
+{
+    uint32_t sum = a + b;
 
     if ((sum & 0x100) == 0x100)
+    {
+        this->registers.set_flag(c, 1);
+        return;
+    }
+    this->registers.set_flag(c, 0);
+    return;
+}
+
+void CPU::checkCarryWord(const int a, const int b)
+{
+    uint32_t sum = a + b;
+
+    
+    if ((sum & 0x10000) == 0x10000)
     {
         this->registers.set_flag(c, 1);
         return;
@@ -413,7 +411,7 @@ int CPU::ins_LDHL_SP_n(Byte* wordRegisterNibbleHi, Byte* wordRegisterNibbleLo, c
     Word sum = stackPointerValue + value;
     this->registers.set_flag(z, 0);
     this->registers.set_flag(n, 0);
-    this->checkCarry(stackPointerValue, value);
+    this->checkCarryWord(stackPointerValue, value);
     this->checkHalfCarry(stackPointerValue, value);
 
     this->registers.set_word(wordRegisterNibbleHi, wordRegisterNibbleLo, sum);
@@ -716,8 +714,8 @@ int CPU::ins_DEC_n(Byte* registerOne, Word address)
 int CPU::ins_ADD_HL_n(const Word value)
 {
     Word HLvalue = this->registers.get_HL();
-    this->checkCarry(HLvalue, value);
-    this->checkHalfCarry(HLvalue, value);
+    this->checkCarryWord(HLvalue, value);
+    this->checkHalfCarryWord(HLvalue, value);
 
     this->registers.set_HL(HLvalue + value);
     
