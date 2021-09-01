@@ -715,10 +715,11 @@ int CPU::ins_DEC_n(Byte* registerOne, Word address)
 
 int CPU::ins_ADD_HL_n(const Word value)
 {
-    this->checkCarry(this->registers.get_HL(), value);
-    this->checkHalfCarry(this->registers.get_HL(), value);
+    Word HLvalue = this->registers.get_HL();
+    this->checkCarry(HLvalue, value);
+    this->checkHalfCarry(HLvalue, value);
 
-    this->registers.set_HL(value);
+    this->registers.set_HL(HLvalue + value);
     
     this->registers.set_flag(n, 0);
     return 8;
