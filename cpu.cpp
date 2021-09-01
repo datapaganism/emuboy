@@ -677,7 +677,7 @@ int CPU::ins_INC_n(Byte* registerOne, Word address)
     // perform addition
     this->bus->set_memory(address, (this->bus->get_memory(address) + 1));
     //evaluate z flag an clear the n flag
-    (*registerOne == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+    (this->bus->get_memory(address) == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
     this->registers.set_flag(n, 0);
 
     return 12;
