@@ -183,10 +183,14 @@ private:
       
         void checkHalfCarry(const int a, const int b);
         void checkHalfCarryWord(int a, int b);
+
         void checkCarry(const int a, const int b);
         void checkCarryWord(const int a, const int b);
         void checkHalfBorrow(const int a, const int b);
         void checkBorrow(const int a, const int b);
+
+        void checkHalfBorrowWord(const int a, const int b);
+
 
         Byte get_nibble(const Byte input, const bool getHi);
        

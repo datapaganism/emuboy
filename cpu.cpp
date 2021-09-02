@@ -185,7 +185,17 @@ void CPU::checkBorrow(const int a, const int b)
     this->registers.set_flag(c, 1);
     return;
     
+}void CPU::checkHalfBorrowWord(const int a, const int b)
+{
+    if ((a & 0xff) >= (b & 0xff))
+    {
+        this->registers.set_flag(h, 0);
+        return;
+    }
+    this->registers.set_flag(h, 1);
+    return;
 }
+
 
 Byte CPU::get_nibble(const Byte input, const bool getHi)
 {
@@ -412,6 +422,7 @@ int CPU::ins_LDHL_SP_n(Byte* wordRegisterNibbleHi, Byte* wordRegisterNibbleLo, c
     this->registers.set_flag(z, 0);
     this->registers.set_flag(n, 0);
     this->checkCarryWord(stackPointerValue, value);
+    // this is weird, wrong behaviour when using checkHalfCarryWord
     this->checkHalfCarry(stackPointerValue, value);
 
     this->registers.set_word(wordRegisterNibbleHi, wordRegisterNibbleLo, sum);
@@ -728,15 +739,14 @@ int CPU::ins_ADD_SP_n(const Byte_s value)
     //if negative
     if (value < 0)
     {
-        this->checkBorrow(this->registers.sp, value);
-        this->checkHalfBorrow(this->registers.sp, value);
-        this->registers.sp += value;
-        this->registers.set_flag(z, 0);
-        this->registers.set_flag(n, 0);
-        return 16;
+        this->checkBorrow((this->registers.sp & 0xff), value);
+        this->checkHalfCarry(this->registers.sp, value);
     }
-    this->checkCarry(this->registers.sp, value);
-    this->checkHalfCarry(this->registers.sp, value);
+    else
+    {
+        this->checkCarry((Byte)(this->registers.sp & 0xff), value);
+        this->checkHalfCarry(this->registers.sp, value);
+    }
     this->registers.sp += value;
     this->registers.set_flag(z, 0);
     this->registers.set_flag(n, 0);
