@@ -811,21 +811,24 @@ int CPU::ins_DAA()
     // however we need to check if the value in register A actually means a negative which we check N flag and then subract 6 instead of adding it
     
     // temp store of offset we will use
+
+
+    //DAA is used after addition or subtraction to fix the BCD value. So if we take the decimal numbers 42 and add 9, we expect to get 51. But if we do this with BCD values, we'll get $4B instead. Executing DAA after this addition will adjust $4B to $51 as expected. The first if determines whether we need to ...
     Byte nibbleOfset = 0x0;
     
     // temp store of value of the carry bit, set to reset
     bool carry = false;
 
     // check if lower nibble is bigger than 9
-    if ((this->registers.a & 0x0F) > 9)
+    if ((this->registers.a) > 9)
     {
-        nibbleOfset += 6;
+        nibbleOfset += 0x6;
     }
 
     // check if higher nibble is bigger than 90, set carry to true
-    if ((this->registers.a & 0xF0) > 90)
+    if ((this->registers.a& 0xF0) > 90)
     {
-        nibbleOfset += 60;
+        nibbleOfset += 0x60;
         carry = true;
     }
 
@@ -833,17 +836,16 @@ int CPU::ins_DAA()
     if (this->registers.get_flag(n))
         nibbleOfset *= -1;
 
+    this->checkCarry(this->registers.a, nibbleOfset);
+
     // perfrom bcd conversion
     this->registers.a += nibbleOfset;
 
     // set carry flag and half to 0
-    this->registers.set_flag(c,carry);
     this->registers.set_flag(h, 0);
 
     // check z flag status
-    if (this->registers.a == 0)
-        this->registers.set_flag(z, 1);
-
+    (this->registers.a == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
 
     return 4;
 }
