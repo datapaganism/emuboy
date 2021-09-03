@@ -778,13 +778,24 @@ int CPU::ins_DEC_nn(Byte* registerOne, Byte* registerTwo, Word* stackPointer)
 
 int CPU::ins_SWAP_nn(Byte* registerOne, Word address)
 {
+    int cyclesUsed = 0;
     if (registerOne)
     {
         *registerOne = (this->get_nibble(*registerOne, false) << 4) + this->get_nibble(*registerOne, true);
-        return 8;
+        (*registerOne == 0x0) ? this->registers.set_flag(z, true) : this->registers.set_flag(z, false);
+        cyclesUsed = 8;
     }
-    this->bus->set_memory(address, (this->get_nibble(this->bus->get_memory(address), false) << 4) + this->get_nibble(this->bus->get_memory(address), true));
-    return 16;
+    else
+    {
+        this->bus->set_memory(address, (this->get_nibble(this->bus->get_memory(address), false) << 4) + this->get_nibble(this->bus->get_memory(address), true));
+        (this->bus->get_memory(address) == 0x0) ? this->registers.set_flag(z, true) : this->registers.set_flag(z, false);
+        cyclesUsed = 16;
+    }
+    this->registers.set_flag(n, false);
+    this->registers.set_flag(h, false);
+    this->registers.set_flag(c, false);
+
+    return cyclesUsed;
 }
 
 int CPU::ins_DAA()
