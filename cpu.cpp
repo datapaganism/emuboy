@@ -917,14 +917,15 @@ int CPU::ins_RLA()
     // swap leftest most bit with the carry flag, then rotate to the left
     
     Byte flagCarry = this->registers.get_flag(c);
-    bool registerCarry = (this->registers.a & 0x80 >> 7);
+    bool registerCarry = ((this->registers.a & 0x80) >> 7);
 
     this->registers.a = (this->registers.a << 1) | (flagCarry);
 
     this->registers.set_flag(c, registerCarry);
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
-    this->registers.set_flag(z, 0);
+    (this->registers.a == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+
     
     return 4;
 }
@@ -937,7 +938,8 @@ int CPU::ins_RRCA()
 
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
-    this->registers.set_flag(z, 0);
+    (this->registers.a == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+
 
     return 4;
 }
@@ -952,7 +954,8 @@ int CPU::ins_RRA()
     this->registers.set_flag(c, registerCarry);
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
-    this->registers.set_flag(z, 0);
+    (this->registers.a == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+
 
     return 4;
 }
@@ -966,23 +969,23 @@ int CPU::ins_RLC(Byte* registerOne, Word address)
 
         this->registers.set_flag(n,0);
         this->registers.set_flag(h,0);
+        (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
 
-        if (*registerOne == 0x0)
-            this->registers.set_flag(z, 1);
 
         return 8;
     }
 
     Byte temp = this->bus->get_memory(address);
+    Byte result = ((temp << 1) | (temp >> 7));
 
     this->registers.set_flag(c, (temp & 0x80 >> 7));
-    this->bus->set_memory(address,((temp << 1) | (temp >> 7)));
+   
+    this->bus->set_memory(address,result);
 
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
+    (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
 
-    if (temp == 0x0)
-        this->registers.set_flag(z, 1);
 
     return 16;
 }
@@ -1001,23 +1004,23 @@ int CPU::ins_RL(Byte* registerOne, Word address)
         this->registers.set_flag(n, 0);
         this->registers.set_flag(h, 0);
 
-        if (*registerOne == 0x0)
-            this->registers.set_flag(z, 1);
+        (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+
 
         return 8;
     }
 
     Byte temp = this->bus->get_memory(address);
-
+    Byte result = ((temp << 1) | (flagCarry));
     newCarry = (temp & 0x80 >> 7);
-    this->bus->set_memory(address, ((temp << 1) | (flagCarry)));
+    this->bus->set_memory(address, result);
 
     this->registers.set_flag(c, newCarry);
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
 
-    if (temp == 0x0)
-        this->registers.set_flag(z, 1);
+    (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+
 
     return 16;
 }
@@ -1032,22 +1035,22 @@ int CPU::ins_RRC(Byte* registerOne, Word address)
         this->registers.set_flag(n, 0);
         this->registers.set_flag(h, 0);
 
-        if (*registerOne == 0x0)
-            this->registers.set_flag(z, 1);
+        (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+
 
         return 8;
     }
 
     Byte temp = this->bus->get_memory(address);
+    Byte result = ((temp >> 1) | (temp << 7));
 
     this->registers.set_flag(c, (temp & 0x1));
-    this->bus->set_memory(address, ((temp >> 1) | (temp << 7)));
+    this->bus->set_memory(address, result);
 
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
 
-    if (temp == 0x0)
-        this->registers.set_flag(z, 1);
+    (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
 
     return 16;
 }
@@ -1066,23 +1069,23 @@ int CPU::ins_RR(Byte* registerOne, Word address)
         this->registers.set_flag(n, 0);
         this->registers.set_flag(h, 0);
 
-        if (*registerOne == 0x0)
-            this->registers.set_flag(z, 1);
+        (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
 
         return 8;
     }
 
     Byte temp = this->bus->get_memory(address);
-
+    Byte result = ((temp >> 1) | (flagCarry << 7));
     newCarry = (temp & 0x01);
-    this->bus->set_memory(address, ((temp >> 1) | (flagCarry << 7)));
+    this->bus->set_memory(address, result);
 
     this->registers.set_flag(c, newCarry);
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
 
-    if (temp == 0x0)
-        this->registers.set_flag(z, 1);
+
+    (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+
 
     return 16;
 }
@@ -1097,21 +1100,21 @@ int CPU::ins_SLA(Byte* registerOne, Word address)
         this->registers.set_flag(n, 0);
         this->registers.set_flag(h, 0);
 
-        if (*registerOne == 0x0)
-            this->registers.set_flag(z, 1);
+
+        (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
 
         return 8;
     }
     Byte temp = this->bus->get_memory(address);
+    Byte result = temp << 1;
 
     this->registers.set_flag(c, temp & 0x80 >> 7);
-    this->bus->set_memory(address, temp << 1);
+    this->bus->set_memory(address, result);
 
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
 
-    if (temp == 0x0)
-        this->registers.set_flag(z, 1);
+    (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
 
     return 16;
 }
@@ -1130,22 +1133,24 @@ int CPU::ins_SRA_n(Byte* registerOne, Word address)
         this->registers.set_flag(n, 0);
         this->registers.set_flag(h, 0);
 
-        if (*registerOne == 0x0)
-            this->registers.set_flag(z, 1);
+
+        (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+
 
         return 8;
     }
     Byte temp = this->bus->get_memory(address);
-
+    Byte result = temp >> 1 | (bit7 << 7);
     this->registers.set_flag(c, temp & 0x1);
     bit7 = temp >> 7;
-    this->bus->set_memory(address, temp >> 1 | (bit7 << 7));
+    this->bus->set_memory(address, result);
 
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
 
-    if (temp == 0x0)
-        this->registers.set_flag(z, 1);
+
+    (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+
 
     return 16;
 }
@@ -1162,22 +1167,24 @@ int CPU::ins_SRL_n(Byte* registerOne, Word address)
         this->registers.set_flag(n, 0);
         this->registers.set_flag(h, 0);
 
-        if (*registerOne == 0x0)
-            this->registers.set_flag(z, 1);
+
+        (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+
 
         return 8;
     }
     Byte temp = this->bus->get_memory(address);
+    Byte result = temp >> 1;
 
     this->registers.set_flag(c, temp & 0x1);
 
-    this->bus->set_memory(address, temp >> 1);
+    this->bus->set_memory(address, result);
 
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
 
-    if (temp == 0x0)
-        this->registers.set_flag(z, 1);
+    (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+
 
     return 16;
 }
@@ -1194,9 +1201,8 @@ int CPU::ins_BIT_b_r(Byte bit, Byte* registerOne, Word address)
 
         return 8;
     }
-
-    if ((this->bus->get_memory(address) & (1 << bit)) == 0)
-        this->registers.set_flag(n, 1);
+    
+    ((this->bus->get_memory(address) & (1 << bit)) == 0) ? this->registers.set_flag(n, 1) : this->registers.set_flag(n, 0);
 
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 1);
