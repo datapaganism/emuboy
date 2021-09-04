@@ -814,37 +814,58 @@ int CPU::ins_DAA()
 
 
     //DAA is used after addition or subtraction to fix the BCD value. So if we take the decimal numbers 42 and add 9, we expect to get 51. But if we do this with BCD values, we'll get $4B instead. Executing DAA after this addition will adjust $4B to $51 as expected. The first if determines whether we need to ...
-    Byte nibbleOfset = 0x0;
+    Byte adjust = 0x0;
+
+    bool flagZ = this->registers.get_flag(z);
+    bool flagN = this->registers.get_flag(n);
+    bool flagH = this->registers.get_flag(h);
+    bool flagC = this->registers.get_flag(c);
     
     // temp store of value of the carry bit, set to reset
-    bool carry = false;
+    bool need_carry = false;
 
-    // check if lower nibble is bigger than 9
-    if ((this->registers.a) > 9)
+    // check if lower nibble is bigger than 9 or flag H is set
+    if (((this->registers.a) > 9) || flagH)
     {
-        nibbleOfset += 0x6;
+        adjust += 0x6;
     }
 
     // check if higher nibble is bigger than 90, set carry to true
-    if ((this->registers.a& 0xF0) > 90)
+    if (((this->registers.a & 0xF0) > 90) || flagC)
     {
-        nibbleOfset += 0x60;
-        carry = true;
+        adjust += 0x60;
+        need_carry = true;
     }
 
-    // check state of the n flag
-    if (this->registers.get_flag(n))
-        nibbleOfset *= -1;
+    if (flagN && flagC)
+    {
 
-    this->checkCarry(this->registers.a, nibbleOfset);
+        need_carry = true;
+        adjust = 0xA0;
+    }
+    if (flagH && flagC)
+    {
 
-    // perfrom bcd conversion
-    this->registers.a += nibbleOfset;
+        need_carry = true;
+        adjust = 0x66;
+    }
+    if (flagH && flagN)
+        adjust = 0xFA;
 
-    // set carry flag and half to 0
+    if (flagH && flagN && flagC)
+    {
+        need_carry = true;
+        adjust = 0x9A;
+    }
+
+
+    //this->checkCarry(this->registers.a, adjust);
+   (need_carry) ? this->registers.set_flag(c, 1) : this->registers.set_flag(c, 0);
+        
     this->registers.set_flag(h, 0);
 
-    // check z flag status
+    this->registers.a += adjust;
+
     (this->registers.a == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
 
     return 4;

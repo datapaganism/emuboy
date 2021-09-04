@@ -69,7 +69,7 @@ int CPU::fetch_decode_execute()
     case 0x2C: { cyclesUsed = this->ins_INC_n(&this->registers.l); } break;
     case 0x2D: { cyclesUsed = this->ins_DEC_n(&this->registers.l); } break;
     case 0x2E: { cyclesUsed = this->ins_LD_nn_n(&this->registers.l, this->get_byte_from_pc()); } break;
-    case 0x2F: { cyclesUsed = this->ins_CP_n(); } break;
+    case 0x2F: { cyclesUsed = this->ins_CPL(); } break;
 
     case 0x30: { cyclesUsed = this->ins_JR_cc_n(NC, this->get_byte_from_pc()); } break;
     case 0x31: { cyclesUsed = this->ins_LD_n_nn(&this->registers.sp, nullptr, nullptr, this->get_word_from_pc_lsbf()); } break;
