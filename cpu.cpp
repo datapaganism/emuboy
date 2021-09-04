@@ -885,7 +885,7 @@ int CPU::ins_CCF()
     this->registers.set_flag(n,0);
     this->registers.set_flag(h,0);
 
-    (this->registers.get_flag(c))? this->registers.set_flag(c,0) : this->registers.set_flag(c, 1);
+    (this->registers.get_flag(c) == true)? this->registers.set_flag(c,0) : this->registers.set_flag(c, 1);
     return 4;
 }
 
@@ -903,11 +903,11 @@ int CPU::ins_RCLA()
     this->registers.set_flag(c, (this->registers.a & 0x80 >> 7));
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
-    this->registers.set_flag(z, 0);
 
     // move everything to the left by one, toggle bit 0 with bit 7 shifted right 7 places
     this->registers.a = (this->registers.a << 1) | (this->registers.a >> (7));
 
+    (this->registers.a == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
 
     return 4;
 }
