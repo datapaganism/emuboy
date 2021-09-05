@@ -907,7 +907,7 @@ int CPU::ins_RCLA()
     // move everything to the left by one, toggle bit 0 with bit 7 shifted right 7 places
     this->registers.a = (this->registers.a << 1) | (this->registers.a >> (7));
 
-    (this->registers.a == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+    this->registers.set_flag(z, 0);
 
     return 4;
 }
@@ -924,7 +924,7 @@ int CPU::ins_RLA()
     this->registers.set_flag(c, registerCarry);
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
-    (this->registers.a == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+    this->registers.set_flag(z, 0);
 
     
     return 4;
@@ -938,7 +938,7 @@ int CPU::ins_RRCA()
 
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
-    (this->registers.a == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+    this->registers.set_flag(z, 0);
 
 
     return 4;
@@ -954,7 +954,7 @@ int CPU::ins_RRA()
     this->registers.set_flag(c, registerCarry);
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
-    (this->registers.a == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+    this->registers.set_flag(z, 0);
 
 
     return 4;
