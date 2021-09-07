@@ -814,37 +814,58 @@ int CPU::ins_DAA()
 
 
     //DAA is used after addition or subtraction to fix the BCD value. So if we take the decimal numbers 42 and add 9, we expect to get 51. But if we do this with BCD values, we'll get $4B instead. Executing DAA after this addition will adjust $4B to $51 as expected. The first if determines whether we need to ...
-    Byte nibbleOfset = 0x0;
+    Byte adjust = 0x0;
+
+    bool flagZ = this->registers.get_flag(z);
+    bool flagN = this->registers.get_flag(n);
+    bool flagH = this->registers.get_flag(h);
+    bool flagC = this->registers.get_flag(c);
     
     // temp store of value of the carry bit, set to reset
-    bool carry = false;
+    bool need_carry = false;
 
-    // check if lower nibble is bigger than 9
-    if ((this->registers.a) > 9)
+    // check if lower nibble is bigger than 9 or flag H is set
+    if (((this->registers.a) > 9) || flagH)
     {
-        nibbleOfset += 0x6;
+        adjust += 0x6;
     }
 
     // check if higher nibble is bigger than 90, set carry to true
-    if ((this->registers.a& 0xF0) > 90)
+    if (((this->registers.a & 0xF0) > 90) || flagC)
     {
-        nibbleOfset += 0x60;
-        carry = true;
+        adjust += 0x60;
+        need_carry = true;
     }
 
-    // check state of the n flag
-    if (this->registers.get_flag(n))
-        nibbleOfset *= -1;
+    if (flagN && flagC)
+    {
 
-    this->checkCarry(this->registers.a, nibbleOfset);
+        need_carry = true;
+        adjust = 0xA0;
+    }
+    if (flagH && flagC)
+    {
 
-    // perfrom bcd conversion
-    this->registers.a += nibbleOfset;
+        need_carry = true;
+        adjust = 0x66;
+    }
+    if (flagH && flagN)
+        adjust = 0xFA;
 
-    // set carry flag and half to 0
+    if (flagH && flagN && flagC)
+    {
+        need_carry = true;
+        adjust = 0x9A;
+    }
+
+
+    //this->checkCarry(this->registers.a, adjust);
+   (need_carry) ? this->registers.set_flag(c, 1) : this->registers.set_flag(c, 0);
+        
     this->registers.set_flag(h, 0);
 
-    // check z flag status
+    this->registers.a += adjust;
+
     (this->registers.a == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
 
     return 4;
@@ -864,7 +885,7 @@ int CPU::ins_CCF()
     this->registers.set_flag(n,0);
     this->registers.set_flag(h,0);
 
-    (this->registers.get_flag(c))? this->registers.set_flag(c,0) : this->registers.set_flag(c, 1);
+    (this->registers.get_flag(c) == true)? this->registers.set_flag(c,0) : this->registers.set_flag(c, 1);
     return 4;
 }
 
@@ -882,11 +903,11 @@ int CPU::ins_RCLA()
     this->registers.set_flag(c, (this->registers.a & 0x80 >> 7));
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
-    this->registers.set_flag(z, 0);
 
     // move everything to the left by one, toggle bit 0 with bit 7 shifted right 7 places
     this->registers.a = (this->registers.a << 1) | (this->registers.a >> (7));
 
+    this->registers.set_flag(z, 0);
 
     return 4;
 }
@@ -896,7 +917,7 @@ int CPU::ins_RLA()
     // swap leftest most bit with the carry flag, then rotate to the left
     
     Byte flagCarry = this->registers.get_flag(c);
-    bool registerCarry = (this->registers.a & 0x80 >> 7);
+    bool registerCarry = ((this->registers.a & 0x80) >> 7);
 
     this->registers.a = (this->registers.a << 1) | (flagCarry);
 
@@ -904,6 +925,7 @@ int CPU::ins_RLA()
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
     this->registers.set_flag(z, 0);
+
     
     return 4;
 }
@@ -917,6 +939,7 @@ int CPU::ins_RRCA()
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
     this->registers.set_flag(z, 0);
+
 
     return 4;
 }
@@ -933,6 +956,7 @@ int CPU::ins_RRA()
     this->registers.set_flag(h, 0);
     this->registers.set_flag(z, 0);
 
+
     return 4;
 }
 
@@ -945,23 +969,23 @@ int CPU::ins_RLC(Byte* registerOne, Word address)
 
         this->registers.set_flag(n,0);
         this->registers.set_flag(h,0);
+        (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
 
-        if (*registerOne == 0x0)
-            this->registers.set_flag(z, 1);
 
         return 8;
     }
 
     Byte temp = this->bus->get_memory(address);
+    Byte result = ((temp << 1) | (temp >> 7));
 
     this->registers.set_flag(c, (temp & 0x80 >> 7));
-    this->bus->set_memory(address,((temp << 1) | (temp >> 7)));
+   
+    this->bus->set_memory(address,result);
 
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
+    (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
 
-    if (temp == 0x0)
-        this->registers.set_flag(z, 1);
 
     return 16;
 }
@@ -980,23 +1004,23 @@ int CPU::ins_RL(Byte* registerOne, Word address)
         this->registers.set_flag(n, 0);
         this->registers.set_flag(h, 0);
 
-        if (*registerOne == 0x0)
-            this->registers.set_flag(z, 1);
+        (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+
 
         return 8;
     }
 
     Byte temp = this->bus->get_memory(address);
-
+    Byte result = ((temp << 1) | (flagCarry));
     newCarry = (temp & 0x80 >> 7);
-    this->bus->set_memory(address, ((temp << 1) | (flagCarry)));
+    this->bus->set_memory(address, result);
 
     this->registers.set_flag(c, newCarry);
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
 
-    if (temp == 0x0)
-        this->registers.set_flag(z, 1);
+    (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+
 
     return 16;
 }
@@ -1011,22 +1035,22 @@ int CPU::ins_RRC(Byte* registerOne, Word address)
         this->registers.set_flag(n, 0);
         this->registers.set_flag(h, 0);
 
-        if (*registerOne == 0x0)
-            this->registers.set_flag(z, 1);
+        (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+
 
         return 8;
     }
 
     Byte temp = this->bus->get_memory(address);
+    Byte result = ((temp >> 1) | (temp << 7));
 
     this->registers.set_flag(c, (temp & 0x1));
-    this->bus->set_memory(address, ((temp >> 1) | (temp << 7)));
+    this->bus->set_memory(address, result);
 
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
 
-    if (temp == 0x0)
-        this->registers.set_flag(z, 1);
+    (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
 
     return 16;
 }
@@ -1045,23 +1069,23 @@ int CPU::ins_RR(Byte* registerOne, Word address)
         this->registers.set_flag(n, 0);
         this->registers.set_flag(h, 0);
 
-        if (*registerOne == 0x0)
-            this->registers.set_flag(z, 1);
+        (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
 
         return 8;
     }
 
     Byte temp = this->bus->get_memory(address);
-
+    Byte result = ((temp >> 1) | (flagCarry << 7));
     newCarry = (temp & 0x01);
-    this->bus->set_memory(address, ((temp >> 1) | (flagCarry << 7)));
+    this->bus->set_memory(address, result);
 
     this->registers.set_flag(c, newCarry);
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
 
-    if (temp == 0x0)
-        this->registers.set_flag(z, 1);
+
+    (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+
 
     return 16;
 }
@@ -1076,21 +1100,21 @@ int CPU::ins_SLA(Byte* registerOne, Word address)
         this->registers.set_flag(n, 0);
         this->registers.set_flag(h, 0);
 
-        if (*registerOne == 0x0)
-            this->registers.set_flag(z, 1);
+
+        (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
 
         return 8;
     }
     Byte temp = this->bus->get_memory(address);
+    Byte result = temp << 1;
 
     this->registers.set_flag(c, temp & 0x80 >> 7);
-    this->bus->set_memory(address, temp << 1);
+    this->bus->set_memory(address, result);
 
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
 
-    if (temp == 0x0)
-        this->registers.set_flag(z, 1);
+    (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
 
     return 16;
 }
@@ -1109,22 +1133,24 @@ int CPU::ins_SRA_n(Byte* registerOne, Word address)
         this->registers.set_flag(n, 0);
         this->registers.set_flag(h, 0);
 
-        if (*registerOne == 0x0)
-            this->registers.set_flag(z, 1);
+
+        (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+
 
         return 8;
     }
     Byte temp = this->bus->get_memory(address);
-
+    Byte result = temp >> 1 | (bit7 << 7);
     this->registers.set_flag(c, temp & 0x1);
     bit7 = temp >> 7;
-    this->bus->set_memory(address, temp >> 1 | (bit7 << 7));
+    this->bus->set_memory(address, result);
 
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
 
-    if (temp == 0x0)
-        this->registers.set_flag(z, 1);
+
+    (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+
 
     return 16;
 }
@@ -1141,22 +1167,24 @@ int CPU::ins_SRL_n(Byte* registerOne, Word address)
         this->registers.set_flag(n, 0);
         this->registers.set_flag(h, 0);
 
-        if (*registerOne == 0x0)
-            this->registers.set_flag(z, 1);
+
+        (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+
 
         return 8;
     }
     Byte temp = this->bus->get_memory(address);
+    Byte result = temp >> 1;
 
     this->registers.set_flag(c, temp & 0x1);
 
-    this->bus->set_memory(address, temp >> 1);
+    this->bus->set_memory(address, result);
 
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
 
-    if (temp == 0x0)
-        this->registers.set_flag(z, 1);
+    (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+
 
     return 16;
 }
@@ -1173,9 +1201,8 @@ int CPU::ins_BIT_b_r(Byte bit, Byte* registerOne, Word address)
 
         return 8;
     }
-
-    if ((this->bus->get_memory(address) & (1 << bit)) == 0)
-        this->registers.set_flag(n, 1);
+    
+    ((this->bus->get_memory(address) & (1 << bit)) == 0) ? this->registers.set_flag(n, 1) : this->registers.set_flag(n, 0);
 
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 1);
