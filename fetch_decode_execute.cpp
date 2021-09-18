@@ -24,7 +24,7 @@ int CPU::fetch_decode_execute()
     case 0x04: { cyclesUsed = this->ins_INC_n(&this->registers.b); } break;
     case 0x05: { cyclesUsed = this->ins_DEC_n(&this->registers.b); } break;
     case 0x06: { cyclesUsed = this->ins_LD_nn_n(&this->registers.b, this->get_byte_from_pc()); } break;
-    case 0x07: { cyclesUsed = this->ins_RCLA(); } break;
+    case 0x07: { cyclesUsed = this->ins_RLCA(); } break;
    
     case 0x08: { cyclesUsed = this->ins_LD_nn_SP(this->get_word_from_pc_lsbf(), this->registers.sp); } break;
     case 0x09: { cyclesUsed = this->ins_ADD_HL_n(this->registers.get_BC()); } break;

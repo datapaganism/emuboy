@@ -897,7 +897,7 @@ int CPU::ins_SCF()
     return 4;
 }
 
-int CPU::ins_RCLA()
+int CPU::ins_RLCA()
 {
     //set c flag to whatever is the value of the leftest bit from register a
     this->registers.set_flag(c, (this->registers.a & 0x80 >> 7));
@@ -907,6 +907,7 @@ int CPU::ins_RCLA()
     // move everything to the left by one, toggle bit 0 with bit 7 shifted right 7 places
     this->registers.a = (this->registers.a << 1) | (this->registers.a >> (7));
 
+    // z is reset
     this->registers.set_flag(z, 0);
 
     return 4;

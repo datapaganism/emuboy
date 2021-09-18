@@ -222,7 +222,7 @@ private:
         int ins_CCF();
         int ins_SCF();
 
-        int ins_RCLA();
+        int ins_RLCA();
         int ins_RLA();
         
         int ins_RRCA();
