@@ -1095,7 +1095,7 @@ int CPU::ins_SLA(Byte* registerOne, Word address)
 {
     if (registerOne)
     {
-        this->registers.set_flag(c,*registerOne & 0x80 >> 7);
+        this->registers.set_flag(c,(*registerOne & 0x80) >> 7);
         *registerOne = *registerOne << 1;
 
         this->registers.set_flag(n, 0);
