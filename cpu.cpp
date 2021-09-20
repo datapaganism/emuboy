@@ -1194,8 +1194,7 @@ int CPU::ins_BIT_b_r(Byte bit, Byte* registerOne, Word address)
 {
     if (registerOne)
     {
-        if ((*registerOne & (1 << bit)) == 0)
-            this->registers.set_flag(n, 1);
+        ((*registerOne & (1 << bit)) == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
 
         this->registers.set_flag(n,0);
         this->registers.set_flag(h,1);
@@ -1203,7 +1202,7 @@ int CPU::ins_BIT_b_r(Byte bit, Byte* registerOne, Word address)
         return 8;
     }
     
-    ((this->bus->get_memory(address) & (1 << bit)) == 0) ? this->registers.set_flag(n, 1) : this->registers.set_flag(n, 0);
+    ((this->bus->get_memory(address) & (1 << bit)) == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
 
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 1);
