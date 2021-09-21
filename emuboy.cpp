@@ -18,10 +18,16 @@ int main(int argv, char** args)
 
     //BUS bus("./roms/blargg/full.gb", "bios.bin");
     std::unique_ptr<BUS> bus;
-    bus = std::make_unique<BUS>("./ROMS/TETRIS.gb", "bios .bin");
+    bus = std::make_unique<BUS>("./roms/TETRIS.gb", "bios.bin");
     // BUS bus("./roms/TETRIS.gb", "bios.bin");
     RENDERER renderer;
 
+    bus.get()->ppu.fifo_bg.push(FIFO_pixel(01,01,1,1));
+
+    bus.get()->ppu.fifo_bg.pop();
+    bus.get()->ppu.fifo_bg.pop();
+
+    bus.get()->ppu.fifo_bg.push(FIFO_pixel(01, 01, 1, 1));
 
     int i = 1;
     TILE tile0(bus.get(), 0x8000+(16*i));
@@ -113,15 +119,22 @@ int main(int argv, char** args)
         if ((bus->io[0] & 0xf))
         {
 
-
+            SDL_SetRenderDrawColor(renderer.renderer, rand() % 255, rand() % 255, rand() % 255, 255);
             SDL_Rect rect;
             rect.x = 250;
             rect.y = 150;
             rect.w = 200;
             rect.h = 200;
+            SDL_RenderFillRect(renderer.renderer, &rect);
 
-            SDL_SetRenderDrawColor(renderer.renderer, 255, 255, 255, 255);
-            SDL_RenderDrawRect(renderer.renderer, &rect);
+            SDL_SetRenderDrawColor(renderer.renderer, rand() % 255, rand() % 255, rand() % 255, 255);
+            SDL_Rect rect1;
+            rect1.x = 200;
+            rect1.y = 100;
+            rect1.w = 200;
+            rect1.h = 200;
+            SDL_RenderFillRect(renderer.renderer, &rect1);
+
 
             SDL_SetRenderDrawColor(renderer.renderer, 0, 0, 0, 255);
 

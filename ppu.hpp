@@ -12,6 +12,44 @@ class BUS;
 // since each pixel is two bits, it takes 2 bytes of data store a single 8pixel line from a tile, and since there are 8 x 8 tiles, it takes 16 bytes for each tile.
 // the first byte represents the 1 first bit of every pixel in the top line, the second byte represents
 
+
+// emulation wise, the display is rendered like a crt display, I think the approach to take for this
+// is to emulate the ppu into an array framebuffer, this buffer can be modified each cpu cycle,
+// and then render the screen every frame by rendering the contents of the framebuffer, the
+// framebuffer should hold pixel colour values.
+
+
+
+
+/*
+ possible rendering solution
+
+
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+		SDL_RenderClear(renderer);
+
+		for (int x = 0; x < gb_width; x++)
+		{
+			for (int y = 0; y < gb_HEIGHT; y++)
+			{
+				if (display == on)
+				{
+					colour[3] = this->framebuffer.get_colour(x,y);
+					SDL_SetRenderDrawColor(renderer.renderer, colour[0],colour[1],colour[2], 255);
+					SDL_Rect r;
+					r.x = x * WINDOW_MULTIPLIER;
+					r.y = y * WINDOW_MULTIPLIER;
+					r.w = WINDOW_MULTIPLIER;
+					r.h = WINDOW_MULTIPLIER;
+					SDL_RenderFillRect(renderer, &r);
+				}
+			}
+		}
+
+		SDL_RenderPresent(renderer);
+
+
+*/
 struct TILE
 {
 	std::array<Byte, 16> bytes_per_tile = { 0, };
@@ -24,13 +62,58 @@ struct TILE
 
 };
 
+struct FIFO_pixel
+{
+	Byte colour : 2;
+	Byte palette : 3;
+	bool sprite_priority;
+	bool bg_priority;
+
+	FIFO_pixel()
+	{
+		this->bg_priority = 0;
+		this->sprite_priority = 0;
+		this->colour = 0;
+		this->palette = 0;
+	};
+
+	FIFO_pixel(Byte colour, Byte palette, bool sprite_priority, bool bg_priority) : FIFO_pixel()
+	{
+		this->colour = colour;
+		this->palette = palette;
+		this->sprite_priority = sprite_priority;
+		this->bg_priority = bg_priority;
+	}
+};
+
+class FIFO
+{
+public:
+	FIFO();
+	
+	std::array<FIFO_pixel, 16> queue;
+
+	void push(FIFO_pixel pixel);
+
+	FIFO_pixel pop();
+
+private:
+	Byte tail_pos = 0;
+
+};
+
+
 class PPU
 {
 public:
+	PPU();
 	void init();
 	void connect_to_bus(BUS* pBus);
 
 	TILE tile;
+
+	FIFO fifo_bg;
+	FIFO fifo_sprite;
 
 
 

@@ -46,3 +46,36 @@ TILE::TILE()
 {
 	this->bytes_per_tile.fill(0x00);
 }
+
+PPU::PPU()
+{};
+
+
+
+void FIFO::push(FIFO_pixel pixel)
+{
+	if (tail_pos <= 16)
+	{
+		this->queue[tail_pos++] = pixel;
+	}
+}
+
+FIFO_pixel FIFO::pop()
+{
+	if (tail_pos > 0)
+	{
+		FIFO_pixel temp = this->queue[0];
+		for (int i = 0; i < this->tail_pos - 1; i++)
+		{
+			this->queue[i] = this->queue[i + 1];
+		}
+		memset(&this->queue[this->tail_pos - 1], 0, sizeof(FIFO_pixel));
+		this->tail_pos--;
+
+		return temp;
+	}
+}
+
+FIFO::FIFO()
+{
+}

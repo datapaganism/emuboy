@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#define DEBUG 1
+#define DEBUG 0
 #define TURBO 0
 
 
@@ -68,3 +68,8 @@
 // hz = 131072 / (2048 - gb)
 
 
+#define GB_PALLETE_OFF 0xFFFFFFFF
+#define GB_PALLETE_00  0xE0F8D0FF 
+#define GB_PALLETE_01  0x88c070FF 
+#define GB_PALLETE_10  0x346856FF
+#define GB_PALLETE_11  0x081820FF
