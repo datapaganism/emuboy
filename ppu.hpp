@@ -50,6 +50,31 @@ class BUS;
 
 
 */
+
+struct FRAMEBUFFER_PIXEL
+{
+	FRAMEBUFFER_PIXEL(Byte red, Byte blue, Byte green, Byte alpha) : FRAMEBUFFER_PIXEL()
+	{
+		this->red = red;
+		this->blue = blue;
+		this->green = green;
+		this->alpha = alpha;
+	}
+
+	FRAMEBUFFER_PIXEL()
+	{
+		this->red = 0x0;
+		this->blue = 0x0;
+		this->green = 0x0;
+		this->alpha = 0x0;
+	}
+
+	Byte red;
+	Byte blue;
+	Byte green;
+	Byte alpha;
+};
+
 struct TILE
 {
 	std::array<Byte, 16> bytes_per_tile = { 0, };
@@ -102,6 +127,16 @@ private:
 
 };
 
+//struct FRAMEBUFFER
+//{
+//	std::array<FRAMEBUFFER_PIXEL, XRES* YRES> framebuffer;
+//
+//	FRAMEBUFFER()
+//	{
+//		this->framebuffer.fill(FRAMEBUFFER_PIXEL(0xFF, 0xFF, 0xFF, 0xFF));
+//	}
+//};
+//
 
 class PPU
 {
@@ -110,6 +145,8 @@ public:
 	void init();
 	void connect_to_bus(BUS* pBus);
 
+	FRAMEBUFFER_PIXEL framebuffer[XRES * YRES];
+	
 	TILE tile;
 
 	FIFO fifo_bg;

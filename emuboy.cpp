@@ -115,32 +115,32 @@ int main(int argv, char** args)
             
         }
 
-        SDL_RenderClear(renderer.renderer);
-        if ((bus->io[0] & 0xf))
-        {
+        //SDL_RenderClear(renderer.renderer);
+        //if ((bus->io[0] & 0xf))
+        //{
 
-            SDL_SetRenderDrawColor(renderer.renderer, rand() % 255, rand() % 255, rand() % 255, 255);
-            SDL_Rect rect;
-            rect.x = 250;
-            rect.y = 150;
-            rect.w = 200;
-            rect.h = 200;
-            SDL_RenderFillRect(renderer.renderer, &rect);
+        //    SDL_SetRenderDrawColor(renderer.renderer, rand() % 255, rand() % 255, rand() % 255, 255);
+        //    SDL_Rect rect;
+        //    rect.x = 250;
+        //    rect.y = 150;
+        //    rect.w = 200;
+        //    rect.h = 200;
+        //    SDL_RenderFillRect(renderer.renderer, &rect);
 
-            SDL_SetRenderDrawColor(renderer.renderer, rand() % 255, rand() % 255, rand() % 255, 255);
-            SDL_Rect rect1;
-            rect1.x = 200;
-            rect1.y = 100;
-            rect1.w = 200;
-            rect1.h = 200;
-            SDL_RenderFillRect(renderer.renderer, &rect1);
+        //    SDL_SetRenderDrawColor(renderer.renderer, rand() % 255, rand() % 255, rand() % 255, 255);
+        //    SDL_Rect rect1;
+        //    rect1.x = 200;
+        //    rect1.y = 100;
+        //    rect1.w = 200;
+        //    rect1.h = 200;
+        //    SDL_RenderFillRect(renderer.renderer, &rect1);
 
 
-            SDL_SetRenderDrawColor(renderer.renderer, 0, 0, 0, 255);
+        //    SDL_SetRenderDrawColor(renderer.renderer, 0, 0, 0, 255);
 
-            
-        }
-        SDL_RenderPresent(renderer.renderer);
+        //    
+        //}
+        //SDL_RenderPresent(renderer.renderer);
 
 
         ticksNow = SDL_GetTicks();
@@ -162,6 +162,28 @@ int main(int argv, char** args)
         }
 #endif // TURBO
 
+        SDL_SetRenderDrawColor(renderer.renderer, 0, 0, 0, 0);
+        SDL_RenderClear(renderer.renderer);
+
+        for (int y = 0; y < YRES; y++)
+        {
+            for (int x = 0; x < XRES; x++)
+            {
+                //if (display == on)
+                //{
+                    auto pixel = bus->ppu.framebuffer[x + (XRES * y)];
+                    SDL_SetRenderDrawColor(renderer.renderer, pixel.red, pixel.blue, pixel.green, pixel.alpha);
+                    SDL_Rect r;
+                    r.x = x * RES_SCALING;
+                    r.y = y * RES_SCALING;
+                    r.w = RES_SCALING;
+                    r.h = RES_SCALING;
+                    SDL_RenderFillRect(renderer.renderer, &r);
+                //}
+            }
+        }
+
+        SDL_RenderPresent(renderer.renderer);
         
 
 

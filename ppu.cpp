@@ -48,7 +48,15 @@ TILE::TILE()
 }
 
 PPU::PPU()
-{};
+{
+	for (auto& pixel : this->framebuffer)
+	{
+		pixel = FRAMEBUFFER_PIXEL(0xFF, 0xFF, 0xFF, 0xFF);
+	}
+	//this->framebuffer.fill(FRAMEBUFFER_PIXEL(0xFF, 0xFF, 0xFF, 0xFF));
+	//int x = 133, y = 26;
+	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF, 0xFF);
+};
 
 
 

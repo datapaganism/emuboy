@@ -16,7 +16,7 @@
 #define XRES 160
 #define YRES 144
 
-#define RES_SCALING 3 // defined integer scaling
+#define RES_SCALING 4 // defined integer scaling
 
 #define EMULATOR_WINDOW_TITLE "emulator"
 
