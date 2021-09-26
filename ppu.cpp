@@ -38,8 +38,7 @@ TILE::TILE(BUS* bus, Word address) : TILE()
 	for (int i = 0; i < 16; i++)
 	{
 		this->bytes_per_tile[0] = bus->get_memory(address + i);
-	}
-	
+	}	
 }
 
 TILE::TILE()
@@ -51,11 +50,49 @@ PPU::PPU()
 {
 	for (auto& pixel : this->framebuffer)
 	{
-		pixel = FRAMEBUFFER_PIXEL(0xFF, 0xFF, 0xFF, 0xFF);
+		pixel = FRAMEBUFFER_PIXEL(0xFF, 0xFF, 0xFF);
 	}
-	//this->framebuffer.fill(FRAMEBUFFER_PIXEL(0xFF, 0xFF, 0xFF, 0xFF));
-	//int x = 133, y = 26;
-	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF, 0xFF);
+
+	
+	//int x = 3, y = 2;
+	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
+	//x = 4, y = 2;
+	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
+
+	//x = 6, y = 2;
+	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
+	//x = 7, y = 2;
+	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
+
+	//x = 2, y = 3;
+	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
+
+	//x = 5, y = 3;
+	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
+
+	//x = 8, y = 3;
+	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
+
+	//x = 2, y = 4;
+	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
+
+	//x = 8, y = 4;
+	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
+
+	//x = 3, y = 5;
+	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
+
+	//x = 7, y = 5;
+	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
+
+	//x = 4, y = 6;
+	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
+
+	//x = 6, y = 6;
+	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
+
+	//x = 5, y = 7;
+	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
 };
 
 

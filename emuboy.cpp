@@ -22,6 +22,8 @@ int main(int argv, char** args)
     // BUS bus("./roms/TETRIS.gb", "bios.bin");
     RENDERER renderer;
 
+
+    // testing fifo
     bus.get()->ppu.fifo_bg.push(FIFO_pixel(01,01,1,1));
 
     bus.get()->ppu.fifo_bg.pop();
@@ -29,6 +31,7 @@ int main(int argv, char** args)
 
     bus.get()->ppu.fifo_bg.push(FIFO_pixel(01, 01, 1, 1));
 
+    // testing printing tile from ram, I dont think the emulator has yet to copy data into ram so this is a bit of a fail
     int i = 1;
     TILE tile0(bus.get(), 0x8000+(16*i));
     tile0.consolePrint();
@@ -70,7 +73,6 @@ int main(int argv, char** args)
 
     bus->cpu.DEBUG_printCurrentState();
     
-    
     unsigned int ticksNow = 0, ticksPrevious = 0;
     
     double tickDelta = 0;
@@ -84,7 +86,8 @@ int main(int argv, char** args)
     // rinse and repeat
     while (renderer.isRunning)
     {
-         SDL_Event event;
+        // Process events and inputs
+        SDL_Event event;
         while (SDL_PollEvent(&event))
         {
             switch (event.type)
@@ -99,8 +102,6 @@ int main(int argv, char** args)
                 enum JoypadButtons pressed = keyToEnum(keyPressed);
                 if (pressed != UNKNOWN)
                     bus->pressButton(pressed);
-               
-
             } break;
             case SDL_KEYUP:
             {
@@ -108,88 +109,27 @@ int main(int argv, char** args)
                 enum JoypadButtons pressed = keyToEnum(keyPressed);
                 if (pressed != UNKNOWN)
                     bus->depressButton(pressed);
-
             } break;
             };
-
-            
         }
-
-        //SDL_RenderClear(renderer.renderer);
-        //if ((bus->io[0] & 0xf))
-        //{
-
-        //    SDL_SetRenderDrawColor(renderer.renderer, rand() % 255, rand() % 255, rand() % 255, 255);
-        //    SDL_Rect rect;
-        //    rect.x = 250;
-        //    rect.y = 150;
-        //    rect.w = 200;
-        //    rect.h = 200;
-        //    SDL_RenderFillRect(renderer.renderer, &rect);
-
-        //    SDL_SetRenderDrawColor(renderer.renderer, rand() % 255, rand() % 255, rand() % 255, 255);
-        //    SDL_Rect rect1;
-        //    rect1.x = 200;
-        //    rect1.y = 100;
-        //    rect1.w = 200;
-        //    rect1.h = 200;
-        //    SDL_RenderFillRect(renderer.renderer, &rect1);
-
-
-        //    SDL_SetRenderDrawColor(renderer.renderer, 0, 0, 0, 255);
-
-        //    
-        //}
-        //SDL_RenderPresent(renderer.renderer);
-
-
         ticksNow = SDL_GetTicks();
         tickDelta = ticksNow - ticksPrevious;
 
-
-
-
-
 #if TURBO 1
-        bus->emulate();
+        bus->cycle_system_one_frame();
 #else
+        // Emulate a single frame's worth of CPU instructions
         if (tickDelta > VSYNC)
         {
-            std::cout << "fps: " << 1000 / tickDelta << std::endl;
+            //std::cout << "fps: " << 1000 / tickDelta << std::endl;
             ticksPrevious = ticksNow;
 
-            bus->emulate();
+            bus->cycle_system_one_frame();
         }
 #endif // TURBO
 
-        SDL_SetRenderDrawColor(renderer.renderer, 0, 0, 0, 0);
-        SDL_RenderClear(renderer.renderer);
-
-        for (int y = 0; y < YRES; y++)
-        {
-            for (int x = 0; x < XRES; x++)
-            {
-                //if (display == on)
-                //{
-                    auto pixel = bus->ppu.framebuffer[x + (XRES * y)];
-                    SDL_SetRenderDrawColor(renderer.renderer, pixel.red, pixel.blue, pixel.green, pixel.alpha);
-                    SDL_Rect r;
-                    r.x = x * RES_SCALING;
-                    r.y = y * RES_SCALING;
-                    r.w = RES_SCALING;
-                    r.h = RES_SCALING;
-                    SDL_RenderFillRect(renderer.renderer, &r);
-                //}
-            }
-        }
-
-        SDL_RenderPresent(renderer.renderer);
-        
-
-
-        //std::cout << bus->cpu.fetch_decode_execute() << "\n";
-        /*bus->cpu.fetch_decode_execute();
-        bus->cpu.do_interrupts();*/
+        //Render framebuffer
+        renderer.render_frame(bus.get());
     }
    
     return 0;

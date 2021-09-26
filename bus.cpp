@@ -344,7 +344,7 @@ const Word BUS::get_memory_word_lsbf(const Word address)
         return (this->get_memory(address) | (this->get_memory(address + 1) << 8));
 }
 
-void BUS::emulate()
+void BUS::cycle_system_one_frame()
 {
     int currentCycles = 0;
 
@@ -357,7 +357,11 @@ void BUS::emulate()
         currentCycles += this->cpu.do_interrupts();
     }
 
-    //update emulator screen
+
+    for (auto& pixel : this->ppu.framebuffer)
+    {
+        pixel = FRAMEBUFFER_PIXEL(rand() % 0xFF, rand() % 0xFF, rand() % 0xFF);
+    }
 }
 
 

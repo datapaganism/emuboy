@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SDL.h"
+#include "bus.hpp"
 
 class RENDERER
 {
@@ -11,6 +12,7 @@ class RENDERER
         SDL_Renderer* renderer = nullptr;
         SDL_Window* window = nullptr;
 
+        void render_frame(BUS *bus);
     private:
         
 };

@@ -50,8 +50,6 @@ public:
     Word sp = 0;
     Word pc = 0;
 
-
-
     const Word get_AF() { return this->get_word(&this->a, &this->f); };
     const Word get_BC() { return this->get_word(&this->b, &this->c); };
     const Word get_DE() { return this->get_word(&this->d, &this->e); };
@@ -72,7 +70,6 @@ public:
         (value) ? this->f |= flag : this->f &= ~flag;
     }
 
-
     const Word get_word(Byte* registerOne, Byte* registerTwo)
     {
         return ((*registerOne << 8) | *registerTwo);
@@ -88,8 +85,7 @@ public:
 
 class CPU
 {
-
-    
+   
     private:
         
         BUS* bus = nullptr;
@@ -98,7 +94,6 @@ class CPU
         /// sets up the CPU registers to fresh boot state.
         /// </summary>
         void init();
-        //void DEBUG_init();
         
         // The way I want the system to be emulated is to have master class where all the components are accessed, the address bus is how are going to achieve this,
         // the address bus has a cpu attached to it but the cpu itself needs to be connected to the bus to access other devices.
@@ -131,7 +126,7 @@ class CPU
         const Word get_word_from_pc_lsbf();
 
         /// <summary>
-        /// A function that emulates the execution of the CPU in one go
+        /// Function that emulates a single cpu instrcution.
         /// </summary>
         /// <returns>The number of CPU cycles used</returns>
         int fetch_decode_execute();
@@ -148,8 +143,8 @@ private:
         void set_interrupt_flag(const enum InterruptTypes type, const bool value, Word address);
  
         int timerCounter = 0;
-
         int divTimerCounter = DIVinit;
+
         Byte get_TMC_frequency();
         
         bool DI_triggered = false;
@@ -173,8 +168,7 @@ private:
         Byte get_nibble(const Byte input, const bool getHi);
         void set_nibble(Byte* registerOne, const Byte value, const bool setHi);
        
-
-
+        // Instructions
         int ins_LD_nn_n(Byte* registerOne, const Byte value);
         int ins_LD_r1_r2(Byte* registerOne = nullptr, const Word address = NULL, Byte* registerTwo = nullptr, const Byte value = NULL);
 
