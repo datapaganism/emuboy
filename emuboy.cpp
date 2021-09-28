@@ -13,27 +13,39 @@
 
 int main(int argv, char** args)
 {
-
-    
-
     //BUS bus("./roms/blargg/full.gb", "bios.bin");
-    std::unique_ptr<BUS> bus;
-    bus = std::make_unique<BUS>("./roms/TETRIS.gb", "bios.bin");
-    // BUS bus("./roms/TETRIS.gb", "bios.bin");
+    //std::unique_ptr<BUS> bus;
+    //bus = std::make_unique<BUS>("./roms/TETRIS.gb", "bios.bin");
+    BUS bus("./roms/TETRIS.gb", "bios.bin");
     RENDERER renderer;
 
-
     // testing fifo
-    bus.get()->ppu.fifo_bg.push(FIFO_pixel(01,01,1,1));
+    bus.ppu.fifo_bg.push(FIFO_pixel(01,01,1,1));
 
-    bus.get()->ppu.fifo_bg.pop();
-    bus.get()->ppu.fifo_bg.pop();
+    bus.ppu.fifo_bg.pop();
+    bus.ppu.fifo_bg.pop();
 
-    bus.get()->ppu.fifo_bg.push(FIFO_pixel(01, 01, 1, 1));
+    bus.ppu.fifo_bg.push(FIFO_pixel(01, 01, 1, 1));
 
-    // testing printing tile from ram, I dont think the emulator has yet to copy data into ram so this is a bit of a fail
-    int i = 1;
-    TILE tile0(bus.get(), 0x8000+(16*i));
+    bus.video_ram[0x8010 - 0x8000] = 0xF0;
+    bus.video_ram[0x8011 - 0x8000] = 0x00;
+    bus.video_ram[0x8012 - 0x8000] = 0xF0;
+    bus.video_ram[0x8013 - 0x8000] = 0x00;
+    bus.video_ram[0x8014 - 0x8000] = 0xFC;
+    bus.video_ram[0x8015 - 0x8000] = 0x00;
+    bus.video_ram[0x8016 - 0x8000] = 0xFC;
+    bus.video_ram[0x8017 - 0x8000] = 0x00;
+    bus.video_ram[0x8018 - 0x8000] = 0xFC;
+    bus.video_ram[0x8019 - 0x8000] = 0x00;
+    bus.video_ram[0x801a - 0x8000] = 0xFC;
+    bus.video_ram[0x801b - 0x8000] = 0x00;
+    bus.video_ram[0x801c - 0x8000] = 0xF3;
+    bus.video_ram[0x801d - 0x8000] = 0x00;
+    bus.video_ram[0x801e - 0x8000] = 0xF3;
+    bus.video_ram[0x801f - 0x8000] = 0x00;
+
+    int i = 0;
+    TILE tile0(&bus, 0x8010+(16*i));
     tile0.consolePrint();
     
     //bus->ppu.tile.bytes_per_tile.at(0) = 0x02;
@@ -71,7 +83,7 @@ int main(int argv, char** args)
     //}
 
 
-    bus->cpu.DEBUG_printCurrentState();
+    bus.cpu.DEBUG_printCurrentState();
     
     unsigned int ticksNow = 0, ticksPrevious = 0;
     
@@ -101,14 +113,14 @@ int main(int argv, char** args)
                 int keyPressed = event.key.keysym.sym;
                 enum JoypadButtons pressed = keyToEnum(keyPressed);
                 if (pressed != UNKNOWN)
-                    bus->pressButton(pressed);
+                    bus.pressButton(pressed);
             } break;
             case SDL_KEYUP:
             {
                 int keyPressed = event.key.keysym.sym;
                 enum JoypadButtons pressed = keyToEnum(keyPressed);
                 if (pressed != UNKNOWN)
-                    bus->depressButton(pressed);
+                    bus.pressButton(pressed);
             } break;
             };
         }
@@ -124,12 +136,13 @@ int main(int argv, char** args)
             //std::cout << "fps: " << 1000 / tickDelta << std::endl;
             ticksPrevious = ticksNow;
 
-            bus->cycle_system_one_frame();
+            bus.cycle_system_one_frame();
         }
 #endif // TURBO
 
         //Render framebuffer
-        renderer.render_frame(bus.get());
+        renderer.render_frame(&bus);
+
     }
    
     return 0;

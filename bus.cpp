@@ -88,16 +88,16 @@ void BUS::depressButton(const enum JoypadButtons button)
     switch (button)
     {
     case dRight:
-    case bA: { this->io.at(0xFF00 - IOOFFSET) |= (0b1 << 0) ; } break;
+    case bA: { this->io[0xFF00 - IOOFFSET] |= (0b1 << 0) ; } break;
     
     case dLeft:
-    case bB: { this->io.at(0xFF00 - IOOFFSET) |= (0b1 << 1) ; } break;
+    case bB: { this->io[0xFF00 - IOOFFSET] |= (0b1 << 1) ; } break;
     
     case dUp:
-    case bSelect: { this->io.at(0xFF00 - IOOFFSET) |= (0b1 << 2) ; } break;
+    case bSelect: { this->io[0xFF00 - IOOFFSET] |= (0b1 << 2) ; } break;
     
     case dDown:
-    case bStart: { this->io.at(0xFF00 - IOOFFSET) |= (0b1 << 3) ; } break;
+    case bStart: { this->io[0xFF00 - IOOFFSET] |= (0b1 << 3) ; } break;
     }
 }
 
@@ -106,16 +106,16 @@ void BUS::pressButton(const enum JoypadButtons button)
     switch (button)
     {
     case dRight:
-    case bA: { this->io.at(0xFF00 - IOOFFSET) &= ~(0b1 << 0) ; } break;
+    case bA: { this->io[0xFF00 - IOOFFSET] &= ~(0b1 << 0) ; } break;
     
     case dLeft:
-    case bB: { this->io.at(0xFF00 - IOOFFSET) &= ~(0b1 << 1) ; } break;
+    case bB: { this->io[0xFF00 - IOOFFSET] &= ~(0b1 << 1) ; } break;
     
     case dUp:
-    case bSelect: { this->io.at(0xFF00 - IOOFFSET) &= ~(0b1 << 2) ; } break;
+    case bSelect: { this->io[0xFF00 - IOOFFSET] &= ~(0b1 << 2) ; } break;
     
     case dDown:
-    case bStart: { this->io.at(0xFF00 - IOOFFSET) &= ~(0b1 << 3) ; } break;
+    case bStart: { this->io[0xFF00 - IOOFFSET] &= ~(0b1 << 3) ; } break;
     }
 
     this->cpu.request_interrupt(joypad);
@@ -150,20 +150,20 @@ Byte BUS::get_memory(const Word address)
 
         //banking is not implemented but we will just now read the whole cart
         return this->gamepak.rom[address];
-        return 0b0;
+  //      return 0b0;
     }
 
     if (address <= 0x97ff) // from 0x8000         
     {
         // Tile Ram region
-        //return this->video_ram.at(address - 0x8000);
-        return 0b0;
+        return this->video_ram[address - 0x8000];
+//        return 0b0;
     }
 
     if (address <= 0x9FFF) // from 0x9800
     {
         // background map region
-        return this->video_ram.at(address - 0x8000);
+        return this->video_ram[address - 0x8000];
         //return 0b0;
     }
 
@@ -176,7 +176,7 @@ Byte BUS::get_memory(const Word address)
     if (address <= 0xDFFF) // from 0xC000
     {
         // working ram
-        return this->work_ram.at(address - 0xC000);
+        return this->work_ram[address - 0xC000];
     }
 
     if (address <= 0xFDFF) // from 0xE000
@@ -199,7 +199,13 @@ Byte BUS::get_memory(const Word address)
     if (address <= 0xFF4B) // from 0xFF00
     {
         // i/o registers
-        return this->io.at(address - 0xFF00);
+
+        if (address == 0xFF26) // NR52
+        {
+
+        }
+
+        return this->io[address - 0xFF00];
     }
     if (address <= 0xFF7F) // from 0xFF4C
     {
@@ -209,7 +215,7 @@ Byte BUS::get_memory(const Word address)
     if (address <= 0xFFFE) // from 0xFF80
     {
         // high ram area
-        return this->high_ram.at(address-0xFF80);
+        return this->high_ram[address-0xFF80];
     }
     if (address <= 0xFFFF) // from 0xFFFF, yep
     {
@@ -245,9 +251,15 @@ void BUS::set_memory(const Word address, const Byte data)
     if (address <= 0x97ff)
     {
 
+        if (data != 00)
+            std::cout << "";
+
         // Tile Ram region
-        this->video_ram.at(address - 0x8000) = data;
+        this->video_ram[address - 0x8000] = data;
         
+        
+
+
         return;
     }
 
@@ -255,7 +267,7 @@ void BUS::set_memory(const Word address, const Byte data)
     {
 
         // background map region
-        this->video_ram.at(address - 0x8000) = data;
+        this->video_ram[address - 0x8000] = data;
         return;
     }
 
@@ -268,7 +280,7 @@ void BUS::set_memory(const Word address, const Byte data)
     if (address <= 0xDFFF)
     {
         // working ram
-        this->work_ram.at(address - 0xC000) = data;
+        this->work_ram[address - 0xC000] = data;
         return;
     }
 
@@ -294,23 +306,45 @@ void BUS::set_memory(const Word address, const Byte data)
         //if changing timers
         if (address == TAC)
         {
-            this->io.at(address - 0xFF00) = data;
+            this->io[address - 0xFF00] = data;
             this->cpu.update_timerCounter();
             return;
         }
         if (address == DIV)
         {
-            this->io.at(address - 0xFF00) = 0;
+            this->io[address - 0xFF00] = 0;
             return;
         }
 
         // i/o registers
 
-        // LY register is read only
-        if (address == LY)
+        if (address == DMA)
+        {
+            this->cpu.dma_transfer(data);
             return;
+        }
 
-        this->io.at(address - 0xFF00) = data;
+
+        // LY register gets reset if written to
+        if (address == LY)
+        {
+            this->io[LY - IOOFFSET] = 0;
+            return;
+        }
+
+        if (address == 0xFF26) // NR52
+        {
+            this->io[0xFF26 - IOOFFSET] |= (data & 0x80);
+
+            if ((this->io[0xFF26 - IOOFFSET] & 0x80) == 0)
+            {
+                //destroy sound registers.
+            }
+
+            return;
+        }
+
+        this->io[address - 0xFF00] = data;
         return;
     }
     if (address <= 0xFF7F)
@@ -321,7 +355,7 @@ void BUS::set_memory(const Word address, const Byte data)
     if (address <= 0xFFFE)
     {
         // high ram area
-        this->high_ram.at(address - 0xFF80) = data;
+        this->high_ram[address - 0xFF80] = data;
         return;
     }
     if (address <= 0xFFFF)
@@ -353,15 +387,15 @@ void BUS::cycle_system_one_frame()
         int cyclesUsed = this->cpu.fetch_decode_execute();
         currentCycles += cyclesUsed;
         this->cpu.update_timers(cyclesUsed);
-        //updategraphics
+        this->ppu.update_graphics(cyclesUsed);
         currentCycles += this->cpu.do_interrupts();
     }
 
 
-    for (auto& pixel : this->ppu.framebuffer)
-    {
-        pixel = FRAMEBUFFER_PIXEL(rand() % 0xFF, rand() % 0xFF, rand() % 0xFF);
-    }
+   //for (auto& pixel : this->ppu.framebuffer)
+   //{
+   //     pixel = FRAMEBUFFER_PIXEL(rand() % 0xFF, rand() % 0xFF, rand() % 0xFF);
+   //}
 }
 
 
@@ -380,10 +414,12 @@ void BUS::load_bios(const std::string bios_name)
         std::ifstream::pos_type pos = file.tellg();
 
         file.seekg(0, std::ios::beg);
-        file.read((char*)this->bios.data(), pos);
+        file.read((char*)this->bios.get(), pos);
 
         //set the program counter of the cpu to execute the bios program
-        this->cpu.registers.pc = 0x0000;
+        this->cpu.bios_init();
+        this->bios_init();
+
         this->biosLoaded = true;
     }
     file.close();
@@ -394,57 +430,125 @@ void BUS::load_bios(const std::string bios_name)
 // initializes the hardware registers on startup
 void BUS::init()
 {
-    this->set_memory(0xFF00,0xCF); // P1
-    this->set_memory(0xFF01,0x00); // SB
-    this->set_memory(0xFF02,0x7E); // SC
-    this->set_memory(0xFF04,0xAB); // DIV
-    this->set_memory(0xFF05,0x00); // TIMA
-    this->set_memory(0xFF06,0x00); // TMA
-    this->set_memory(0xFF07,0xF8); // TAC
-    this->set_memory(0xFF0F,0xE1); // IF
-    this->set_memory(0xFF10,0x80); // NR10
-    this->set_memory(0xFF11,0xBF); // NR11
-    this->set_memory(0xFF12,0xF3); // NR12
-    this->set_memory(0xFF13,0xFF); // NR13
-    this->set_memory(0xFF14,0xBF); // NR14
-    this->set_memory(0xFF16,0x3F); // NR21
-    this->set_memory(0xFF17,0x00); // NR22
-    this->set_memory(0xFF18,0xFF); // NR23
-    this->set_memory(0xFF19,0xBF); // NR24
-    this->set_memory(0xFF1A,0x7F); // NR30
-    this->set_memory(0xFF1B,0xFF); // NR31
-    this->set_memory(0xFF1C,0x9F); // NR32
-    this->set_memory(0xFF1D,0xFF); // MR33
-    this->set_memory(0xFF1E,0xBF); // MR34
-    this->set_memory(0xFF20,0xFF); // NR41
-    this->set_memory(0xFF21,0x00); // NR42
-    this->set_memory(0xFF22,0x00); // NR44
-    this->set_memory(0xFF23,0xBF); // NR50
-    this->set_memory(0xFF24,0x77); // NR51
-    this->set_memory(0xFF25,0xF3); // LCDC
-    this->set_memory(0xFF26,0xF1); // STAT
-    this->set_memory(0xFF40,0x91); // SCY
-    this->set_memory(0xFF41,0x85); // SCX
-    this->set_memory(0xFF42,0x00); // LY
-    this->set_memory(0xFF43,0x00); // LYC
-    this->set_memory(0xFF44,0x00); // DMA
-    this->set_memory(0xFF45,0x00); // BGP
-    this->set_memory(0xFF46,0xFF); // 0BP0
-    this->set_memory(0xFF47,0xFC); // 0BP1
-    this->set_memory(0xFF48,0xFF); // WY
-    this->set_memory(0xFF49,0xFF); // WX
-    this->set_memory(0xFF4A,0x00); // KEY1
-    this->set_memory(0xFF4B,0x00); // VBK
-    this->set_memory(0xFF4D,0xFF); // HDMA1
-    this->set_memory(0xFF4F,0xFF); // HDMA2
-    this->set_memory(0xFF51,0xFF); // HDMA3
-    this->set_memory(0xFF52,0xFF); // HDMA4
-    this->set_memory(0xFF53,0xFF); // HDMA5
-    this->set_memory(0xFF56,0xFF); // RP
-    this->set_memory(0xFF68,0xFF); // BCPS
-    this->set_memory(0xFF69,0xFF); // BCPD
-    this->set_memory(0xFF6A,0xFF); // OCPS
-    this->set_memory(0xFF6B,0xFF); // OCPD
-    this->set_memory(0xFF70,0xFF); // SVBK
-    this->set_memory(0xFFFF,0x00); // IE
+    this->io[0xFF00 - IOOFFSET] = 0xCF; // P1
+    this->io[0xFF01 - IOOFFSET] = 0x00; // SB
+    this->io[0xFF02 - IOOFFSET] = 0x7E; // SC
+    this->io[0xFF04 - IOOFFSET] = 0xAB; // DIV
+    this->io[0xFF05 - IOOFFSET] = 0x00; // TIMA
+    this->io[0xFF06 - IOOFFSET] = 0x00; // TMA
+    this->io[0xFF07 - IOOFFSET] = 0xF8; // TAC
+    this->io[0xFF0F - IOOFFSET] = 0xE1; // IF
+    this->io[0xFF10 - IOOFFSET] = 0x80; // NR10
+    this->io[0xFF11 - IOOFFSET] = 0xBF; // NR11
+    this->io[0xFF12 - IOOFFSET] = 0xF3; // NR12
+    this->io[0xFF13 - IOOFFSET] = 0xFF; // NR13
+    this->io[0xFF14 - IOOFFSET] = 0xBF; // NR14
+    //this->io[0xFF15 - IOOFFSET] = 0xFF; // NR14
+    this->io[0xFF16 - IOOFFSET] = 0x3F; // NR21
+    this->io[0xFF17 - IOOFFSET] = 0x00; // NR22
+    this->io[0xFF18 - IOOFFSET] = 0xFF; // NR23
+    this->io[0xFF19 - IOOFFSET] = 0xBF; // NR24
+    this->io[0xFF1A - IOOFFSET] = 0x7F; // NR30
+    this->io[0xFF1B - IOOFFSET] = 0xFF; // NR31
+    this->io[0xFF1C - IOOFFSET] = 0x9F; // NR32
+    this->io[0xFF1D - IOOFFSET] = 0xFF; // MR33
+    this->io[0xFF1E - IOOFFSET] = 0xBF; // MR34
+    //this->io[0xFF1F - IOOFFSET] = 0xFF; // MR34
+    this->io[0xFF20 - IOOFFSET] = 0xFF; // NR41
+    this->io[0xFF21 - IOOFFSET] = 0x00; // NR42
+    this->io[0xFF22 - IOOFFSET] = 0x00; // NR44
+    this->io[0xFF23 - IOOFFSET] = 0xBF; // NR50
+    this->io[0xFF24 - IOOFFSET] = 0x77; // NR51
+    this->io[0xFF25 - IOOFFSET] = 0xF3; // LCDC
+    this->io[0xFF26 - IOOFFSET] = 0xF1; // STAT
+    this->io[0xFF40 - IOOFFSET] = 0x91; // SCY
+    this->io[0xFF41 - IOOFFSET] = 0x85; // SCX
+    this->io[0xFF42 - IOOFFSET] = 0x00; // LY
+    this->io[0xFF43 - IOOFFSET] = 0x00; // LYC
+    this->io[0xFF44 - IOOFFSET] = 0x00; // DMA
+    this->io[0xFF45 - IOOFFSET] = 0x00; // BGP
+    this->io[0xFF46 - IOOFFSET] = 0xFF; // 0BP0
+    this->io[0xFF47 - IOOFFSET] = 0xFC; // 0BP1
+    this->io[0xFF48 - IOOFFSET] = 0xFF; // WY
+    this->io[0xFF49 - IOOFFSET] = 0xFF; // WX
+    this->io[0xFF4A - IOOFFSET] = 0x00; // KEY1
+    this->io[0xFF4B - IOOFFSET] = 0x00; // VBK
+    this->io[0xFF4D - IOOFFSET] = 0xFF; // HDMA1
+    this->io[0xFF4F - IOOFFSET] = 0xFF; // HDMA2
+    this->io[0xFF51 - IOOFFSET] = 0xFF; // HDMA3
+    this->io[0xFF52 - IOOFFSET] = 0xFF; // HDMA4
+    this->io[0xFF53 - IOOFFSET] = 0xFF; // HDMA5
+    this->io[0xFF54 - IOOFFSET] = 0xFF; // HDMA5
+    this->io[0xFF55 - IOOFFSET] = 0xFF; // HDMA5
+    this->io[0xFF56 - IOOFFSET] = 0xFF; // RP
+    this->io[0xFF68 - IOOFFSET] = 0xFF; // BCPS
+    this->io[0xFF69 - IOOFFSET] = 0xFF; // BCPD
+    this->io[0xFF6A - IOOFFSET] = 0xFF; // OCPS
+    this->io[0xFF6B - IOOFFSET] = 0xFF; // OCPD
+    this->io[0xFF70 - IOOFFSET] = 0xFF; // SVBK
+
+    this->interrupt_enable_register = 0;
+}
+
+void BUS::bios_init()
+{
+    this->io[0xFF00 - IOOFFSET ] = 0xCF; // P1
+    this->io[0xFF01 - IOOFFSET ] = 0x00; // SB
+    this->io[0xFF02 - IOOFFSET ] = 0x7E; // SC
+    this->io[0xFF04 - IOOFFSET ] = 0x00; // DIV
+    this->io[0xFF05 - IOOFFSET ] = 0x00; // TIMA
+    this->io[0xFF06 - IOOFFSET ] = 0x00; // TMA
+    this->io[0xFF07 - IOOFFSET ] = 0xF8; // TAC
+    this->io[0xFF0F - IOOFFSET ] = 0xE1; // IF
+    this->io[0xFF10 - IOOFFSET ] = 0x80; // NR10
+    this->io[0xFF11 - IOOFFSET ] = 0x00; // NR11
+    this->io[0xFF12 - IOOFFSET ] = 0x00; // NR12
+    this->io[0xFF13 - IOOFFSET ] = 0x00; // NR13
+    this->io[0xFF14 - IOOFFSET ] = 0xB8; // NR14
+    this->io[0xFF15 - IOOFFSET ] = 0xFF; // NR14
+    this->io[0xFF16 - IOOFFSET ] = 0x00; // NR21
+    this->io[0xFF17 - IOOFFSET ] = 0x00; // NR22
+    this->io[0xFF18 - IOOFFSET ] = 0x00; // NR23
+    this->io[0xFF19 - IOOFFSET ] = 0xB8; // NR24
+    this->io[0xFF1A - IOOFFSET ] = 0x7F; // NR30
+    this->io[0xFF1B - IOOFFSET ] = 0x00; // NR31
+    this->io[0xFF1C - IOOFFSET ] = 0x9F; // NR32
+    this->io[0xFF1D - IOOFFSET ] = 0x00; // MR33
+    this->io[0xFF1E - IOOFFSET ] = 0xB8; // MR34
+    this->io[0xFF1F - IOOFFSET ] = 0xFF; // MR34
+    this->io[0xFF20 - IOOFFSET ] = 0xC0; // NR41
+    this->io[0xFF21 - IOOFFSET ] = 0x00; // NR42
+    this->io[0xFF22 - IOOFFSET ] = 0x00; // NR44
+    this->io[0xFF23 - IOOFFSET ] = 0xBF; // NR50
+    this->io[0xFF24 - IOOFFSET ] = 0x00; // NR51
+    this->io[0xFF25 - IOOFFSET ] = 0x00; // LCDC
+    this->io[0xFF26 - IOOFFSET ] = 0x70; // STAT
+    this->io[0xFF40 - IOOFFSET ] = 0x00; // SCY
+    this->io[0xFF41 - IOOFFSET ] = 0x84; // SCX
+    this->io[0xFF42 - IOOFFSET ] = 0x00; // LY
+    this->io[0xFF43 - IOOFFSET ] = 0x00; // LYC
+    this->io[0xFF44 - IOOFFSET ] = 0x00; // DMA
+    this->io[0xFF45 - IOOFFSET ] = 0x00; // BGP
+    this->io[0xFF46 - IOOFFSET ] = 0xFF; // 0BP0
+    this->io[0xFF47 - IOOFFSET ] = 0xFC; // 0BP1
+    this->io[0xFF48 - IOOFFSET ] = 0xFF; // WY
+    this->io[0xFF49 - IOOFFSET ] = 0xFF; // WX
+    this->io[0xFF4A - IOOFFSET ] = 0x00; // KEY1
+    this->io[0xFF4B - IOOFFSET ] = 0x00; // VBK
+    this->io[0xFF4D - IOOFFSET ] = 0xFF; // HDMA1
+    this->io[0xFF4F - IOOFFSET ] = 0x0 ; // HDMA2
+    this->io[0xFF51 - IOOFFSET ] = 0xFF; // HDMA3
+    this->io[0xFF52 - IOOFFSET ] = 0xFF; // HDMA4
+    this->io[0xFF53 - IOOFFSET ] = 0x9F; // HDMA5
+    this->io[0xFF54 - IOOFFSET ] = 0xF0; // HDMA5
+    this->io[0xFF55 - IOOFFSET ] = 0xFF; // HDMA5
+    this->io[0xFF56 - IOOFFSET ] = 0xFF; // RP
+    this->io[0xFF68 - IOOFFSET ] = 0xFF; // BCPS
+    this->io[0xFF69 - IOOFFSET ] = 0xFF; // BCPD
+    this->io[0xFF6A - IOOFFSET ] = 0xFF; // OCPS
+    this->io[0xFF6B - IOOFFSET ] = 0xFF; // OCPD
+    this->io[0xFF70 - IOOFFSET ] = 0x1 ; // SVBK
+
+    this->interrupt_enable_register = 0;
+
 }

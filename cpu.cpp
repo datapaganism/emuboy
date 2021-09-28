@@ -30,40 +30,37 @@ void CPU::DEBUG_printCurrentState()
 void CPU::init()
 {
     this->registers.pc = 0x100;
-    this->registers.a = 0x01;
-    this->registers.b = 0x00;
-    this->registers.c = 0x13;
-    this->registers.d = 0x00;
-    this->registers.e = 0xd8;
-    this->registers.f = 0xb0;
-    this->registers.h = 0x01;
-    this->registers.l = 0x4d;
+    this->registers.a  = 0x01;
+    this->registers.b  = 0x00;
+    this->registers.c  = 0x13;
+    this->registers.d  = 0x00;
+    this->registers.e  = 0xd8;
+    this->registers.f  = 0xb0;
+    this->registers.h  = 0x01;
+    this->registers.l  = 0x4d;
     this->registers.sp = 0xFFFE;
-}
-//
-//void CPU::DEBUG_init()
-//{
-//    this->registers.pc = 0x100;
-//    this->registers.a = 0x11;
-//    this->registers.b = 0x00;
-//    this->registers.c = 0x00;
-//    this->registers.d = 0xff;
-//    this->registers.e = 0x56;
-//    this->registers.f = 0x80;
-//    this->registers.h = 0x00;
-//    this->registers.l = 0x0d;
-//    this->registers.sp = 0xFFFE;
-//}
 
+   
+}
+
+void CPU::bios_init()
+{
+    this->registers.pc = 0;
+    this->registers.a  = 0;
+    this->registers.b  = 0;
+    this->registers.c  = 0;
+    this->registers.d  = 0;
+    this->registers.e  = 0;
+    this->registers.f  = 0;
+    this->registers.h  = 0;
+    this->registers.l  = 0;
+    this->registers.sp = 0;
+}
 
 
 CPU::CPU()
 {
     this->init();
-#if DEBUG 1
-    //this->DEBUG_init();
-#endif
-
 }
 
 
@@ -276,7 +273,7 @@ void CPU::update_timers(const int cycles)
     {
         this->divTimerCounter = DIVinit;
         //register is read only to gameboy
-        this->bus->io.at(DIV - IOOFFSET)++;
+        this->bus->io[DIV - IOOFFSET]++;
     }
 
     // if TMC bit 2 is set, this means that the timer is enabled
@@ -319,6 +316,14 @@ void CPU::update_timerCounter()
 void CPU::request_interrupt(const InterruptTypes type)
 {
     this->set_interrupt_flag(type, 1, IF_REGISTER);
+}
+
+void CPU::dma_transfer(Byte data)
+{
+    for (int i = 0; i < 0xA0; i++)
+    {
+        this->bus->set_memory(OAM + i, this->bus->get_memory((data << 8) + i));
+    }
 }
 
 Byte CPU::get_interrupt_flag(const enum InterruptTypes type, Word address)
@@ -440,20 +445,25 @@ int CPU::ins_LD_nn_SP(const Word address, const Word stackPointerValue)
 
 int CPU::ins_PUSH_nn(const Word wordRegisterValue)
 {
-    this->bus->set_memory(this->registers.sp, ((wordRegisterValue & 0xff00) >> 8));
+    // move low byte to higher (sp)
     this->registers.sp--;
     this->bus->set_memory(this->registers.sp, (wordRegisterValue & 0x00ff));
+    
     this->registers.sp--;
+    // move high byte to lower (sp)
+    this->bus->set_memory(this->registers.sp, ((wordRegisterValue & 0xff00) >> 8));
+    
+
 
     return 16;
 }
 
 int CPU::ins_POP_nn(Byte* registerOne, Byte* registerTwo)
 {
+    *registerOne = this->bus->get_memory(this->registers.sp);
     this->registers.sp++;
     *registerTwo = this->bus->get_memory(this->registers.sp);
     this->registers.sp++;
-    *registerOne = this->bus->get_memory(this->registers.sp);
 
     return 12;
 }
@@ -1319,7 +1329,7 @@ int CPU::ins_JR_cc_n(const enum JumpCondition condition, Byte_s jumpOffset)
 
 int CPU::ins_CALL_nn(Word address)
 {
-    this->ins_PUSH_nn(this->registers.pc+1);
+    this->ins_PUSH_nn(this->registers.pc);
     this->ins_JP_nn(address);
     return 12;
 }
@@ -1364,8 +1374,9 @@ int CPU::ins_RST_n(const Byte addrOffset)
 
 int CPU::ins_RET()
 {
-    this->registers.sp -= 2;
-    this->registers.pc = this->registers.sp;
+    
+    this->registers.pc = this->bus->get_memory(this->registers.sp) << 8 | this->bus->get_memory(this->registers.sp+1);
+    this->registers.sp += 2;
     return 8;
 }
 

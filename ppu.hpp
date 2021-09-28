@@ -2,6 +2,7 @@
 
 #include "config.h"
 #include <array>
+#include <memory>
 class BUS;
 
 // gameboy graphics use a tiling system, instead of a frame buffer like modern systems.
@@ -131,16 +132,30 @@ public:
 	void init();
 	void connect_to_bus(BUS* pBus);
 
-	FRAMEBUFFER_PIXEL framebuffer[XRES * YRES];
+	std::unique_ptr<FRAMEBUFFER_PIXEL[]> framebuffer = std::make_unique<FRAMEBUFFER_PIXEL[]>(XRES * YRES);
+
 	
 	TILE tile;
 
 	FIFO fifo_bg;
 	FIFO fifo_sprite;
 
+	void update_graphics(const int cycles);
+	void update_lcdstat();
+
+	/// <summary>
+	/// polls the state of FF40 register's 7th bit, if 1 then the LCD and PPU is enabled for processing/rendering else not.
+	/// </summary>
+	/// <returns>if it is enabled</returns>
+	bool lcd_enabled();
 
 
 private:
 	BUS* bus = nullptr;
+
+	/// <summary>
+	/// 
+	/// </summary>
+	int cycle_counter = 0;
 };
 

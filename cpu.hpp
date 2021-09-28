@@ -60,10 +60,15 @@ public:
     void set_DE(const Word value) { this->set_word(&this->d, &this->e, value); };
     void set_HL(const Word value) { this->set_word(&this->h, &this->l, value); };
 
+
+
+#pragma warning( push )
+#pragma warning( disable : 26812 )
     bool get_flag(const Flags flag)
     {
         return this->f & flag;
     }
+#pragma warning( pop )
 
     void set_flag(const Flags flag, const bool value)
     {
@@ -94,11 +99,16 @@ class CPU
         /// sets up the CPU registers to fresh boot state.
         /// </summary>
         void init();
+
+        
         
         // The way I want the system to be emulated is to have master class where all the components are accessed, the address bus is how are going to achieve this,
         // the address bus has a cpu attached to it but the cpu itself needs to be connected to the bus to access other devices.
         
     public:
+
+
+        void bios_init();
 
         CPU();
 
@@ -136,6 +146,8 @@ class CPU
 
         void update_timerCounter();
         void request_interrupt(const InterruptTypes type);
+
+        void dma_transfer(Byte data);
 
 private:
        

@@ -34,17 +34,17 @@ void RENDERER::render_frame(BUS *bus)
     {
         for (int x = 0; x < XRES; x++)
         {
-            //if (display == on)
-            //{
-            auto pixel = bus->ppu.framebuffer[x + (XRES * y)];
-            SDL_SetRenderDrawColor(this->renderer, pixel.red, pixel.blue, pixel.green, 0xFF);
-            SDL_Rect r;
-            r.x = x * RES_SCALING;
-            r.y = y * RES_SCALING;
-            r.w = RES_SCALING;
-            r.h = RES_SCALING;
-            SDL_RenderFillRect(this->renderer, &r);
-            //}
+            if (bus->ppu.lcd_enabled())
+            {
+                auto pixel = bus->ppu.framebuffer[x + (XRES * y)];
+                SDL_SetRenderDrawColor(this->renderer, pixel.red, pixel.blue, pixel.green, 0xFF);
+                SDL_Rect r;
+                r.x = x * RES_SCALING;
+                r.y = y * RES_SCALING;
+                r.w = RES_SCALING;
+                r.h = RES_SCALING;
+                SDL_RenderFillRect(this->renderer, &r);
+            }
         }
     }
 

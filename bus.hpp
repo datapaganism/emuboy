@@ -6,7 +6,9 @@
 #include "ppu.hpp"
 #include "config.h"
 #include <array>
+#include <memory>
 #include "joypad_mapping.h"
+
 
 
 //forward declaration of JoypadButtons mapping
@@ -21,11 +23,12 @@ public:
     PPU ppu;
     CPU cpu;
     GAMEPAK gamepak;
-    std::array<Byte, 0x2000> work_ram = {0,};
-    std::array<Byte, 0x0100> bios = { 0, };
-    std::array<Byte, 0x004C> io = { 0, };
-    std::array<Byte, 0x007F> high_ram = { 0, };
-    std::array<Byte, 0x2000> video_ram = { 0, };
+    std::unique_ptr<Byte[]> work_ram  = std::make_unique<Byte[]>(0x2000);
+    std::unique_ptr<Byte[]> bios      = std::make_unique<Byte[]>(0x100);
+    std::unique_ptr<Byte[]> io        = std::make_unique<Byte[]>(0x80);
+    std::unique_ptr<Byte[]> high_ram  = std::make_unique<Byte[]>(0x7F);
+    std::unique_ptr<Byte[]> video_ram = std::make_unique<Byte[]>(0x2000);
+
     Byte interrupt_enable_register = 0;
     
     Byte DEBUG_ascii_to_hex(char character);
@@ -40,6 +43,7 @@ public:
     BUS();
     BUS(const std::string game_name, const std::string bios_name);
     void init();
+    void bios_init();
     Byte get_memory(const Word address);
     void set_memory(const Word address, const Byte data);
     void set_memory_word(const Word address, const Word data);

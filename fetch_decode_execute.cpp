@@ -314,13 +314,39 @@ int CPU::fetch_decode_execute()
     this->interrupt_DI_EI_handler();
 
 #if DEBUG 1
-#define BREAKPOINTPC 0x020F
+#define BREAKPOINTPC 0x0039
+#define BREAKPOINTHL 0x8010
+
+
+    // follows bgb till 0x000C confirmed
+
+    // 0x0013 ldd behaviour not working
    
-    this->DEBUG_printCurrentState();
+    //this->DEBUG_printCurrentState();
+    if (this->registers.pc >= BREAKPOINTPC)
+        //this->DEBUG_printCurrentState();
+
     if (this->registers.pc == BREAKPOINTPC)
     {
         this->registers.pc = BREAKPOINTPC;
+        int i = 9;
+        TILE tile0(this->bus, 0x8000 + (16 * i));
+        tile0.consolePrint();
+        
     }
+
+    if (this->registers.get_HL() == BREAKPOINTHL)
+    {
+        this->registers.get_HL();
+
+    }
+
+   /* if (this->bus->video_ram[0x8010 - 0x8000] != 0){
+        int i = 0;
+        TILE tile0(this->bus, 0x8010 + (16 * i));
+        tile0.consolePrint();
+        std::cout << "\n";
+    }*/
 
 #endif // DEBUG
 

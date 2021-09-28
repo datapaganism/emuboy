@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#define DEBUG 0
+#define DEBUG 1
 #define TURBO 0
 
 
@@ -59,7 +59,7 @@
 #define WY 0xFF4A // window y position r/w
 #define WX 0xFF4B // window x position r/w
 
-
+#define OAM 0xFE00 // OAM start address, to 0xFE9F
 
 // convert to gb register freq
 // gb = 2048 - (131072 / hz) 

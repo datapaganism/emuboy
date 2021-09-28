@@ -224,7 +224,6 @@
     <None Include="cpp.hint" />
     <None Include="empty.bin" />
     <None Include="roms\blargg cpu.gb" />
-    <None Include="roms\Pokemon - Yellow Version %28UE%29 [C][!].bin" />
     <None Include="roms\TETRIS.gb" />
   </ItemGroup>
   <ItemGroup>
