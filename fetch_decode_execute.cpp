@@ -314,15 +314,16 @@ int CPU::fetch_decode_execute()
     this->interrupt_DI_EI_handler();
 
 #if DEBUG 1
-#define BREAKPOINTPC 0x0039
+#define BREAKPOINTPC 0x0099
 #define BREAKPOINTHL 0x8010
 
 
-    // follows bgb till 0x000C confirmed
+    // follows bgb till 0x0027 confirmed
 
-    // 0x0013 ldd behaviour not working
-   
-    //this->DEBUG_printCurrentState();
+   // 00a7, af register corrupted
+
+
+    this->DEBUG_printCurrentState();
     if (this->registers.pc >= BREAKPOINTPC)
         //this->DEBUG_printCurrentState();
 

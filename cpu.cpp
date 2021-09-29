@@ -7,13 +7,14 @@
 void CPU::DEBUG_printCurrentState()
 {
 
+    printf("%s:0x%.4X  ", "pc", this->registers.pc);
     printf("op:0x%.2X | ", this->bus->get_memory(this->registers.pc));
     printf("%s:0x%.2X%.2X  ","AF", this->registers.a,this->registers.f);
     printf("%s:0x%.2X%.2X  ","BC", this->registers.b,this->registers.c);
     printf("%s:0x%.2X%.2X  ","DE", this->registers.d,this->registers.e);
     printf("%s:0x%.2X%.2X  ","HL", this->registers.h,this->registers.l);
     printf("%s:0x%.4X  ","SP", this->registers.sp);
-    printf("%s:0x%.4X  ","pc", this->registers.pc);
+    
     printf("%s:%i  ","z", this->registers.get_flag(z));
     printf("%s:%i  ","n", this->registers.get_flag(n));
     printf("%s:%i  ","h", this->registers.get_flag(h));
@@ -977,7 +978,7 @@ int CPU::ins_RLC(Byte* registerOne, Word address)
 {
     if (registerOne)
     {
-        this->registers.set_flag(c, (*registerOne & 0x80 >> 7));
+        this->registers.set_flag(c, ((*registerOne & 0x80) >> 7));
         *registerOne = ((*registerOne << 1) | (*registerOne >> 7));
 
         this->registers.set_flag(n,0);
@@ -991,7 +992,7 @@ int CPU::ins_RLC(Byte* registerOne, Word address)
     Byte temp = this->bus->get_memory(address);
     Byte result = ((temp << 1) | (temp >> 7));
 
-    this->registers.set_flag(c, (temp & 0x80 >> 7));
+    this->registers.set_flag(c, ((temp & 0x80) >> 7));
    
     this->bus->set_memory(address,result);
 
@@ -1010,7 +1011,7 @@ int CPU::ins_RL(Byte* registerOne, Word address)
 
     if (registerOne)
     {
-        newCarry = (*registerOne & 0x80 >> 7);
+        newCarry = ((*registerOne & 0x80) >> 7);
         *registerOne = ((*registerOne << 1) | (flagCarry));
 
         this->registers.set_flag(c, newCarry);
@@ -1025,7 +1026,7 @@ int CPU::ins_RL(Byte* registerOne, Word address)
 
     Byte temp = this->bus->get_memory(address);
     Byte result = ((temp << 1) | (flagCarry));
-    newCarry = (temp & 0x80 >> 7);
+    newCarry = ((temp & 0x80) >> 7);
     this->bus->set_memory(address, result);
 
     this->registers.set_flag(c, newCarry);
@@ -1121,7 +1122,7 @@ int CPU::ins_SLA(Byte* registerOne, Word address)
     Byte temp = this->bus->get_memory(address);
     Byte result = temp << 1;
 
-    this->registers.set_flag(c, temp & 0x80 >> 7);
+    this->registers.set_flag(c, (temp & 0x80) >> 7);
     this->bus->set_memory(address, result);
 
     this->registers.set_flag(n, 0);
@@ -1141,7 +1142,7 @@ int CPU::ins_SRA_n(Byte* registerOne, Word address)
         this->registers.set_flag(c, *registerOne & 0x1);
         bit7 = *registerOne >> 7;
 
-        *registerOne = *registerOne >> 1 | (bit7 << 7);
+        *registerOne = (*registerOne >> 1) | (bit7 << 7);
 
         this->registers.set_flag(n, 0);
         this->registers.set_flag(h, 0);
@@ -1153,7 +1154,7 @@ int CPU::ins_SRA_n(Byte* registerOne, Word address)
         return 8;
     }
     Byte temp = this->bus->get_memory(address);
-    Byte result = temp >> 1 | (bit7 << 7);
+    Byte result = (temp >> 1) | (bit7 << 7);
     this->registers.set_flag(c, temp & 0x1);
     bit7 = temp >> 7;
     this->bus->set_memory(address, result);

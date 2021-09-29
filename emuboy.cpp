@@ -16,7 +16,7 @@ int main(int argv, char** args)
     //BUS bus("./roms/blargg/full.gb", "bios.bin");
     //std::unique_ptr<BUS> bus;
     //bus = std::make_unique<BUS>("./roms/TETRIS.gb", "bios.bin");
-    BUS bus("./roms/TETRIS.gb", "bios.bin");
+    BUS bus("./roms/POKEMON YELLOW.gbc", "bios.bin");
     RENDERER renderer;
 
     // testing fifo
