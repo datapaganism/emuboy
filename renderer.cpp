@@ -30,20 +30,20 @@ void RENDERER::render_frame(BUS *bus)
     SDL_SetRenderDrawColor(this->renderer, 0, 0, 0, 0);
     SDL_RenderClear(this->renderer);
 
-    for (int y = 0; y < YRES; y++)
+    if (bus->ppu.lcd_enabled())
     {
-        for (int x = 0; x < XRES; x++)
+        for (int y = 0; y < YRES; y++)
         {
-            if (bus->ppu.lcd_enabled())
+            for (int x = 0; x < XRES; x++)
             {
-                auto pixel = bus->ppu.framebuffer[x + (XRES * y)];
-                SDL_SetRenderDrawColor(this->renderer, pixel.red, pixel.blue, pixel.green, 0xFF);
-                SDL_Rect r;
-                r.x = x * RES_SCALING;
-                r.y = y * RES_SCALING;
-                r.w = RES_SCALING;
-                r.h = RES_SCALING;
-                SDL_RenderFillRect(this->renderer, &r);
+                    auto pixel = bus->ppu.framebuffer[x + (XRES * y)];
+                    SDL_SetRenderDrawColor(this->renderer, pixel.red, pixel.blue, pixel.green, 0xFF);
+                    SDL_Rect r;
+                    r.x = x * RES_SCALING;
+                    r.y = y * RES_SCALING;
+                    r.w = RES_SCALING;
+                    r.h = RES_SCALING;
+                    SDL_RenderFillRect(this->renderer, &r);
             }
         }
     }

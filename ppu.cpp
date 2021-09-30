@@ -133,8 +133,8 @@ void PPU::update_lcdstat()
 
 bool PPU::lcd_enabled()
 {
-	Byte temp = this->bus->io[LCDC - IOOFFSET];
-	return (this->bus->io[LCDC - IOOFFSET] >> 7);
+	return (bool)(this->bus->io[LCDC - IOOFFSET] & (0b1 << 7));
+	
 }
 
 void TILE::consolePrint()
@@ -181,10 +181,10 @@ TILE::TILE()
 
 PPU::PPU()
 {
-	/*for (auto& pixel : this->framebuffer)
+	for (int i = 0; i < XRES * YRES; i++)
 	{
-		pixel = FRAMEBUFFER_PIXEL(0xFF, 0xFF, 0xFF);
-	}*/
+		this->framebuffer[i] = FRAMEBUFFER_PIXEL(0xFF, 0xFF, 0xFF);
+	}
 
 	
 	//int x = 3, y = 2;
