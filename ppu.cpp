@@ -2,6 +2,9 @@
 #include "bus.hpp"
 #include <bitset>
 
+// ppu pushes for 4 pixels per NOP
+
+
 PPU::PPU()
 {
 
