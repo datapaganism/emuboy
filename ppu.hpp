@@ -1,6 +1,7 @@
 #pragma once
 
 #include "config.h"
+#include "fifo.hpp"
 #include <array>
 #include <memory>
 class BUS;
@@ -20,57 +21,25 @@ class BUS;
 // framebuffer should hold pixel colour values.
 
 
-
-
-/*
- possible rendering solution
-
-
-		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
-		SDL_RenderClear(renderer);
-
-		for (int x = 0; x < gb_width; x++)
-		{
-			for (int y = 0; y < gb_HEIGHT; y++)
-			{
-				if (display == on)
-				{
-					colour[3] = this->framebuffer.get_colour(x,y);
-					SDL_SetRenderDrawColor(renderer.renderer, colour[0],colour[1],colour[2], 255);
-					SDL_Rect r;
-					r.x = x * WINDOW_MULTIPLIER;
-					r.y = y * WINDOW_MULTIPLIER;
-					r.w = WINDOW_MULTIPLIER;
-					r.h = WINDOW_MULTIPLIER;
-					SDL_RenderFillRect(renderer, &r);
-				}
-			}
-		}
-
-		SDL_RenderPresent(renderer);
-
-
-*/
-
 struct FRAMEBUFFER_PIXEL
 {
-	FRAMEBUFFER_PIXEL(Byte red, Byte blue, Byte green) : FRAMEBUFFER_PIXEL()
+	FRAMEBUFFER_PIXEL(Byte red, Byte green, Byte blue )
 	{
 		this->red = red;
-		this->blue = blue;
 		this->green = green;
+		this->blue = blue;
 	}
 
 	FRAMEBUFFER_PIXEL()
 	{
 		this->red = 0x0;
-		this->blue = 0x0;
 		this->green = 0x0;
+		this->blue = 0x0;
 	}
 
 	Byte red;
-	Byte blue;
 	Byte green;
+	Byte blue;
 };
 
 struct TILE
@@ -85,49 +54,23 @@ struct TILE
 
 };
 
-struct FIFO_pixel
-{
-	Byte colour : 2;
-	Byte palette : 3;
-	bool sprite_priority;
-	bool bg_priority;
 
-	FIFO_pixel()
-	{
-		this->bg_priority = 0;
-		this->sprite_priority = 0;
-		this->colour = 0;
-		this->palette = 0;
-	};
 
-	FIFO_pixel(Byte colour, Byte palette, bool sprite_priority, bool bg_priority) : FIFO_pixel()
-	{
-		this->colour = colour;
-		this->palette = palette;
-		this->sprite_priority = sprite_priority;
-		this->bg_priority = bg_priority;
-	}
-};
+/// <summary>
+/// im am such a fool, how do we know where we draw? well a framebuffer would be nice but there isnt enough ram for that,
+/// what is the work around? a tile map and tiles.
+/// you store the tiles in a region of memory and then a tile map which is like a frame buffer but has tile references.
+/// </summary>
 
-class FIFO
-{
-public:
-	FIFO();
-	
-	std::array<FIFO_pixel, 16> queue;
 
-	void push(FIFO_pixel pixel);
-
-	FIFO_pixel pop();
-
-private:
-	Byte tail_pos = 0;
-
-};
 
 class PPU
 {
 public:
+
+	Byte scanline_x = 0;
+
+	enum tile_type { background, window, sprite };
 	PPU();
 	void init();
 	void connect_to_bus(BUS* pBus);
@@ -149,13 +92,37 @@ public:
 	/// <returns>if it is enabled</returns>
 	bool lcd_enabled();
 
+	/// <summary>
+	/// Converts tile id to address in video ram
+	/// </summary>
+	Word get_tile_address(const Byte tile_number, const enum tile_type tile_type);
 
-private:
+	void render_scanline();
+
 	BUS* bus = nullptr;
 
 	/// <summary>
 	/// 
 	/// </summary>
 	int cycle_counter = 0;
+
+	void add_to_framebuffer(const int x, const int y, const FIFO_pixel fifo_pixel);
+	FRAMEBUFFER_PIXEL dmg_framebuffer_pixel_to_rgb(const FIFO_pixel fifo_pixel);
+
+	/// <summary>
+	/// convert scx and scy position to the top left tile's (of the viewport) address, ignores shifting
+	/// </summary>
+	/// <returns></returns>
+
+
+
+	void new_scanline();
+
+	void update_state(Byte new_state);
+private:
+
+	
+
+
 };
 

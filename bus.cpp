@@ -390,12 +390,6 @@ void BUS::cycle_system_one_frame()
         this->ppu.update_graphics(cyclesUsed);
         currentCycles += this->cpu.do_interrupts();
     }
-
-
-   //for (auto& pixel : this->ppu.framebuffer)
-   //{
-   //     pixel = FRAMEBUFFER_PIXEL(rand() % 0xFF, rand() % 0xFF, rand() % 0xFF);
-   //}
 }
 
 

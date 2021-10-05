@@ -23,6 +23,7 @@ public:
     PPU ppu;
     CPU cpu;
     GAMEPAK gamepak;
+
     std::unique_ptr<Byte[]> work_ram  = std::make_unique<Byte[]>(0x2000);
     std::unique_ptr<Byte[]> bios      = std::make_unique<Byte[]>(0x100);
     std::unique_ptr<Byte[]> io        = std::make_unique<Byte[]>(0x80);

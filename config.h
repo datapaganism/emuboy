@@ -44,8 +44,9 @@
 #define LCDC 0xFF40  //LCD Control R/W Register //ff40
 #define STAT 0xFF41 //LCDC Status R/W Register //ff41
 
-#define SCY 0xFF42  //scroll y r/w //ff42
-#define SCX 0xFF43 //scroll x r/w //ff43
+
+#define SCY 0xFF42  // position of topleft (y comp) pixel of the viewport within the bg map,  r/w 0xff42
+#define SCX 0xFF43  // position of topleft (x comp) pixel of the viewport within the bg map,  r/w 0xff42
 
 #define LY 0xFF44 //lcdc y coordinate read only //ff44
 #define LYC 0xFF45 //ly compare r/w //
@@ -69,7 +70,27 @@
 
 
 #define GB_PALLETE_OFF 0xFFFFFFFF
-#define GB_PALLETE_00  0xE0F8D0FF 
-#define GB_PALLETE_01  0x88c070FF 
-#define GB_PALLETE_10  0x346856FF
-#define GB_PALLETE_11  0x081820FF
+#define GB_PALLETE_00  0xFF 
+#define GB_PALLETE_01  0xC0
+#define GB_PALLETE_10  0x69
+#define GB_PALLETE_11  0x00
+
+#define GB_PALLETE_00_r 0x89 
+#define GB_PALLETE_00_g 0xc0 
+#define GB_PALLETE_00_b 0x77
+
+#define GB_PALLETE_01_r 0x4d 
+#define GB_PALLETE_01_g 0xa3 
+#define GB_PALLETE_01_b 0x50 
+
+#define GB_PALLETE_10_r 0x37
+#define GB_PALLETE_10_g 0x76 
+#define GB_PALLETE_10_b 0x4A 
+
+#define GB_PALLETE_11_r 0x22 
+#define GB_PALLETE_11_g 0x49 
+#define GB_PALLETE_11_b 0x39 
+
+#define GB_PALLETE_BG_r 0xCA 
+#define GB_PALLETE_BG_g 0xDC 
+#define GB_PALLETE_BG_b 0x9F 

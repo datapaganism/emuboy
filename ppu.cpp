@@ -1,7 +1,20 @@
 #include "ppu.hpp"
 #include "bus.hpp"
-
 #include <bitset>
+
+PPU::PPU()
+{
+
+	this->fifo_bg.connect_to_ppu(this);
+	this->fifo_sprite.connect_to_ppu(this);
+
+	for (int i = 0; i < XRES * YRES; i++)
+	{
+		this->framebuffer[i] = FRAMEBUFFER_PIXEL(GB_PALLETE_00_r, GB_PALLETE_00_g, GB_PALLETE_00_b);
+	}
+}
+
+
 void PPU::connect_to_bus(BUS* pBus)
 {
 	this->bus = pBus;
@@ -13,33 +26,95 @@ void PPU::update_graphics(const int cycles)
 	// one scanline is 456 cycles 
 	
 	// the cpu may have modified the registers since the last cycle, it is time to check and update any changes of the lcd stat.
-	this->update_lcdstat();
+	//this->update_lcdstat();
 
-	if (this->lcd_enabled())
-	{
-		this->cycle_counter += cycles;
 
-		if (this->cycle_counter >= 456)
+		/*this->bus->set_memory(SCX, 0x20);
+		this->bus->set_memory(SCY, 0x40);*/
+		//this->bus->io[LY - IOOFFSET] = 0x00;
+//		this->debug_register_set = false;
+
+		if (this->lcd_enabled())
 		{
-			this->bus->io[0xFF44 - IOOFFSET]++;
-			this->cycle_counter = 0;
 
-			if (this->bus->io[0xFF44 - IOOFFSET] == 144)
+			this->cycle_counter += cycles;
+
+			switch (this->bus->io[STAT - IOOFFSET] & 0b00000011)
 			{
-				this->bus->cpu.request_interrupt(vblank);
-				return;
+			case 0: // h blank
+			{
+				if (this->cycle_counter >= 456)
+				{
+					this->new_scanline();
+				}
+			} break;
+
+			case 1: // v blank
+			{
+				if (this->cycle_counter >= 456)
+				{
+					this->new_scanline();
+				}
+			} break;
+
+			case 2: // oam search
+			{
+				// do stuff
+				if (this->cycle_counter >= 80)
+				{
+					this->update_state(3);
+				}
+			} break;
+
+			case 3: // graphics transfer
+			{
+				// do stuff
+				this->fifo_bg.fetcher.update_fetcher(cycles);
+				this->fifo_bg.update_fifo(cycles);
+
+				if (this->scanline_x >= 160)
+					this->update_state(0);
+			} break;
 			}
 
-			if (this->bus->io[0xFF44 - IOOFFSET] > 153)
-			{
-				this->bus->io[0xFF44 - IOOFFSET] = 0;
-				return;
-			}
-
-			// emulate ppu of that scanline
 		}
+
 		return;
-	}
+
+
+
+
+	//if (this->lcd_enabled())
+	//{
+	//	this->cycle_counter += cycles;
+
+	//	if (this->cycle_counter >= 80)
+	//	{
+	//		this->fifo_bg.fetcher.update_fetcher(cycles);
+	//		this->fifo_bg.update_fifo(cycles);
+	//	}
+
+	//	if (this->cycle_counter >= 456)
+	//	{
+	//		this->bus->io[0xFF44 - IOOFFSET]++;
+	//		this->cycle_counter = 0;
+
+	//		if (this->bus->io[0xFF44 - IOOFFSET] == 144)
+	//		{
+	//			this->bus->cpu.request_interrupt(vblank);
+	//			return;
+	//		}
+
+	//		if (this->bus->io[0xFF44 - IOOFFSET] > 153)
+	//		{
+	//			this->bus->io[0xFF44 - IOOFFSET] = 0;
+	//			return;
+	//		}
+
+	//		//this->render_scanline();
+	//	}
+	//	return;
+	//}
 }
 
 void PPU::update_lcdstat()
@@ -137,6 +212,189 @@ bool PPU::lcd_enabled()
 	
 }
 
+
+
+Word PPU::get_tile_address(const Byte tile_number, const enum tile_type tile_type)
+{
+	switch (tile_type)
+	{
+	case PPU::sprite:
+			return 0x8000 + (tile_number * 16);
+			break;
+
+	case PPU::background:
+	case PPU::window:
+		{
+			bool addressing_mode = (this->bus->get_memory(LCDC) & (0b1 << 4));
+			// LCDC.4 = 1, $8000 addressing
+			if (addressing_mode == 1) 
+			{
+				return 0x8000 + (tile_number * 16);
+				break;
+			}
+			// LCDC.4 = 0, $9000 addressing
+			return (tile_number > 127) ? (0x8800 + tile_number * 16) : (0x9000 + tile_number * 16);
+			break;
+		}
+	}
+}
+
+void PPU::render_scanline()
+{
+	//resets fifos
+	//this->fifo_bg = FIFO();
+	//this->fifo_sprite = FIFO();
+
+	// temp setting of scx, scy, ly registers
+	this->bus->set_memory(SCX, 0x80);
+	this->bus->set_memory(SCY, 0x40);
+	this->bus->io[LY - IOOFFSET] = 0x00;
+	
+	// get tile number and address of topleft tile of viewport
+	Byte tile_number = this->fifo_bg.fetcher.get_tile_number();
+	Word tile_address = this->get_tile_address(tile_number, PPU::background);
+
+	// get scy
+	Byte scy = this->bus->get_memory(SCY);
+
+	// get top and bottom byte of 8 pixel line from tile
+	Byte line_data0 = this->bus->get_memory(tile_address + 2 * (scy % 8));
+	Byte line_data1 = this->bus->get_memory((tile_address + 1) + 2 * (scy % 8));
+	
+	for (int i = 0; i < 8; i++) 
+	{
+		// get colour of pixel
+		int offset = (0b1 << (7 - i));
+		bool bit0 = line_data0 & offset;
+		bool bit1 = line_data1 & offset;
+		Byte colour = (((Byte)bit0 << 1) | (Byte)bit1);
+		
+		//push to fifo
+		this->fifo_bg.push(FIFO_pixel(colour, 0, 0, 0));
+
+	}
+
+	// get ly for setting to framebuffer
+	Byte ly = this->bus->get_memory(LY);
+	
+	
+	// pop fifo 8 times into framebuffer
+	for (int i = 0; i < 8; i++)
+	{
+		this->add_to_framebuffer(i, ly, this->fifo_bg.pop());
+	}
+
+}
+
+
+
+void PPU::add_to_framebuffer(const int x, const int y, const FIFO_pixel fifo_pixel)
+{
+	this->framebuffer[x + (XRES * y)] = this->dmg_framebuffer_pixel_to_rgb(fifo_pixel);
+}
+
+FRAMEBUFFER_PIXEL PPU::dmg_framebuffer_pixel_to_rgb(const FIFO_pixel fifo_pixel)
+{
+	Byte palette_register = this->bus->get_memory(0xFF47);
+	Byte id_to_palette_id = 0;
+	switch (fifo_pixel.colour)
+	{
+	case 0:
+		id_to_palette_id = (palette_register & 0b00000011); break;
+	case 1:
+		id_to_palette_id = (palette_register & 0b00001100) >> 2; break;
+	case 2:
+		id_to_palette_id = (palette_register & 0b00110000) >> 4; break;
+	case 3:
+		id_to_palette_id = (palette_register & 0b11000000) >> 6; break;
+	}; 
+
+	switch (id_to_palette_id)
+	{
+	case 0:
+		return FRAMEBUFFER_PIXEL(GB_PALLETE_00_r, GB_PALLETE_00_g, GB_PALLETE_00_b); // white
+	case 1:
+		return FRAMEBUFFER_PIXEL(GB_PALLETE_01_r, GB_PALLETE_01_g, GB_PALLETE_01_b); // light gray
+	case 2:
+		return FRAMEBUFFER_PIXEL(GB_PALLETE_10_r, GB_PALLETE_10_g, GB_PALLETE_10_b); // dark gray
+	case 3:
+		return FRAMEBUFFER_PIXEL(GB_PALLETE_11_r, GB_PALLETE_11_g, GB_PALLETE_11_b); // black
+	}
+}
+
+void PPU::new_scanline()
+{
+	this->bus->io[LY - IOOFFSET]++;
+
+	if (this->bus->io[LY - IOOFFSET] == 144)
+	{
+		this->update_state(2);
+		this->bus->cpu.request_interrupt(vblank);
+	}
+
+	if (this->bus->io[LY - IOOFFSET] > 153)
+	{
+		this->bus->io[LY - IOOFFSET] = 0;
+		this->update_state(2);
+	}
+
+	this->cycle_counter = 0;
+	this->scanline_x = 0;
+	this->fifo_bg.reset();
+	this->fifo_sprite.reset();
+}
+
+void PPU::update_state(Byte new_state)
+{
+	Byte* lcdstat_register_ptr = &this->bus->io[STAT - IOOFFSET];
+	Byte original_mode = (*lcdstat_register_ptr & 0b00000011);
+	bool irq_needed = false;
+
+	switch (new_state)
+	{
+		case 0: {
+			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000000); 
+			irq_needed = (*lcdstat_register_ptr & 0b00001000);
+		}break;
+
+		case 1: { 
+			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000001);
+			if (this->lcd_enabled())
+				irq_needed = (*lcdstat_register_ptr & 0b00010000);
+		}break;
+
+		case 2: { 
+			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000010);
+			irq_needed = (*lcdstat_register_ptr & 0b00100000);
+		}break;
+
+		case 3: { 
+			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000011); 
+		}break;
+	
+	}
+
+	//if mode hsa changed
+
+	if (original_mode != (*lcdstat_register_ptr & 0b00000011) && irq_needed)
+		this->bus->cpu.request_interrupt(lcdstat);
+
+	//time to check LYC = LY
+
+//set register for equality
+	if (this->bus->io[LY - IOOFFSET] == this->bus->io[LYC - IOOFFSET])
+	{
+		*lcdstat_register_ptr |= 0b00000100;
+		// if interrupt is enabled
+		if ((*lcdstat_register_ptr & 0b01000000))
+			this->bus->cpu.request_interrupt(lcdstat);
+	}
+	else
+		*lcdstat_register_ptr &= ~0b00000100;
+}
+
+
+
 void TILE::consolePrint()
 {    
 	for (int y = 0; y < 8; y++)
@@ -161,6 +419,9 @@ void TILE::getPixelColour(int x, int y)
 
 	if (result != 0)
 		std::cout<< "";
+	if (result == 00)
+		std::cout << "  ";
+	else
 	std::cout << std::bitset<2>{result};
 
 	//return result;
@@ -179,81 +440,3 @@ TILE::TILE()
 	this->bytes_per_tile.fill(0x00);
 }
 
-PPU::PPU()
-{
-	for (int i = 0; i < XRES * YRES; i++)
-	{
-		this->framebuffer[i] = FRAMEBUFFER_PIXEL(0xFF, 0xFF, 0xFF);
-	}
-
-	
-	//int x = 3, y = 2;
-	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
-	//x = 4, y = 2;
-	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
-
-	//x = 6, y = 2;
-	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
-	//x = 7, y = 2;
-	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
-
-	//x = 2, y = 3;
-	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
-
-	//x = 5, y = 3;
-	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
-
-	//x = 8, y = 3;
-	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
-
-	//x = 2, y = 4;
-	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
-
-	//x = 8, y = 4;
-	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
-
-	//x = 3, y = 5;
-	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
-
-	//x = 7, y = 5;
-	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
-
-	//x = 4, y = 6;
-	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
-
-	//x = 6, y = 6;
-	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
-
-	//x = 5, y = 7;
-	//this->framebuffer[x + (XRES * y)] = FRAMEBUFFER_PIXEL(0x32, 0x32, 0xFF);
-};
-
-
-
-void FIFO::push(FIFO_pixel pixel)
-{
-	if (tail_pos <= 16)
-	{
-		this->queue[tail_pos++] = pixel;
-	}
-}
-
-FIFO_pixel FIFO::pop()
-{
-	if (tail_pos > 0)
-	{
-		FIFO_pixel temp = this->queue[0];
-		for (int i = 0; i < this->tail_pos - 1; i++)
-		{
-			this->queue[i] = this->queue[i + 1];
-		}
-		memset(&this->queue[this->tail_pos - 1], 0, sizeof(FIFO_pixel));
-		this->tail_pos--;
-
-		return temp;
-	}
-}
-
-FIFO::FIFO()
-{
-}

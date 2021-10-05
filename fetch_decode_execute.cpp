@@ -314,24 +314,20 @@ int CPU::fetch_decode_execute()
     this->interrupt_DI_EI_handler();
 
 #if DEBUG 1
-#define BREAKPOINTPC 0x005d
+#define BREAKPOINTPC 0x0100
 #define BREAKPOINTHL 0x8010
 
-
-    // follows bgb till 0x0027 confirmed
-
-   // 00a7, af register corrupted
 
 
     //this->DEBUG_printCurrentState();
     if (this->registers.pc >= BREAKPOINTPC)
-        this->DEBUG_printCurrentState();
+        //this->DEBUG_printCurrentState();
+    //this->bus->ppu.fifo_bg.push()
 
     if (this->registers.pc == BREAKPOINTPC)
     {
         this->registers.pc = BREAKPOINTPC;
-        int i = 9;
-        TILE tile0(this->bus, 0x8000 + (16 * i));
+        TILE tile0(this->bus, this->bus->ppu.get_tile_address(25, PPU::background));
         tile0.consolePrint();
         
     }

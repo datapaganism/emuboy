@@ -13,7 +13,7 @@ RENDERER::RENDERER()
         YRES * RES_SCALING, SDL_WINDOW_SHOWN);
 
     this->renderer = SDL_CreateRenderer(this->window, -1, SDL_TEXTUREACCESS_TARGET);
-    SDL_SetRenderDrawColor(this->renderer,0,0,0,0);
+    SDL_SetRenderDrawColor(this->renderer, GB_PALLETE_BG_r, GB_PALLETE_BG_g, GB_PALLETE_BG_b, 0xFF);
     SDL_RenderClear(this->renderer);
     SDL_RenderPresent(this->renderer);
 }
@@ -27,7 +27,7 @@ RENDERER::~RENDERER()
 
 void RENDERER::render_frame(BUS *bus)
 {
-    SDL_SetRenderDrawColor(this->renderer, 0, 0, 0, 0);
+    //SDL_SetRenderDrawColor(this->renderer, GB_PALLETE_BG_r, GB_PALLETE_BG_g, GB_PALLETE_BG_b, 0xFF);
     SDL_RenderClear(this->renderer);
 
     if (bus->ppu.lcd_enabled())
@@ -37,7 +37,7 @@ void RENDERER::render_frame(BUS *bus)
             for (int x = 0; x < XRES; x++)
             {
                     auto pixel = bus->ppu.framebuffer[x + (XRES * y)];
-                    SDL_SetRenderDrawColor(this->renderer, pixel.red, pixel.blue, pixel.green, 0xFF);
+                    SDL_SetRenderDrawColor(this->renderer, pixel.red, pixel.green, pixel.blue, 0xFF);
                     SDL_Rect r;
                     r.x = x * RES_SCALING;
                     r.y = y * RES_SCALING;

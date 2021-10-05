@@ -16,38 +16,38 @@ int main(int argv, char** args)
     //BUS bus("./roms/blargg/full.gb", "bios.bin");
     //std::unique_ptr<BUS> bus;
     //bus = std::make_unique<BUS>("./roms/TETRIS.gb", "bios.bin");
-    BUS bus("./roms/POKEMON YELLOW.gbc", "bios.bin");
+    BUS bus("./roms/TETRIS.gb", "bios.bin");
     RENDERER renderer;
 
     // testing fifo
-    bus.ppu.fifo_bg.push(FIFO_pixel(01,01,1,1));
+    //bus.ppu.fifo_bg.push(FIFO_pixel(01,01,1,1));
 
-    bus.ppu.fifo_bg.pop();
-    bus.ppu.fifo_bg.pop();
+    //bus.ppu.fifo_bg.pop();
+    //bus.ppu.fifo_bg.pop();
 
-    bus.ppu.fifo_bg.push(FIFO_pixel(01, 01, 1, 1));
+    ////bus.ppu.fifo_bg.push(FIFO_pixel(01, 01, 1, 1));
 
-    bus.video_ram[0x8010 - 0x8000] = 0xF0;
-    bus.video_ram[0x8011 - 0x8000] = 0x00;
-    bus.video_ram[0x8012 - 0x8000] = 0xF0;
-    bus.video_ram[0x8013 - 0x8000] = 0x00;
-    bus.video_ram[0x8014 - 0x8000] = 0xFC;
-    bus.video_ram[0x8015 - 0x8000] = 0x00;
-    bus.video_ram[0x8016 - 0x8000] = 0xFC;
-    bus.video_ram[0x8017 - 0x8000] = 0x00;
-    bus.video_ram[0x8018 - 0x8000] = 0xFC;
-    bus.video_ram[0x8019 - 0x8000] = 0x00;
-    bus.video_ram[0x801a - 0x8000] = 0xFC;
-    bus.video_ram[0x801b - 0x8000] = 0x00;
-    bus.video_ram[0x801c - 0x8000] = 0xF3;
-    bus.video_ram[0x801d - 0x8000] = 0x00;
-    bus.video_ram[0x801e - 0x8000] = 0xF3;
-    bus.video_ram[0x801f - 0x8000] = 0x00;
+    //bus.video_ram[0x8010 - 0x8000] = 0xF0;
+    //bus.video_ram[0x8011 - 0x8000] = 0x00;
+    //bus.video_ram[0x8012 - 0x8000] = 0xF0;
+    //bus.video_ram[0x8013 - 0x8000] = 0x00;
+    //bus.video_ram[0x8014 - 0x8000] = 0xFC;
+    //bus.video_ram[0x8015 - 0x8000] = 0x00;
+    //bus.video_ram[0x8016 - 0x8000] = 0xFC;
+    //bus.video_ram[0x8017 - 0x8000] = 0x00;
+    //bus.video_ram[0x8018 - 0x8000] = 0xFC;
+    //bus.video_ram[0x8019 - 0x8000] = 0x00;
+    //bus.video_ram[0x801a - 0x8000] = 0xFC;
+    //bus.video_ram[0x801b - 0x8000] = 0x00;
+    //bus.video_ram[0x801c - 0x8000] = 0xF3;
+    //bus.video_ram[0x801d - 0x8000] = 0x00;
+    //bus.video_ram[0x801e - 0x8000] = 0xF3;
+    //bus.video_ram[0x801f - 0x8000] = 0x00;
 
-    int i = 0;
-    TILE tile0(&bus, 0x8010+(16*i));
-    tile0.consolePrint();
-    
+    //int i = 0;
+    //TILE tile0(&bus, 0x8010+(16*i));
+    //tile0.consolePrint();
+    //
     //bus->ppu.tile.bytes_per_tile.at(0) = 0x02;
     //bus->ppu.tile.bytes_per_tile.at(1) = 0xFF;
     //
@@ -141,6 +141,7 @@ int main(int argv, char** args)
 #endif // TURBO
 
         //Render framebuffer
+        
         renderer.render_frame(&bus);
 
     }

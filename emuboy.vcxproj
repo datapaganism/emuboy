@@ -214,7 +214,9 @@
     <ClCompile Include="bus.cpp" />
     <ClCompile Include="cpu.cpp" />
     <ClCompile Include="emuboy.cpp" />
+    <ClCompile Include="fetcher.cpp" />
     <ClCompile Include="fetch_decode_execute.cpp" />
+    <ClCompile Include="fifo.cpp" />
     <ClCompile Include="gamepak.cpp" />
     <ClCompile Include="ppu.cpp" />
     <ClCompile Include="renderer.cpp" />
@@ -230,6 +232,9 @@
     <ClInclude Include="bus.hpp" />
     <ClInclude Include="config.h" />
     <ClInclude Include="cpu.hpp" />
+    <ClInclude Include="fetcher.hpp" />
+    <ClInclude Include="fifo.hpp" />
+    <ClInclude Include="FIFO_pixel.hpp" />
     <ClInclude Include="gamepak.hpp" />
     <ClInclude Include="joypad_mapping.h" />
     <ClInclude Include="ppu.hpp" />
