@@ -314,21 +314,20 @@ int CPU::fetch_decode_execute()
     this->interrupt_DI_EI_handler();
 
 #if DEBUG 1
-#define BREAKPOINTPC 0x0100
+#define BREAKPOINTPC 0x0064
 #define BREAKPOINTHL 0x8010
 
 
 
     //this->DEBUG_printCurrentState();
     if (this->registers.pc >= BREAKPOINTPC)
-        //this->DEBUG_printCurrentState();
-    //this->bus->ppu.fifo_bg.push()
+        this->DEBUG_printCurrentState();
 
     if (this->registers.pc == BREAKPOINTPC)
     {
         this->registers.pc = BREAKPOINTPC;
-        TILE tile0(this->bus, this->bus->ppu.get_tile_address(25, PPU::background));
-        tile0.consolePrint();
+        //TILE tile0(this->bus, this->bus->ppu.get_tile_address_from_number(25, PPU::background));
+        //tile0.consolePrint();
         
     }
 

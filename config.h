@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#define DEBUG 1
+#define DEBUG 0
 #define TURBO 0
 
 
@@ -16,7 +16,7 @@
 #define XRES 160
 #define YRES 144
 
-#define RES_SCALING 5 // defined integer scaling
+#define RES_SCALING 4 // defined integer scaling
 
 #define EMULATOR_WINDOW_TITLE "emulator"
 

@@ -15,6 +15,9 @@ PPU::PPU()
 	for (int i = 0; i < XRES * YRES; i++)
 	{
 		this->framebuffer[i] = FRAMEBUFFER_PIXEL(GB_PALLETE_00_r, GB_PALLETE_00_g, GB_PALLETE_00_b);
+#if DEBUG 1
+		this->framebuffer[i] = FRAMEBUFFER_PIXEL(0xFF, 0xFF, 0xFF);
+#endif
 	}
 }
 
@@ -33,13 +36,30 @@ void PPU::update_graphics(const int cycles)
 	//this->update_lcdstat();
 
 
-		/*this->bus->set_memory(SCX, 0x20);
-		this->bus->set_memory(SCY, 0x40);*/
+		//this->bus->set_memory(SCX, 0x00);
+		//this->bus->set_memory(SCY, 0x00);
 		//this->bus->io[LY - IOOFFSET] = 0x00;
 //		this->debug_register_set = false;
 
-		if (this->lcd_enabled())
-		{
+	/*this->bus->set_memory(0x8000, 0xC2);
+	this->bus->set_memory(0x8001, 0x7F);
+	this->bus->set_memory(0x8002, 0xBD);
+	this->bus->set_memory(0x8003, 0xC3);
+	this->bus->set_memory(0x8004, 0xDB);
+	this->bus->set_memory(0x8005, 0x24);
+	this->bus->set_memory(0x8006, 0xA5);
+	this->bus->set_memory(0x8007, 0x5A);
+	this->bus->set_memory(0x8008, 0xA5);
+	this->bus->set_memory(0x8009, 0x5A);
+	this->bus->set_memory(0x800A, 0xDB);
+	this->bus->set_memory(0x800B, 0x24);
+	this->bus->set_memory(0x800C, 0xBD);
+	this->bus->set_memory(0x800D, 0xC3);
+	this->bus->set_memory(0x800E, 0xFF);
+	this->bus->set_memory(0x800F, 0x42);*/
+	
+	if (this->lcd_enabled())
+	{
 
 			this->cycle_counter += cycles;
 
@@ -47,7 +67,7 @@ void PPU::update_graphics(const int cycles)
 			{
 			case 0: // h blank
 			{
-				if (this->cycle_counter >= 456)
+				if (this->cycle_counter >= (456/4))
 				{
 					this->new_scanline();
 				}
@@ -55,7 +75,7 @@ void PPU::update_graphics(const int cycles)
 
 			case 1: // v blank
 			{
-				if (this->cycle_counter >= 456)
+				if (this->cycle_counter >= (456 / 4))
 				{
 					this->new_scanline();
 				}
@@ -64,7 +84,7 @@ void PPU::update_graphics(const int cycles)
 			case 2: // oam search
 			{
 				// do stuff
-				if (this->cycle_counter >= 80)
+				if (this->cycle_counter >= (80/4))
 				{
 					this->update_state(3);
 				}
@@ -81,10 +101,20 @@ void PPU::update_graphics(const int cycles)
 			} break;
 			}
 
-		}
-
-		return;
-
+	return;
+	}
+	
+	// reset to the start of the drawing routine, set ly back to 0
+	this->cycle_counter = 0;
+	Byte* ly_ptr = &this->bus->io[LY - IOOFFSET];
+	*ly_ptr = 0;
+		
+	//update register to mode one
+	this->update_state(0);
+		
+	return;
+		
+	
 
 
 
@@ -121,94 +151,94 @@ void PPU::update_graphics(const int cycles)
 	//}
 }
 
-void PPU::update_lcdstat()
-{
-
-	/*
-		LCDSTAT
-
-		00: H-Blank
-		01: V-Blank
-		10: Searching Sprites Atts
-		11: Transfering Data to LCD Driver 
-	
-		Bit 3: Mode 0 Interupt Enabled
-		Bit 4: Mode 1 Interupt Enabled
-		Bit 5: Mode 2 Interupt Enabled
-	*/
-	Byte* lcdstat_register_ptr = &this->bus->io[STAT - IOOFFSET];
-	
-	Byte* ly_ptr = &this->bus->io[LY - IOOFFSET];
-
-	Byte original_mode = (*lcdstat_register_ptr & 0b00000011);
-	bool lyc_ly_flag   = (*lcdstat_register_ptr & 0b00000100);
-	bool mode0_irq     = (*lcdstat_register_ptr & 0b00001000);
-	bool mode1_irq     = (*lcdstat_register_ptr & 0b00010000);
-	bool mode2_irq     = (*lcdstat_register_ptr & 0b00100000);
-	bool lyc_ly_irq    = (*lcdstat_register_ptr & 0b01000000);
-	
-
-	bool irq_needed = false;
-
-	if (!this->lcd_enabled())
-	{
-		// reset to the start of the drawing routine, set ly back to 0
-		this->cycle_counter = 0;
-		*ly_ptr = 0;
-
-		//update register to mode one
-		*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000001);
-
-		return;
-	}
-	
-	// if in vblank
-	if (*ly_ptr >= 144)
-	{
-		*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000001);
-		irq_needed = mode1_irq;
-	}
-	// if not in vblank where are in h
-	else
-	{
-		// OAM scan, mode 2
-		if (this->cycle_counter <= 80)
-		{
-			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000010);
-			irq_needed = mode2_irq;
-		}
-		// pixel transfer, mode 3
-		else if (this->cycle_counter <= 172)
-		{
-			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000011);
-		}
-		// h blank, mode 0
-		else
-		{
-			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000000);
-			irq_needed = mode0_irq;
-		}
-
-
-	}
-
-	if (original_mode != (*lcdstat_register_ptr & 0b00000011) && irq_needed)
-		this->bus->cpu.request_interrupt(lcdstat);
-	
-	//time to check LYC = LY
-
-	//set register for equality
-	if (*ly_ptr == this->bus->io[LYC - IOOFFSET])
-	{
-		*lcdstat_register_ptr |= 0b00000100;
-		// if interrupt is enabled
-		if (lyc_ly_irq)
-			this->bus->cpu.request_interrupt(lcdstat);
-	}
-	else
-		*lcdstat_register_ptr &= ~0b00000100;
-	
-}
+//void PPU::update_lcdstat()
+//{
+//
+//	/*
+//		LCDSTAT
+//
+//		00: H-Blank
+//		01: V-Blank
+//		10: Searching Sprites Atts
+//		11: Transfering Data to LCD Driver 
+//	
+//		Bit 3: Mode 0 Interupt Enabled
+//		Bit 4: Mode 1 Interupt Enabled
+//		Bit 5: Mode 2 Interupt Enabled
+//	*/
+//	Byte* lcdstat_register_ptr = &this->bus->io[STAT - IOOFFSET];
+//	
+//	Byte* ly_ptr = &this->bus->io[LY - IOOFFSET];
+//
+//	Byte original_mode = (*lcdstat_register_ptr & 0b00000011);
+//	bool lyc_ly_flag   = (*lcdstat_register_ptr & 0b00000100);
+//	bool mode0_irq     = (*lcdstat_register_ptr & 0b00001000);
+//	bool mode1_irq     = (*lcdstat_register_ptr & 0b00010000);
+//	bool mode2_irq     = (*lcdstat_register_ptr & 0b00100000);
+//	bool lyc_ly_irq    = (*lcdstat_register_ptr & 0b01000000);
+//	
+//
+//	bool irq_needed = false;
+//
+//	if (!this->lcd_enabled())
+//	{
+//		// reset to the start of the drawing routine, set ly back to 0
+//		this->cycle_counter = 0;
+//		*ly_ptr = 0;
+//
+//		//update register to mode one
+//		*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000001);
+//
+//		return;
+//	}
+//	
+//	// if in vblank
+//	if (*ly_ptr >= 144)
+//	{
+//		*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000001);
+//		irq_needed = mode1_irq;
+//	}
+//	// if not in vblank where are in h
+//	else
+//	{
+//		// OAM scan, mode 2
+//		if (this->cycle_counter <= 80)
+//		{
+//			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000010);
+//			irq_needed = mode2_irq;
+//		}
+//		// pixel transfer, mode 3
+//		else if (this->cycle_counter <= 172)
+//		{
+//			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000011);
+//		}
+//		// h blank, mode 0
+//		else
+//		{
+//			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000000);
+//			irq_needed = mode0_irq;
+//		}
+//
+//
+//	}
+//
+//	if (original_mode != (*lcdstat_register_ptr & 0b00000011) && irq_needed)
+//		this->bus->cpu.request_interrupt(lcdstat);
+//	
+//	//time to check LYC = LY
+//
+//	//set register for equality
+//	if (*ly_ptr == this->bus->io[LYC - IOOFFSET])
+//	{
+//		*lcdstat_register_ptr |= 0b00000100;
+//		// if interrupt is enabled
+//		if (lyc_ly_irq)
+//			this->bus->cpu.request_interrupt(lcdstat);
+//	}
+//	else
+//		*lcdstat_register_ptr &= ~0b00000100;
+//	
+//}
 
 bool PPU::lcd_enabled()
 {
@@ -218,7 +248,7 @@ bool PPU::lcd_enabled()
 
 
 
-Word PPU::get_tile_address(const Byte tile_number, const enum tile_type tile_type)
+Word PPU::get_tile_address_from_number(const Byte tile_number, const enum tile_type tile_type)
 {
 	switch (tile_type)
 	{
@@ -243,53 +273,53 @@ Word PPU::get_tile_address(const Byte tile_number, const enum tile_type tile_typ
 	}
 }
 
-void PPU::render_scanline()
-{
-	//resets fifos
-	//this->fifo_bg = FIFO();
-	//this->fifo_sprite = FIFO();
-
-	// temp setting of scx, scy, ly registers
-	this->bus->set_memory(SCX, 0x80);
-	this->bus->set_memory(SCY, 0x40);
-	this->bus->io[LY - IOOFFSET] = 0x00;
-	
-	// get tile number and address of topleft tile of viewport
-	Byte tile_number = this->fifo_bg.fetcher.get_tile_number();
-	Word tile_address = this->get_tile_address(tile_number, PPU::background);
-
-	// get scy
-	Byte scy = this->bus->get_memory(SCY);
-
-	// get top and bottom byte of 8 pixel line from tile
-	Byte line_data0 = this->bus->get_memory(tile_address + 2 * (scy % 8));
-	Byte line_data1 = this->bus->get_memory((tile_address + 1) + 2 * (scy % 8));
-	
-	for (int i = 0; i < 8; i++) 
-	{
-		// get colour of pixel
-		int offset = (0b1 << (7 - i));
-		bool bit0 = line_data0 & offset;
-		bool bit1 = line_data1 & offset;
-		Byte colour = (((Byte)bit0 << 1) | (Byte)bit1);
-		
-		//push to fifo
-		this->fifo_bg.push(FIFO_pixel(colour, 0, 0, 0));
-
-	}
-
-	// get ly for setting to framebuffer
-	Byte ly = this->bus->get_memory(LY);
-	
-	
-	// pop fifo 8 times into framebuffer
-	for (int i = 0; i < 8; i++)
-	{
-		this->add_to_framebuffer(i, ly, this->fifo_bg.pop());
-	}
-
-}
-
+//void PPU::render_scanline()
+//{
+//	//resets fifos
+//	//this->fifo_bg = FIFO();
+//	//this->fifo_sprite = FIFO();
+//
+//	// temp setting of scx, scy, ly registers
+//	this->bus->set_memory(SCX, 0x80);
+//	this->bus->set_memory(SCY, 0x40);
+//	this->bus->io[LY - IOOFFSET] = 0x00;
+//	
+//	// get tile number and address of topleft tile of viewport
+//	Byte tile_number = this->fifo_bg.fetcher.get_tile_number();
+//	Word tile_address = this->get_tile_address(tile_number, PPU::background);
+//
+//	// get scy
+//	Byte scy = this->bus->get_memory(SCY);
+//
+//	// get top and bottom byte of 8 pixel line from tile
+//	Byte line_data0 = this->bus->get_memory(tile_address + 2 * (scy % 8));
+//	Byte line_data1 = this->bus->get_memory((tile_address + 1) + 2 * (scy % 8));
+//	
+//	for (int i = 0; i < 8; i++) 
+//	{
+//		// get colour of pixel
+//		int offset = (0b1 << (7 - i));
+//		bool bit0 = line_data0 & offset;
+//		bool bit1 = line_data1 & offset;
+//		Byte colour = (((Byte)bit0 << 1) | (Byte)bit1);
+//		
+//		//push to fifo
+//		this->fifo_bg.push(FIFO_pixel(colour, 0, 0, 0));
+//
+//	}
+//
+//	// get ly for setting to framebuffer
+//	Byte ly = this->bus->get_memory(LY);
+//	
+//	
+//	// pop fifo 8 times into framebuffer
+//	for (int i = 0; i < 8; i++)
+//	{
+//		this->add_to_framebuffer(i, ly, this->fifo_bg.pop());
+//	}
+//
+//}
+//
 
 
 void PPU::add_to_framebuffer(const int x, const int y, const FIFO_pixel fifo_pixel)
@@ -329,18 +359,16 @@ FRAMEBUFFER_PIXEL PPU::dmg_framebuffer_pixel_to_rgb(const FIFO_pixel fifo_pixel)
 void PPU::new_scanline()
 {
 	this->bus->io[LY - IOOFFSET]++;
+	this->update_state(2);
 
 	if (this->bus->io[LY - IOOFFSET] == 144)
 	{
-		this->update_state(2);
+		this->update_state(1);
 		this->bus->cpu.request_interrupt(vblank);
 	}
 
 	if (this->bus->io[LY - IOOFFSET] > 153)
-	{
 		this->bus->io[LY - IOOFFSET] = 0;
-		this->update_state(2);
-	}
 
 	this->cycle_counter = 0;
 	this->scanline_x = 0;

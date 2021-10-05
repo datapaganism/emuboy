@@ -43,33 +43,20 @@ void FIFO::update_fifo(int cyclesUsed)
 {
 	this->fifo_cycle_counter += cyclesUsed;
 
-	while (this->fifo_cycle_counter >= 4)
+	while (this->fifo_cycle_counter >= (4/4))
 	{
-		this->fifo_cycle_counter -= 4;
+		this->fifo_cycle_counter -= (4/4);
 
 		if (this->tail_pos > -1)
 		{
 			BUS* pBus = this->ppu_parent->bus;
-			Byte ly = pBus->get_memory(LY);
+			Byte ly = pBus->io[LY - IOOFFSET];
 			
-			//debug
-			//ly = this->ppu_parent->debug_ly;
-
 			if ( this->ppu_parent->scanline_x <= 160)
 			{
 				this->ppu_parent->add_to_framebuffer(this->ppu_parent->scanline_x, ly, this->pop());
 				this->ppu_parent->scanline_x++;
 			}
-
-			//if (this->ppu_parent->scanline_x > 160)
-			//{
-			//	this->ppu_parent->scanline_x = 0;
-			//	pBus->set_memory(LY, ly+1);
-
-			//	//debug
-			//	this->ppu_parent->debug_ly++;
-
-			//}
 		}
 	}
 }

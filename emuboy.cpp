@@ -127,9 +127,23 @@ int main(int argv, char** args)
         ticksNow = SDL_GetTicks();
         tickDelta = ticksNow - ticksPrevious;
 
-#if TURBO 1
-        bus->cycle_system_one_frame();
-#else
+
+        
+#if DEBUG 1
+        int currentCycles = 0;
+
+        
+        int cyclesUsed = bus.cpu.fetch_decode_execute();
+        currentCycles += cyclesUsed;
+        bus.cpu.update_timers(cyclesUsed);
+        bus.ppu.update_graphics(cyclesUsed);
+        currentCycles += bus.cpu.do_interrupts();
+
+
+      if (bus.cpu.registers.pc > 0x5d)
+            renderer.render_frame(&bus);
+        #else
+
         // Emulate a single frame's worth of CPU instructions
         if (tickDelta > VSYNC)
         {
@@ -138,11 +152,13 @@ int main(int argv, char** args)
 
             bus.cycle_system_one_frame();
         }
-#endif // TURBO
+
 
         //Render framebuffer
-        
+
         renderer.render_frame(&bus);
+#endif
+
 
     }
    

@@ -95,7 +95,7 @@ public:
 	/// <summary>
 	/// Converts tile id to address in video ram
 	/// </summary>
-	Word get_tile_address(const Byte tile_number, const enum tile_type tile_type);
+	Word get_tile_address_from_number(const Byte tile_number, const enum tile_type tile_type);
 
 	void render_scanline();
 

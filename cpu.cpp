@@ -14,13 +14,14 @@ void CPU::DEBUG_printCurrentState()
     printf("%s:0x%.2X%.2X  ","DE", this->registers.d,this->registers.e);
     printf("%s:0x%.2X%.2X  ","HL", this->registers.h,this->registers.l);
     printf("%s:0x%.4X  ","SP", this->registers.sp);
+    printf("%s:0x%.4X  ","STAT", this->bus->get_memory(STAT));
     
-    printf("%s:%i  ","z", this->registers.get_flag(z));
+    /*printf("%s:%i  ","z", this->registers.get_flag(z));
     printf("%s:%i  ","n", this->registers.get_flag(n));
     printf("%s:%i  ","h", this->registers.get_flag(h));
     printf("%s:%i  ","c", this->registers.get_flag(c));
     printf("%s:","0xFF00");
-    std::cout << std::bitset<8>(this->bus->io[0]);
+    std::cout << std::bitset<8>(this->bus->io[0]);*/
 
     printf("\n");
 }

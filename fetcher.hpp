@@ -26,9 +26,9 @@ public:
 	
 	//void get_tile();
 
-	Word scroll_register_to_bg_map_address();
+	Word sc_registers_to_top_left_bg_map_address();
 
-	Byte get_tile_number();
+	//Byte get_tile_number();
 	Byte get_tile_number(Word address);
 
 	/*Byte scanline_x_pos = 0;

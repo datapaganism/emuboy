@@ -328,7 +328,7 @@ void BUS::set_memory(const Word address, const Byte data)
         // LY register gets reset if written to
         if (address == LY)
         {
-            this->io[LY - IOOFFSET] = 0;
+            //this->io[LY - IOOFFSET] = 0;
             return;
         }
 
