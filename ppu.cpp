@@ -3,6 +3,7 @@
 #include <bitset>
 
 // ppu pushes for 4 pixels per NOP
+// https://www.reddit.com/r/EmuDev/comments/8uahbc/dmg_bgb_lcd_timings_and_cnt/e1iooum/
 
 
 PPU::PPU()
