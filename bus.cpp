@@ -69,6 +69,119 @@ int BUS::DEBUG_opcode_program(Word address, std::string byteString, int cycles)
     return cyclesUsed;
 }
 
+void BUS::DEBUG_fill_ram(Word address, std::string byteString)
+{
+#include <iterator>
+    std::vector<Byte> byteArray;
+
+    Word temp = 0x0;
+
+
+    for (auto itr = byteString.begin(); itr != byteString.end(); itr++)
+    {
+        auto character = *(itr);
+
+        if (character == ' ' || itr == byteString.end() - 1)
+        {
+            // edge case handling but its bad
+            if (itr == byteString.end() - 1)
+            {
+                temp += this->DEBUG_ascii_to_hex(character);
+                temp = temp << 4;
+            }
+
+            byteArray.push_back(temp >> 4);
+            temp = 0x0;
+            continue;
+        }
+        temp += this->DEBUG_ascii_to_hex(character);
+        temp = temp << 4;
+    }
+
+    int i = 0;
+    for (Byte byte : byteArray)
+    {
+        this->set_memory(address + i, byte);
+        i++;
+    }
+}
+
+void BUS::DEBUG_nintendo_logo()
+{
+    this->DEBUG_fill_ram(0x8000, "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00");
+    //this->DEBUG_fill_ram(0x8000, "FF FF 81 81 81 81 81 81 81 81 81 81 81 81 FF FF");
+    this->DEBUG_fill_ram(0x8000, "FF FF C3 81 81 A5 99 81 99 81 81 A5 C3 81 FF FF");
+    
+    this->DEBUG_fill_ram(0x8010, "F0 00 F0 00 FC 00 FC 00 FC 00 FC 00 F3 00 F3 00");
+    
+    this->DEBUG_fill_ram(0x8020, "3C 00 3C 00 3C 00 3C 00 3C 00 3C 00 3C 00 3C 00");
+    
+    this->DEBUG_fill_ram(0x8030, "F0 00 F0 00 F0 00 F0 00 00 00 00 00 F3 00 F3 00");
+    
+    this->DEBUG_fill_ram(0x8040, "00 00 00 00 00 00 00 00 00 00 00 00 CF 00 CF 00");
+    
+    this->DEBUG_fill_ram(0x8050, "00 00 00 00 0F 00 0F 00 3F 00 3F 00 0F 00 0F 00");
+    
+    this->DEBUG_fill_ram(0x8060, "00 00 00 00 00 00 00 00 C0 00 C0 00 0F 00 0F 00");
+    
+    this->DEBUG_fill_ram(0x8070, "00 00 00 00 00 00 00 00 00 00 00 00 F0 00 F0 00");
+    
+    this->DEBUG_fill_ram(0x8080, "00 00 00 00 00 00 00 00 00 00 00 00 F3 00 F3 00");
+    
+    this->DEBUG_fill_ram(0x8090, "00 00 00 00 00 00 00 00 00 00 00 00 C0 00 C0 00");
+    
+    this->DEBUG_fill_ram(0x80A0, "03 00 03 00 03 00 03 00 03 00 03 00 FF 00 FF 00");
+    
+    this->DEBUG_fill_ram(0x80B0, "C0 00 C0 00 C0 00 C0 00 C0 00 C0 00 C3 00 C3 00");
+    
+    this->DEBUG_fill_ram(0x80C0, "00 00 00 00 00 00 00 00 00 00 00 00 FC 00 FC 00");
+    
+    this->DEBUG_fill_ram(0x80D0, "F3 00 F3 00 F0 00 F0 00 F0 00 F0 00 F0 00 F0 00");
+    
+    this->DEBUG_fill_ram(0x80E0, "3C 00 3C 00 FC 00 FC 00 FC 00 FC 00 3C 00 3C 00");
+    
+    this->DEBUG_fill_ram(0x80F0, "F3 00 F3 00 F3 00 F3 00 F3 00 F3 00 F3 00 F3 00");
+    
+    this->DEBUG_fill_ram(0x8100, "F3 00 F3 00 C3 00 C3 00 C3 00 C3 00 C3 00 C3 00");
+    
+    this->DEBUG_fill_ram(0x8110, "CF 00 CF 00 CF 00 CF 00 CF 00 CF 00 CF 00 CF 00");
+    
+    this->DEBUG_fill_ram(0x8120, "3C 00 3C 00 3F 00 3F 00 3C 00 3C 00 0F 00 0F 00");
+    
+    this->DEBUG_fill_ram(0x8130, "3C 00 3C 00 FC 00 FC 00 00 00 00 00 FC 00 FC 00");
+    
+    this->DEBUG_fill_ram(0x8140, "FC 00 FC 00 F0 00 F0 00 F0 00 F0 00 F0 00 F0 00");
+    
+    this->DEBUG_fill_ram(0x8150, "F3 00 F3 00 F3 00 F3 00 F3 00 F3 00 F0 00 F0 00");
+    
+    this->DEBUG_fill_ram(0x8160, "C3 00 C3 00 C3 00 C3 00 C3 00 C3 00 FF 00 FF 00");
+    
+    this->DEBUG_fill_ram(0x8170, "CF 00 CF 00 CF 00 CF 00 CF 00 CF 00 C3 00 C3 00");
+    
+    this->DEBUG_fill_ram(0x8180, "0F 00 0F 00 0F 00 0F 00 0F 00 0F 00 FC 00 FC 00");
+    
+    this->DEBUG_fill_ram(0x8190, "3C 00 42 00 B9 00 A5 00 B9 00 A5 00 42 00 3C 00");
+
+    this->DEBUG_fill_ram(0x9900, "00 00 00 00 01 02 03 04 05 06 07 08 09 0A 0B 0C");
+    this->DEBUG_fill_ram(0x9910, "19 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00");
+    this->DEBUG_fill_ram(0x9920, "00 00 00 00 0D 0E 0F 10 11 12 13 14 15 16 17 18");
+
+    this->set_memory(LY, 0);
+    this->set_memory(SCY, 0x40);
+    this->set_memory(SCX, 0x20);
+    
+    //this->set_memory(SCY, 0x0);
+    //this->set_memory(SCX, 0x0);
+
+
+    this->set_memory(LCDC, 0x91);
+    this->set_memory(STAT, 0b00000011);
+    this->set_memory(0xFF47, 0xE4);
+
+
+
+}
+
 BUS::BUS()
 {
     this->cpu.connect_to_bus(this);

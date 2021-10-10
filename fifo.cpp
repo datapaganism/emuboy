@@ -52,8 +52,27 @@ void FIFO::update_fifo(int cyclesUsed)
 			BUS* pBus = this->ppu_parent->bus;
 			Byte ly = pBus->io[LY - IOOFFSET];
 			
-			if ( this->ppu_parent->scanline_x <= 160)
+			
+			if ( this->ppu_parent->scanline_x < 160)
 			{
+				/*
+					Check scx register, % 8 gives the amount of pixels we are within a tile, if not 0, pop the fifo by the result
+				*/
+				Byte scx_pop = pBus->io[SCX - IOOFFSET] % 8;
+				if ((this->ppu_parent->scanline_x == 0) && (scx_pop != 0))
+				{
+					for (int i = 0; i < (scx_pop); i++)
+					{
+						this->pop();
+					}
+				}
+
+
+				/*
+				The scroll registers are re - read on each tile fetch, except for the low 3 bits of SCX, which are only read at the beginning of the scanline(for the initial shifting of pixels).
+
+					All models before the CGB - D read the Y coordinate once for each bitplane(so a very precisely timed SCY write allows “desyncing” them), but CGB - D and later use the same Y coordinate for both no matter what.
+					*/
 				this->ppu_parent->add_to_framebuffer(this->ppu_parent->scanline_x, ly, this->pop());
 				this->ppu_parent->scanline_x++;
 			}

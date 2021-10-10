@@ -12,9 +12,14 @@ public:
 	FETCHER();
 	
 	Word address_to_read = 0;
+	Word tile_map_address = 0;
+	Word tile_address = 0;
 	Byte tile_number = 0;
 	Byte data0;
 	Byte data1;
+
+	Byte fetcher_x = 0;
+	Byte fetcher_y = 0;
 	
 	std::array<FIFO_pixel, 8> temp_buffer;
 
@@ -43,6 +48,9 @@ public:
 	FIFO* fifo_parent = nullptr;
 
 	void reset();
+
+	void latch();
+	void inc_address();
 private:
 	
 };

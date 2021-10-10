@@ -93,11 +93,15 @@ void PPU::update_graphics(const int cycles)
 			case 3: // graphics transfer
 			{
 				// do stuff
+				auto ly = this->bus->get_memory(LY);
 				this->fifo_bg.fetcher.update_fetcher(cycles);
 				this->fifo_bg.update_fifo(cycles);
 
 				if (this->scanline_x >= 160)
 					this->update_state(0);
+				
+				//if (this->scanline_x >= 8)
+					//this->new_scanline();
 			} break;
 			}
 

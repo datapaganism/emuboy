@@ -8,6 +8,7 @@
 #include <bitset>
 #include <memory>
 #include "joypad_mapping.h"
+#include <string>
 
 
 
@@ -83,8 +84,18 @@ int main(int argv, char** args)
     //}
 
 
-    bus.cpu.DEBUG_printCurrentState();
-    
+   // bus.cpu.DEBUG_printCurrentState();
+
+    //bus.DEBUG_nintendo_logo();
+
+  /*  for (int i = 0; i < 0x19; i++)
+    {
+        std::cout << i << "\n";
+        TILE tile0(&bus, bus.ppu.get_tile_address_from_number(i, PPU::background));
+        tile0.consolePrint();
+        std::cout << "\n";
+    }
+    */
     unsigned int ticksNow = 0, ticksPrevious = 0;
     
     double tickDelta = 0;
@@ -153,10 +164,26 @@ int main(int argv, char** args)
             bus.cycle_system_one_frame();
         }
 
+        /*int currentCycles = 0;
+
+        while (currentCycles < CYCLES_PER_FRAME)
+        {
+            int cyclesUsed = 1;
+            currentCycles += cyclesUsed;
+            bus.ppu.update_graphics(cyclesUsed);
+            renderer.render_frame(&bus);
+        }*/
 
         //Render framebuffer
-
         renderer.render_frame(&bus);
+        std::string windowTitle("SCX: ");
+        windowTitle.append(std::to_string(bus.get_memory(SCX)));
+        windowTitle.append(" SCY: ");
+        windowTitle.append(std::to_string(bus.get_memory(SCY)));
+        windowTitle.append(" fps: ");
+        windowTitle.append(std::to_string(tickDelta));
+        SDL_SetWindowTitle(renderer.window, windowTitle.data());
+        
 #endif
 
 

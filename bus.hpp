@@ -63,7 +63,8 @@ public:
     void pressButton(const enum JoypadButtons button);
     void depressButton(const enum JoypadButtons button);
 
-
+    void DEBUG_fill_ram(Word address, std::string byteString);
+    void DEBUG_nintendo_logo();
 
 private:
     void load_bios(const std::string bios_name);
