@@ -1,4 +1,5 @@
 #include "gamepak.hpp"
+#include <iostream>
 
 GAMEPAK::GAMEPAK(const std::string filename) : GAMEPAK::GAMEPAK()
 {
@@ -15,7 +16,11 @@ GAMEPAK::GAMEPAK(const std::string filename) : GAMEPAK::GAMEPAK()
 		file.read((char*)this->rom.data(), pos);		
 
 		this->gamepakLoaded = true;
+
+		file.close();
+		return;
 	}
+	std::cout << "GAMEPAK NOT LOADED\n";
 	file.close();
 }
 

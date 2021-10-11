@@ -99,7 +99,7 @@ void FETCHER::update_fetcher(const int cycles)
 		{
 		case 0: // read tile address
 		{
-			this->fetcher_x = ((bus->io[SCX - IOOFFSET] / 8) + this->fifo_parent->ppu_parent->scanline_x / 8) & 0x1F;
+			this->fetcher_x = ((bus->io[SCX - IOOFFSET] / 8) + this->fetcher_scanline_x) & 0x1F;
 			this->fetcher_y = (bus->io[SCY - IOOFFSET] + bus->io[LY - IOOFFSET]) & 255;
 
 			this->tile_map_address = 0x9800 + (this->fetcher_x) + ((this->fetcher_y / 8) * 0x20 );			
@@ -132,6 +132,7 @@ void FETCHER::update_fetcher(const int cycles)
 				//push to fifo
 				this->temp_buffer[i] = (FIFO_pixel(colour, 0, 0, 0));
 			}
+			this->fetcher_scanline_x ++;
 
 			this->state++;
 		};
@@ -239,6 +240,12 @@ void FETCHER::reset()
 	this->temp_buffer.fill(FIFO_pixel(NULL, NULL, NULL, NULL));
 	this->address_to_read = 0;
 	this->tile_number = 0;
+	this->tile_address = 0;
+	this->tile_map_address = 0;
+
+	this->fetcher_scanline_x = 0;
+	this->fetcher_x = 0;
+	this->fetcher_y = 0;
 }
 
 void FETCHER::inc_address()

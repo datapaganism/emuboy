@@ -53,6 +53,21 @@
     <None Include="roms\TETRIS.gb" />
     <None Include="roms\blargg cpu.gb" />
     <None Include="cpp.hint" />
+    <None Include="roms\POKEMON YELLOW.sav" />
+    <None Include="roms\blargg\01-special.gb" />
+    <None Include="roms\blargg\02-interrupts.gb" />
+    <None Include="roms\blargg\03-op sp,hl.gb" />
+    <None Include="roms\blargg\04-op r,imm.gb" />
+    <None Include="roms\blargg\05-op rp.gb" />
+    <None Include="roms\blargg\06-ld r,r.gb" />
+    <None Include="roms\blargg\07-jr,jp,call,ret,rst.gb" />
+    <None Include="roms\blargg\08-misc instrs.gb" />
+    <None Include="roms\blargg\09-op r,r.gb" />
+    <None Include="roms\blargg\10-bit ops.gb" />
+    <None Include="roms\blargg\11-op a,(hl).gb" />
+    <None Include="roms\blargg\full.gb" />
+    <None Include="roms\POKEMON YELLOW.gbc" />
+    <None Include="TETRIS.gb" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bus.hpp">

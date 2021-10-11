@@ -20,6 +20,8 @@ public:
 
 	Byte fetcher_x = 0;
 	Byte fetcher_y = 0;
+
+	Byte fetcher_scanline_x = 0;
 	
 	std::array<FIFO_pixel, 8> temp_buffer;
 
