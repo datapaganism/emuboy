@@ -15,6 +15,7 @@
 int main(int argv, char** args)
 {
     BUS bus("./roms/TETRIS.gb", "bios.bin");
+    //BUS bus("./roms/blargg/10-bit ops.gb", "bios.bin");
     RENDERER renderer;
 
     //bus.DEBUG_nintendo_logo();
@@ -71,28 +72,16 @@ int main(int argv, char** args)
 
 
         
-#if DEBUG 1
-        int currentCycles = 0;
 
-        
-        int cyclesUsed = bus.cpu.fetch_decode_execute();
-        currentCycles += cyclesUsed;
-        bus.cpu.update_timers(cyclesUsed);
-        bus.ppu.update_graphics(cyclesUsed);
-        currentCycles += bus.cpu.do_interrupts();
-
-
-      if (bus.cpu.registers.pc > 0x5d)
-            renderer.render_frame(&bus);
-        #else
 
         // Emulate a single frame's worth of CPU instructions
-        if (tickDelta > VSYNC)
+        if (tickDelta > 1000/VSYNC)
         {
             //std::cout << "fps: " << 1000 / tickDelta << std::endl;
             ticksPrevious = ticksNow;
 
             bus.cycle_system_one_frame();
+            renderer.render_frame(&bus);
         }
 
         /*int currentCycles = 0;
@@ -106,16 +95,19 @@ int main(int argv, char** args)
         }*/
 
         //Render framebuffer
-        renderer.render_frame(&bus);
+        
         std::string windowTitle("SCX: ");
         windowTitle.append(std::to_string(bus.get_memory(SCX)));
         windowTitle.append(" SCY: ");
         windowTitle.append(std::to_string(bus.get_memory(SCY)));
+        //windowTitle.append(" LY: ");
+        //windowTitle.append(std::to_string(bus.get_memory(LY)));
         windowTitle.append(" fps: ");
-        windowTitle.append(std::to_string(tickDelta));
+        //windowTitle.append(std::to_string(std::pow(tickDelta,-1)));
+        windowTitle.append(std::to_string(1000/ tickDelta));
         SDL_SetWindowTitle(renderer.window, windowTitle.data());
         
-#endif
+
 
 
     }

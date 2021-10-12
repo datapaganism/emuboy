@@ -314,14 +314,14 @@ int CPU::fetch_decode_execute()
     this->interrupt_DI_EI_handler();
 
 #if DEBUG 1
-#define BREAKPOINTPC 0x0064
+#define BREAKPOINTPC 0x0388
 #define BREAKPOINTHL 0x8010
 
 
 
     //this->DEBUG_printCurrentState();
     if (this->registers.pc >= BREAKPOINTPC)
-        this->DEBUG_printCurrentState();
+        //this->DEBUG_printCurrentState();
 
     if (this->registers.pc == BREAKPOINTPC)
     {

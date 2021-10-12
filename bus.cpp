@@ -244,7 +244,7 @@ Byte BUS::get_memory(const Word address)
     if (address <= 0x00ff) //from 0x0000
     {
         // if the bios has never been loaded or if the register at 0xFF50 is set 1 (which is done by the bios program) we need to access the cartridge bank
-        if (this->get_memory(0xFF50) == 0x1|| !this->biosLoaded)
+        if (this->io[(0xFF50) - IOOFFSET] == 0x1|| !this->biosLoaded)
             return this->gamepak.rom[address];
         
         return this->bios[address];
@@ -343,6 +343,13 @@ Byte BUS::get_memory(const Word address)
 
 void BUS::set_memory(const Word address, const Byte data)
 {
+
+    if (address == 0xFF50)
+    {
+        this->io[0xFF50 - IOOFFSET] = 0x1;
+        return;
+    }
+
     if (address <= 0x00ff)
     {
         // boot rom area, or rom bank 0
@@ -414,8 +421,15 @@ void BUS::set_memory(const Word address, const Byte data)
         // unused part of the map, just return
         return;
     }
-    if (address <= 0xFF4B)
+    if (address <= 0xFF4B) // from ff00
     {
+        if (address == STAT)
+        {
+            this->io[address - 0xFF00] = (this->io[address - 0xFF00] & 0x80) | (data & 0x7F);
+
+            return;
+        }
+
         //if changing timers
         if (address == TAC)
         {
@@ -454,6 +468,12 @@ void BUS::set_memory(const Word address, const Byte data)
                 //destroy sound registers.
             }
 
+            return;
+        }
+
+        if (address == 0xFF50)
+        {
+            this->io[0xFF50 - IOOFFSET] = 0x1;
             return;
         }
 
@@ -497,11 +517,18 @@ void BUS::cycle_system_one_frame()
 
     while (currentCycles < CYCLES_PER_FRAME)
     {
-        int cyclesUsed = this->cpu.fetch_decode_execute();
+        /*int cyclesUsed = this->cpu.fetch_decode_execute();
         currentCycles += cyclesUsed;
         this->cpu.update_timers(cyclesUsed);
         this->ppu.update_graphics(cyclesUsed);
-        currentCycles += this->cpu.do_interrupts();
+        currentCycles += this->cpu.do_interrupts();*/
+
+
+        int cyclesUsed = this->cpu.fetch_decode_execute();
+        this->cpu.update_timers(cyclesUsed);
+        cyclesUsed += this->cpu.do_interrupts();
+        this->ppu.update_graphics(cyclesUsed);
+        currentCycles += cyclesUsed;
     }
 }
 
