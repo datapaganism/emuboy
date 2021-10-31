@@ -21,13 +21,23 @@ class BUS;
 // framebuffer should hold pixel colour values.
 
 
+//RGBA32 pixel
 struct FRAMEBUFFER_PIXEL
 {
-	FRAMEBUFFER_PIXEL(Byte red, Byte green, Byte blue )
+	FRAMEBUFFER_PIXEL(Byte red, Byte green, Byte blue)
 	{
 		this->red = red;
 		this->green = green;
 		this->blue = blue;
+		this->alpha = 0xFF;
+	}
+
+	FRAMEBUFFER_PIXEL(Byte red, Byte green, Byte blue, Byte alpha)
+	{
+		this->red = red;
+		this->green = green;
+		this->blue = blue;
+		this->alpha = alpha;
 	}
 
 	FRAMEBUFFER_PIXEL()
@@ -35,11 +45,14 @@ struct FRAMEBUFFER_PIXEL
 		this->red = 0x0;
 		this->green = 0x0;
 		this->blue = 0x0;
+		this->alpha = 0xFF;
 	}
 
 	Byte red;
 	Byte green;
 	Byte blue;
+	Byte alpha;
+	
 };
 
 struct TILE

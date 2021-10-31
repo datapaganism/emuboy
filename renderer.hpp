@@ -11,6 +11,7 @@ class RENDERER
         bool isRunning = true;
         SDL_Renderer* renderer = nullptr;
         SDL_Window* window = nullptr;
+        SDL_Texture* texture = nullptr;
 
         void render_frame(BUS *bus);
     private:
