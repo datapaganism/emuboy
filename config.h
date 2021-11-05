@@ -62,6 +62,9 @@
 
 #define OAM 0xFE00 // OAM start address, to 0xFE9F
 
+#define WY 0xFF4A // WY r/w
+#define WX 0xFF4B // WX, true value += 7 r/w
+
 // convert to gb register freq
 // gb = 2048 - (131072 / hz) 
 

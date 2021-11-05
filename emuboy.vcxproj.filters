@@ -68,6 +68,7 @@
     <None Include="roms\blargg\full.gb" />
     <None Include="roms\POKEMON YELLOW.gbc" />
     <None Include="TETRIS.gb" />
+    <None Include="roms\DR.MARIO.gb" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bus.hpp">

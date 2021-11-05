@@ -87,8 +87,7 @@ public:
 	FIFO fifo_sprite;
 
 	void update_graphics(const int cycles);
-	void update_lcdstat();
-
+	
 	/// <summary>
 	/// polls the state of FF40 register's 7th bit, if 1 then the LCD and PPU is enabled for processing/rendering else not.
 	/// </summary>
@@ -100,8 +99,7 @@ public:
 	/// </summary>
 	Word get_tile_address_from_number(const Byte tile_number, const enum tile_type tile_type);
 
-	void render_scanline();
-
+	
 	BUS* bus = nullptr;
 
 	/// <summary>

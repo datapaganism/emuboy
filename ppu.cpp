@@ -92,10 +92,12 @@ void PPU::update_graphics(const int cycles)
 
 			case 3: // graphics transfer
 			{
-				// do stuff
-				auto ly = this->bus->get_memory(LY);
-				this->fifo_bg.fetcher.update_fetcher(cycles);
-				this->fifo_bg.update_fifo(cycles);
+				// check if backround rendering is enabled
+				if (this->bus->io[LCDC - IOOFFSET] & 0b00000001)
+				{
+					this->fifo_bg.fetcher.update_fetcher(cycles);
+					this->fifo_bg.update_fifo(cycles);
+				}
 
 				if (this->scanline_x >= 160)
 					this->update_state(0);
