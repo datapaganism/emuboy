@@ -238,6 +238,7 @@
     <None Include="roms\blargg\10-bit ops.gb" />
     <None Include="roms\blargg\11-op a,(hl).gb" />
     <None Include="roms\blargg\full.gb" />
+    <None Include="roms\DR.MARIO.gb" />
     <None Include="roms\POKEMON YELLOW.gbc" />
     <None Include="roms\POKEMON YELLOW.sav" />
     <None Include="roms\TETRIS.gb" />

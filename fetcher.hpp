@@ -21,29 +21,22 @@ public:
 	Byte fetcher_x = 0;
 	Byte fetcher_y = 0;
 
+	/// <summary>
+	/// increments by 1 per pixel fetch, 0 to 159 range, independent of x's pushed
+	/// </summary>
 	Byte fetcher_scanline_x = 0;
+
+	Byte state = 0;
 	
 	std::array<FIFO_pixel, 8> temp_buffer;
 
-	Byte state = 0;
 	int cycle_counter = 0;
-
 	
 	void connect_to_fifo(FIFO* pFIFO);
 	
-	//void get_tile();
-
 	Word sc_registers_to_top_left_bg_map_address();
 
-	//Byte get_tile_number();
 	Byte get_tile_number(Word address);
-
-	/*Byte scanline_x_pos = 0;
-	Byte fetcher_x = 0;
-	Byte fetcher_y = 0;*/
-	/*get_tile_data_low();
-	get_tile_data_high();
-	push();*/
 
 	void update_fetcher(const int cycles);
 
@@ -51,7 +44,6 @@ public:
 
 	void reset();
 
-	void latch();
 	void inc_address();
 private:
 	

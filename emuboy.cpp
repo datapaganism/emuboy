@@ -14,7 +14,7 @@
 
 int main(int argv, char** args)
 {
-    BUS bus("./roms/TETRIS.gb", "bios.bin");
+    BUS bus("./roms/DR.MARIO.gb", "bi os.bin");
     //BUS bus("./roms/blargg/10-bit ops.gb", "bios.bin");
     RENDERER renderer;
 

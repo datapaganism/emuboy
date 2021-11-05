@@ -67,7 +67,6 @@ void FIFO::update_fifo(int cyclesUsed)
 					}
 				}
 
-
 				/*
 				The scroll registers are re - read on each tile fetch, except for the low 3 bits of SCX, which are only read at the beginning of the scanline(for the initial shifting of pixels).
 
