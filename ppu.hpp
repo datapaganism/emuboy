@@ -21,7 +21,7 @@ class BUS;
 // framebuffer should hold pixel colour values.
 
 
-//RGB24 pixel
+//ARGB8888 pixel, byte order reversed to argb, due to endianess?
 struct FRAMEBUFFER_PIXEL
 {
 	FRAMEBUFFER_PIXEL(Byte red, Byte green, Byte blue)
@@ -38,11 +38,10 @@ struct FRAMEBUFFER_PIXEL
 		this->blue = 0x0;
 	}
 
-	Byte red;
-	Byte green;
 	Byte blue;
-
-	
+	Byte green;
+	Byte red;
+	Byte alpha = 0xFF;
 };
 
 struct TILE

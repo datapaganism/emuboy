@@ -18,6 +18,15 @@ int main(int argv, char** args)
     //BUS bus("./roms/blargg/10-bit ops.gb", "bios.bin");
     RENDERER renderer;
 
+    SDL_RendererInfo info;
+    SDL_GetRendererInfo(renderer.renderer, &info);
+   std::cout << "Renderer name: " << info.name << std::endl;
+   std::cout << "Texture formats: " << std::endl;
+    for (Uint32 i = 0; i < info.num_texture_formats; i++)
+    {
+        std::cout << SDL_GetPixelFormatName(info.texture_formats[i]) << std::endl;
+    }
+
     //bus.DEBUG_nintendo_logo();
 
   /*  for (int i = 0; i < 0x19; i++)
