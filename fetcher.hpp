@@ -18,7 +18,14 @@ public:
 	Byte data0;
 	Byte data1;
 
+	/// <summary>
+	/// ranges between 0 - 31
+	/// </summary>
 	Byte fetcher_x = 0;
+	
+	/// <summary>
+	/// ranges between 0 - 255
+	/// </summary>
 	Byte fetcher_y = 0;
 
 	/// <summary>

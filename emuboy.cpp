@@ -14,7 +14,7 @@
 
 int main(int argv, char** args)
 {
-    BUS bus("./roms/DR.MARIO.gb", "bi os.bin");
+    BUS bus("./roms/TETRIS.gb", "bios.bin");
     //BUS bus("./roms/blargg/10-bit ops.gb", "bios.bin");
     RENDERER renderer;
 
@@ -91,34 +91,22 @@ int main(int argv, char** args)
 
             bus.cycle_system_one_frame();
             renderer.render_frame(&bus);
+
+            std::string windowTitle("SCX: ");
+            windowTitle.append(std::to_string(bus.get_memory(SCX)));
+            windowTitle.append(" SCY: ");
+            windowTitle.append(std::to_string(bus.get_memory(SCY)));
+            //windowTitle.append(" LY: ");
+            //windowTitle.append(std::to_string(bus.get_memory(LY)));
+            windowTitle.append(" fps: ");
+            //windowTitle.append(std::to_string(std::pow(tickDelta,-1)));
+            windowTitle.append(std::to_string(1000 / tickDelta));
+            SDL_SetWindowTitle(renderer.window, windowTitle.data());
+            
+
         }
 
-        /*int currentCycles = 0;
-
-        while (currentCycles < CYCLES_PER_FRAME)
-        {
-            int cyclesUsed = 1;
-            currentCycles += cyclesUsed;
-            bus.ppu.update_graphics(cyclesUsed);
-            renderer.render_frame(&bus);
-        }*/
-
-        //Render framebuffer
         
-        std::string windowTitle("SCX: ");
-        windowTitle.append(std::to_string(bus.get_memory(SCX)));
-        windowTitle.append(" SCY: ");
-        windowTitle.append(std::to_string(bus.get_memory(SCY)));
-        //windowTitle.append(" LY: ");
-        //windowTitle.append(std::to_string(bus.get_memory(LY)));
-        windowTitle.append(" fps: ");
-        //windowTitle.append(std::to_string(std::pow(tickDelta,-1)));
-        windowTitle.append(std::to_string(1000/ tickDelta));
-        SDL_SetWindowTitle(renderer.window, windowTitle.data());
-        
-
-
-
     }
    
     return 0;

@@ -50,16 +50,16 @@ void RENDERER::render_frame(BUS *bus)
             }
         }*/
 
-        void* mPixels;
-        int mPitch;
+        //void* mPixels;
+        //int mPitch;
 
-        mPixels = bus->ppu.framebuffer.get();
+        //mPixels = bus->ppu.framebuffer.get();
 
         //SDL_LockTexture(this->texture, NULL, (void**)&mPixels, &mPitch);
 
        
         SDL_UpdateTexture(this->texture, NULL, bus->ppu.framebuffer.get(), XRES * sizeof(FRAMEBUFFER_PIXEL));
-        SDL_UnlockTexture(this->texture);
+        //SDL_UnlockTexture(this->texture);
         SDL_RenderCopy(this->renderer, this->texture, NULL, NULL);        
     }
 

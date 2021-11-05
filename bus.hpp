@@ -29,9 +29,10 @@ public:
     std::unique_ptr<Byte[]> io        = std::make_unique<Byte[]>(0x80);
     std::unique_ptr<Byte[]> high_ram  = std::make_unique<Byte[]>(0x7F);
     std::unique_ptr<Byte[]> video_ram = std::make_unique<Byte[]>(0x2000);
-
+    std::unique_ptr<Byte[]> oam_ram   = std::make_unique<Byte[]>(0x100);
     Byte interrupt_enable_register = 0;
     
+
     Byte DEBUG_ascii_to_hex(char character);
     /// <summary>
     /// replaces area of memory with opcode string, useful for writing quick debugging programs

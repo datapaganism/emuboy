@@ -92,12 +92,10 @@ void PPU::update_graphics(const int cycles)
 
 			case 3: // graphics transfer
 			{
-				// check if backround rendering is enabled
-				if (this->bus->io[LCDC - IOOFFSET] & 0b00000001)
-				{
-					this->fifo_bg.fetcher.update_fetcher(cycles);
-					this->fifo_bg.update_fifo(cycles);
-				}
+				// update bg/win fetcher and fifo
+				this->fifo_bg.fetcher.update_fetcher(cycles);
+				this->fifo_bg.update_fifo(cycles);
+				
 
 				if (this->scanline_x >= 160)
 					this->update_state(0);
@@ -253,7 +251,9 @@ bool PPU::lcd_enabled()
 }
 
 
-
+/// <summary>
+/// output 8000-8FFF or 8800-97FF
+/// </summary>
 Word PPU::get_tile_address_from_number(const Byte tile_number, const enum tile_type tile_type)
 {
 	switch (tile_type)

@@ -241,7 +241,7 @@ void BUS::pressButton(const enum JoypadButtons button)
 Byte BUS::get_memory(const Word address)
 {
     // boot rom area, or rom bank 0
-    if (address <= 0x00ff) //from 0x0000
+    if (address <= 0x00FF) //from 0x0000
     {
         // if the bios has never been loaded or if the register at 0xFF50 is set 1 (which is done by the bios program) we need to access the cartridge bank
         if (this->io[(0xFF50) - IOOFFSET] == 0x1|| !this->biosLoaded)
@@ -250,14 +250,14 @@ Byte BUS::get_memory(const Word address)
         return this->bios[address];
     }
 
-    if (address <= 0x3fff) //from 0x0100
+    if (address <= 0x3FFF) //from 0x0100
     {
 
         // game rom bank 0
         return this->gamepak.rom[address];
     }
 
-    if (address <= 0x7fff) // from 0x4000
+    if (address <= 0x7FFF) // from 0x4000
     {
         // game rom bank N
 
@@ -266,17 +266,25 @@ Byte BUS::get_memory(const Word address)
   //      return 0b0;
     }
 
-    if (address <= 0x97ff) // from 0x8000         
+    if (address <= 0x97FF) // from 0x8000         
     {
-        // Tile Ram region
-        return this->video_ram[address - 0x8000];
+        //if ppu in pixel transfer mode
+        if (this->ppu.lcd_enabled() && ( (this->io[STAT - IOOFFSET] & 0b00000011) == 0x3))
+            return 0xFF;
+        
+        //else reutrn tile ram region
+        return this->video_ram[address - VIDEORAMOFFSET];
 //        return 0b0;
     }
 
     if (address <= 0x9FFF) // from 0x9800
     {
+        //if ppu in pixel transfer mode
+        if (this->ppu.lcd_enabled() && ((this->io[STAT - IOOFFSET] & 0b00000011) == 0x3))
+            return 0xFF;
+
         // background map region
-        return this->video_ram[address - 0x8000];
+        return this->video_ram[address - VIDEORAMOFFSET];
         //return 0b0;
     }
 
@@ -301,7 +309,10 @@ Byte BUS::get_memory(const Word address)
     if (address <= 0xFE9F) // from 0xFE00
     {
         // object attribute memory
-        return 0b0;
+        //if ppu in pixel transfer mode
+        if ((this->ppu.lcd_enabled() && ((this->io[STAT - IOOFFSET] & 0b00000011) == 0x3 || (this->io[STAT - IOOFFSET] & 0b00000011) == 0x2)))
+            return 0xFF;
+        return this->oam_ram[address - OAMOFFSET];
     }
 
     if (address <= 0xFEFF) // from 0xFEA0
@@ -370,24 +381,23 @@ void BUS::set_memory(const Word address, const Byte data)
 
     if (address <= 0x97ff)
     {
-
-        if (data != 00)
-            std::cout << "";
+        // if ppu is enabled and pixel transfer mode then can't set data
+        if ((this->ppu.lcd_enabled() && ((this->io[STAT - IOOFFSET] & 0b00000011) == 0x3)))
+            return;
 
         // Tile Ram region
-        this->video_ram[address - 0x8000] = data;
-        
-        
-
-
+        this->video_ram[address - VIDEORAMOFFSET] = data;
         return;
     }
 
     if (address <= 0x9FFF)
     {
+        // if ppu is enabled and pixel transfer mode then can't set data
+        if ((this->ppu.lcd_enabled() && ((this->io[STAT - IOOFFSET] & 0b00000011) == 0x3)))
+            return;
 
         // background map region
-        this->video_ram[address - 0x8000] = data;
+        this->video_ram[address - VIDEORAMOFFSET] = data;
         return;
     }
 
@@ -410,10 +420,15 @@ void BUS::set_memory(const Word address, const Byte data)
         return this->set_memory(address - 0x2000, data);
     }
 
-    if (address <= 0xFE9F)
+    if (address <= 0xFE9F) // from 0xFE00
     {
         // object attribute memory
-        return;
+        // if ppu is enabled and in pixel transfer mode or oam search then can't set data
+        if ((this->ppu.lcd_enabled() && ((this->io[STAT - IOOFFSET] & 0b00000011) == 0x3 || (this->io[STAT - IOOFFSET] & 0b00000011) == 0x2)))
+            return;
+
+       this->oam_ram[address - OAMOFFSET] = data;
+       return;
     }
 
     if (address <= 0xFEFF)
@@ -515,7 +530,7 @@ void BUS::cycle_system_one_frame()
 {
     int currentCycles = 0;
 
-    while (currentCycles < CYCLES_PER_FRAME)
+    while (currentCycles <= CYCLES_PER_FRAME)
     {
         /*int cyclesUsed = this->cpu.fetch_decode_execute();
         currentCycles += cyclesUsed;

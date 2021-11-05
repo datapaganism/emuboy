@@ -13,6 +13,10 @@
 
 #define CYCLES_PER_FRAME GB_CLOCKSPEED/VSYNC // used to figure out how many CPU operations can be done before we need update the screen a single frame
 
+// the CPU uses cycles 70221 times per video frame
+// a video frame takes 70221/4 cycles to render.
+
+
 #define XRES 160
 #define YRES 144
 
@@ -26,8 +30,10 @@
 #define Byte_s int8_t
 #define Word_s int16_t
 
-#define WORKRAMOFFSET 0xc000
+#define WORKRAMOFFSET 0xC000
 #define IOOFFSET 0xFF00
+#define OAMOFFSET 0xFE00
+#define VIDEORAMOFFSET 0x8000
 
 #define IF_REGISTER 0xFF0F
 #define IE_REGISTER 0xFFFF
