@@ -449,11 +449,12 @@ int CPU::ins_PUSH_nn(const Word wordRegisterValue)
 {
     // move low byte to higher (sp)
     this->registers.sp--;
-    this->bus->set_memory(this->registers.sp, (wordRegisterValue & 0x00ff));
+    
+    this->bus->set_memory(this->registers.sp, ((wordRegisterValue & 0xff00) >> 8));
     
     this->registers.sp--;
     // move high byte to lower (sp)
-    this->bus->set_memory(this->registers.sp, ((wordRegisterValue & 0xff00) >> 8));
+    this->bus->set_memory(this->registers.sp, (wordRegisterValue & 0x00ff));
     
 
 
@@ -462,9 +463,9 @@ int CPU::ins_PUSH_nn(const Word wordRegisterValue)
 
 int CPU::ins_POP_nn(Byte* registerOne, Byte* registerTwo)
 {
-    *registerOne = this->bus->get_memory(this->registers.sp);
-    this->registers.sp++;
     *registerTwo = this->bus->get_memory(this->registers.sp);
+    this->registers.sp++;
+    *registerOne = this->bus->get_memory(this->registers.sp);
     this->registers.sp++;
 
     return 12;
@@ -553,14 +554,15 @@ int CPU::ins_SUB_n(const Byte* registerOne, const Byte immediateValue)
 
 int CPU::ins_SBC_A_n(const Byte* registerOne, const Byte immediateValue)
 {
+    bool carry = this->registers.get_flag(c);
     if (registerOne)
     {
         this->ins_SUB_n(nullptr, *registerOne);
-        this->registers.a -= +this->registers.get_flag(c);
+        this->registers.a -= +carry;
         return 4;
     }
     this->ins_SUB_n(nullptr, immediateValue);
-    this->registers.a -= +this->registers.get_flag(c);
+    this->registers.a -= +carry;
     return 8;
 }
 
