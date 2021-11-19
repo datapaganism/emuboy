@@ -34,9 +34,9 @@ Byte FETCHER::get_tile_number(Word address)
 	Word base_tilemap_address = address;
 	
 	//base address is always at ly=0, incrementing it here is improtant
-	base_tilemap_address += ((pBus->get_memory(LY) / 8) * 0x20);
+	base_tilemap_address += ((pBus->get_memory(LY, MEMORY_ACCESS_TYPE::ppu) / 8) * 0x20);
 	
-	Byte tile_number = pBus->get_memory(base_tilemap_address);
+	Byte tile_number = pBus->get_memory(base_tilemap_address, MEMORY_ACCESS_TYPE::ppu);
 
 	return tile_number;
 }

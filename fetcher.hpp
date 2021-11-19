@@ -15,8 +15,8 @@ public:
 	Word tile_map_address = 0;
 	Word tile_address = 0;
 	Byte tile_number = 0;
-	Byte data0;
-	Byte data1;
+	Byte data0 = 0;
+	Byte data1 = 0;
 
 	/// <summary>
 	/// ranges between 0 - 31

@@ -3,18 +3,19 @@
 
 #include <iostream>
 #include <bitset>
+#include <sstream>
 
 void CPU::DEBUG_printCurrentState()
 {
 
     printf("%s:0x%.4X  ", "pc", this->registers.pc);
-    printf("op:0x%.2X | ", this->bus->get_memory(this->registers.pc));
+    printf("op:0x%.2X | ", this->bus->get_memory(this->registers.pc, MEMORY_ACCESS_TYPE::cpu));
     printf("%s:0x%.2X%.2X  ","AF", this->registers.a,this->registers.f);
     printf("%s:0x%.2X%.2X  ","BC", this->registers.b,this->registers.c);
     printf("%s:0x%.2X%.2X  ","DE", this->registers.d,this->registers.e);
     printf("%s:0x%.2X%.2X  ","HL", this->registers.h,this->registers.l);
     printf("%s:0x%.4X  ","SP", this->registers.sp);
-    printf("%s:0x%.4X  ","STAT", this->bus->get_memory(STAT));
+    printf("%s:0x%.4X  ","STAT", this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::cpu));
     
     /*printf("%s:%i  ","z", this->registers.get_flag(z));
     printf("%s:%i  ","n", this->registers.get_flag(n));
@@ -68,7 +69,7 @@ CPU::CPU()
 
 const Byte CPU::get_byte_from_pc()
 {
-    return this->bus->get_memory(this->registers.pc++);
+    return this->bus->get_memory(this->registers.pc++, MEMORY_ACCESS_TYPE::cpu);
 }
 
 const Word CPU::get_word_from_pc()
@@ -80,6 +81,30 @@ const Word CPU::get_word_from_pc()
 const Word CPU::get_word_from_pc_lsbf()
 {
     return (this->get_byte_from_pc()) | (this->get_byte_from_pc() << 8);
+}
+
+void CPU::DEBUG_print_IO()
+{
+    std::cout << "0xFF00  [JOYP]: ";  printf("%.2X\n",this->bus->get_memory(0xFF00, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "0xFF01    [SB]: ";  printf("%.2X\n", this->bus->get_memory(0xFF01, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "0xFF02    [SC]: ";  printf("%.2X\n", this->bus->get_memory(0xFF02, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "0xFF04   [DIV]: ";  printf("%.2X\n", this->bus->get_memory(0xFF04, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "0xFF05  [TIMA]: ";  printf("%.2X\n", this->bus->get_memory(0xFF05, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "0xFF06   [TMA]: ";  printf("%.2X\n", this->bus->get_memory(0xFF06, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "0xFF07   [TAC]: ";  printf("%.2X\n", this->bus->get_memory(0xFF07, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "0xFF0F    [IF]: ";  printf("%.2X\n", this->bus->get_memory(0xFF0F, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "0xFF40  [LCDC]: ";  printf("%.2X\n", this->bus->get_memory(0xFF40, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "0xFF41  [STAT]: ";  printf("%.2X\n", this->bus->get_memory(0xFF41, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "0xFF42   [SCY]: ";  printf("%.2X\n", this->bus->get_memory(0xFF42, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "0xFF43   [SCX]: ";  printf("%.2X\n", this->bus->get_memory(0xFF43, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "0xFF44    [LY]: ";  printf("%.2X\n", this->bus->get_memory(0xFF44, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "0xFF45   [LYC]: ";  printf("%.2X\n", this->bus->get_memory(0xFF45, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "0xFF47   [BGP]: ";  printf("%.2X\n", this->bus->get_memory(0xFF47, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "0xFF48  [OPB0]: ";  printf("%.2X\n", this->bus->get_memory(0xFF48, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "0xFF49  [OPB1]: ";  printf("%.2X\n", this->bus->get_memory(0xFF49, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "0xFF4A    [WY]: ";  printf("%.2X\n", this->bus->get_memory(0xFF4A, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "0xFF4B    [WX]: ";  printf("%.2X\n", this->bus->get_memory(0xFF4B, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "0xFFFF    [IE]: ";  printf("%.2X\n", this->bus->get_memory(0xFFFF, MEMORY_ACCESS_TYPE::cpu));
 }
 
 void CPU::connect_to_bus(BUS *pBus)
@@ -279,7 +304,7 @@ void CPU::update_timers(const int cycles)
     }
 
     // if TMC bit 2 is set, this means that the timer is enabled
-    if (this->bus->get_memory(TAC) & (0b00000100))
+    if (this->bus->get_memory(TAC, MEMORY_ACCESS_TYPE::cpu) & (0b00000100))
     {
         //the timer increment holds the amount of cycles needed to tick TIMA register up one, we can decrement it and see if it has hit 0
         this->timerCounter -= cycles;
@@ -287,20 +312,20 @@ void CPU::update_timers(const int cycles)
         // if the TIMA needs updating
         if (this->timerCounter <= 0)
         {
-            if (this->bus->get_memory(TIMA) == 0xFF)
+            if (this->bus->get_memory(TIMA, MEMORY_ACCESS_TYPE::cpu) == 0xFF)
             {
-                this->bus->set_memory(TIMA, this->bus->get_memory(TMA));
+                this->bus->set_memory(TIMA, this->bus->get_memory(TMA, MEMORY_ACCESS_TYPE::cpu), MEMORY_ACCESS_TYPE::cpu);
                 this->request_interrupt(timer);
             }
 
-            this->bus->set_memory(TIMA, this->bus->get_memory(TIMA)+1);
+            this->bus->set_memory(TIMA, this->bus->get_memory(TIMA, MEMORY_ACCESS_TYPE::cpu)+1, MEMORY_ACCESS_TYPE::cpu);
         }
     }
 }
 
 Byte CPU::get_TMC_frequency()
 {
-    return this->bus->get_memory(TAC) & 0x3;
+    return this->bus->get_memory(TAC, MEMORY_ACCESS_TYPE::cpu) & 0x3;
 }
 
 void CPU::update_timerCounter()
@@ -324,18 +349,18 @@ void CPU::dma_transfer(Byte data)
 {
     for (int i = 0; i < 0xA0; i++)
     {
-        this->bus->set_memory(OAM + i, this->bus->get_memory((data << 8) + i));
+        this->bus->set_memory(OAM + i, this->bus->get_memory((data << 8) + i, MEMORY_ACCESS_TYPE::cpu), MEMORY_ACCESS_TYPE::cpu);
     }
 }
 
 Byte CPU::get_interrupt_flag(const enum InterruptTypes type, Word address)
 {
-    return this->bus->get_memory(address) & type;
+    return this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) & type;
 }
 
 void CPU::set_interrupt_flag(const enum InterruptTypes type, const bool value, Word address)
 {
-    (value) ? this->bus->set_memory(address, this->bus->get_memory(address) | type) : this->bus->set_memory(address, this->bus->get_memory(address) & ~type);
+    (value) ? this->bus->set_memory(address, this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) | type, MEMORY_ACCESS_TYPE::cpu) : this->bus->set_memory(address, this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) & ~type, MEMORY_ACCESS_TYPE::cpu);
 }
 
 
@@ -361,17 +386,17 @@ int CPU::ins_LD_r1_r2(Byte* registerOne, Word address, Byte* registerTwo, Byte v
     }
     if (registerOne && address)
     {
-        *registerOne = this->bus->get_memory(address);
+        *registerOne = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
         return 8;
     }
     if (address && registerTwo)
     {
-        this->bus->set_memory(address, *registerTwo);
+        this->bus->set_memory(address, *registerTwo, MEMORY_ACCESS_TYPE::cpu);
         return 8;
     }
     // if (address && value)
     
-    this->bus->set_memory(address, value);
+    this->bus->set_memory(address, value, MEMORY_ACCESS_TYPE::cpu);
     return 12;
     
 }
@@ -383,26 +408,26 @@ int CPU::ins_LD_r1_nn(Byte* registerOne, const Word address, const int cyclesUse
     // LD a,(nn), mem byte eg: FA 34 12, ld a,(1234)
     // check memory at address 0x1234, put that data into register one
 
-    *registerOne = this->bus->get_memory(address);
+    *registerOne = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
     return cyclesUsed;
 };
 // Take value from registerOne, place at memory location 
 int CPU::ins_LD_nn_r1(Word address, Byte* registerOne)
 {
-    this->bus->set_memory(address, *registerOne);
+    this->bus->set_memory(address, *registerOne, MEMORY_ACCESS_TYPE::cpu);
     return 16;
 };
 
 int CPU::ins_LDDI_nn_r1(Word address, const Byte* registerOne, Byte* registerTwo, Byte* registerThree, const int addSubValue)
 {
-    this->bus->set_memory(address, *registerOne);
+    this->bus->set_memory(address, *registerOne, MEMORY_ACCESS_TYPE::cpu);
     this->registers.set_word(registerTwo, registerThree, (this->registers.get_word(registerTwo, registerThree) + addSubValue));
     return 8;
 };
 
 int CPU::ins_LDDI_r1_nn(Byte* registerOne, const Word address, Byte* registerTwo, Byte* registerThree, const int addSubValue)
 {
-    *registerOne = this->bus->get_memory(address);
+    *registerOne = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
     this->registers.set_word(registerTwo, registerThree, (this->registers.get_word(registerTwo, registerThree) + addSubValue));
     return 8;
 }
@@ -441,31 +466,63 @@ int CPU::ins_LDHL_SP_n(Byte* wordRegisterNibbleHi, Byte* wordRegisterNibbleLo, c
 int CPU::ins_LD_nn_SP(const Word address, const Word stackPointerValue)
 {
     //place value of SP into memory at address and address + 1
-    this->bus->set_memory_word(address, stackPointerValue);
+    this->bus->set_memory_word(address, stackPointerValue, MEMORY_ACCESS_TYPE::cpu);
     return 20;
 }
 
+//new push, pushes addr -1 then addr -2
 int CPU::ins_PUSH_nn(const Word wordRegisterValue)
 {
     // move low byte to higher (sp)
     this->registers.sp--;
-    
-    this->bus->set_memory(this->registers.sp, ((wordRegisterValue & 0xff00) >> 8));
-    
+      this->bus->set_memory(this->registers.sp, ((wordRegisterValue & 0xff00) >> 8), MEMORY_ACCESS_TYPE::cpu);
+
     this->registers.sp--;
     // move high byte to lower (sp)
-    this->bus->set_memory(this->registers.sp, (wordRegisterValue & 0x00ff));
-    
-
-
+    this->bus->set_memory(this->registers.sp, (wordRegisterValue & 0x00ff), MEMORY_ACCESS_TYPE::cpu);
+  
     return 16;
 }
+//old push
+//int CPU::ins_PUSH_nn(const Word wordRegisterValue)
+//{
+//    // move low byte to higher (sp)
+//    this->registers.sp--;
+//    this->bus->set_memory(this->registers.sp, (wordRegisterValue & 0x00ff));
+//
+//    
+//    this->registers.sp--;
+//    // move high byte to lower (sp)
+//    this->bus->set_memory(this->registers.sp, ((wordRegisterValue & 0xff00) >> 8));
+//
+//
+//
+//    return 16;
+//}
 
+
+
+//old pop
+//int CPU::ins_POP_nn(Byte* registerOne, Byte* registerTwo)
+//{
+//    *registerOne = this->bus->get_memory(this->registers.sp);
+//    this->registers.sp++;
+//    *registerTwo = this->bus->get_memory(this->registers.sp);
+//    this->registers.sp++;
+//
+//    return 12;
+//}
+
+//new pop
 int CPU::ins_POP_nn(Byte* registerOne, Byte* registerTwo)
+// a f
 {
-    *registerTwo = this->bus->get_memory(this->registers.sp);
+    *registerTwo = this->bus->get_memory(this->registers.sp, MEMORY_ACCESS_TYPE::cpu);
+    if (registerTwo == &this->registers.f)
+        *registerTwo &= 0xF0;
+
     this->registers.sp++;
-    *registerOne = this->bus->get_memory(this->registers.sp);
+    *registerOne = this->bus->get_memory(this->registers.sp, MEMORY_ACCESS_TYPE::cpu);
     this->registers.sp++;
 
     return 12;
@@ -697,12 +754,12 @@ int CPU::ins_INC_n(Byte* registerOne, Word address)
     // else if immediate value passed
 
     //check carry and half carry flags, I realise this is out of order but it should work the same.
-    this->checkHalfCarry(this->bus->get_memory(address), 1);
+    this->checkHalfCarry(this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu), 1);
     
     // perform addition
-    this->bus->set_memory(address, (this->bus->get_memory(address) + 1));
+    this->bus->set_memory(address, (this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) + 1), MEMORY_ACCESS_TYPE::cpu);
     //evaluate z flag an clear the n flag
-    (this->bus->get_memory(address) == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+    (this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
     this->registers.set_flag(n, 0);
 
     return 12;
@@ -727,12 +784,12 @@ int CPU::ins_DEC_n(Byte* registerOne, Word address)
     // else if immediate value passed
 
     //check carry and half carry flags, I realise this is out of order but it should work the same.
-    this->checkHalfBorrow(this->bus->get_memory(address), 1);
+    this->checkHalfBorrow(this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu), 1);
 
     // perform addition
-    this->bus->set_memory(address, (this->bus->get_memory(address) - 1 ));
+    this->bus->set_memory(address, (this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) - 1 ), MEMORY_ACCESS_TYPE::cpu);
     //evaluate z flag an clear the n flag
-    (this->bus->get_memory(address) == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+    (this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
     this->registers.set_flag(n, 1);
 
     return 12;
@@ -803,8 +860,8 @@ int CPU::ins_SWAP_nn(Byte* registerOne, Word address)
     }
     else
     {
-        this->bus->set_memory(address, (this->get_nibble(this->bus->get_memory(address), false) << 4) + this->get_nibble(this->bus->get_memory(address), true));
-        (this->bus->get_memory(address) == 0x0) ? this->registers.set_flag(z, true) : this->registers.set_flag(z, false);
+        this->bus->set_memory(address, (this->get_nibble(this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu), false) << 4) + this->get_nibble(this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu), true), MEMORY_ACCESS_TYPE::cpu);
+        (this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) == 0x0) ? this->registers.set_flag(z, true) : this->registers.set_flag(z, false);
         cyclesUsed = 16;
     }
     this->registers.set_flag(n, false);
@@ -979,28 +1036,27 @@ int CPU::ins_RRA()
 
 int CPU::ins_RLC(Byte* registerOne, Word address)
 {
+    this->registers.set_flag(n, 0);
+    this->registers.set_flag(h, 0);
+
     if (registerOne)
     {
         this->registers.set_flag(c, ((*registerOne & 0x80) >> 7));
         *registerOne = ((*registerOne << 1) | (*registerOne >> 7));
 
-        this->registers.set_flag(n,0);
-        this->registers.set_flag(h,0);
         (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-
 
         return 8;
     }
 
-    Byte temp = this->bus->get_memory(address);
+    Byte temp = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
     Byte result = ((temp << 1) | (temp >> 7));
 
     this->registers.set_flag(c, ((temp & 0x80) >> 7));
    
-    this->bus->set_memory(address,result);
+    this->bus->set_memory(address,result, MEMORY_ACCESS_TYPE::cpu);
 
-    this->registers.set_flag(n, 0);
-    this->registers.set_flag(h, 0);
+
     (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
 
 
@@ -1012,60 +1068,55 @@ int CPU::ins_RL(Byte* registerOne, Word address)
     Byte flagCarry = this->registers.get_flag(c);
     bool newCarry = 0;
 
+    this->registers.set_flag(n, 0);
+    this->registers.set_flag(h, 0);
+
     if (registerOne)
     {
         newCarry = ((*registerOne & 0x80) >> 7);
         *registerOne = ((*registerOne << 1) | (flagCarry));
 
         this->registers.set_flag(c, newCarry);
-        this->registers.set_flag(n, 0);
-        this->registers.set_flag(h, 0);
-
+        
         (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-
 
         return 8;
     }
 
-    Byte temp = this->bus->get_memory(address);
+    Byte temp = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
     Byte result = ((temp << 1) | (flagCarry));
     newCarry = ((temp & 0x80) >> 7);
-    this->bus->set_memory(address, result);
+    this->bus->set_memory(address, result, MEMORY_ACCESS_TYPE::cpu);
 
     this->registers.set_flag(c, newCarry);
-    this->registers.set_flag(n, 0);
-    this->registers.set_flag(h, 0);
 
     (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-
 
     return 16;
 }
 
 int CPU::ins_RRC(Byte* registerOne, Word address)
 {
+
+    this->registers.set_flag(n, 0);
+    this->registers.set_flag(h, 0);
+
     if (registerOne)
     {
         this->registers.set_flag(c, (*registerOne & 0x1));
         *registerOne = ((*registerOne >> 1) | (*registerOne << 7));
 
-        this->registers.set_flag(n, 0);
-        this->registers.set_flag(h, 0);
 
         (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-
 
         return 8;
     }
 
-    Byte temp = this->bus->get_memory(address);
+    Byte temp = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
     Byte result = ((temp >> 1) | (temp << 7));
 
     this->registers.set_flag(c, (temp & 0x1));
-    this->bus->set_memory(address, result);
-
-    this->registers.set_flag(n, 0);
-    this->registers.set_flag(h, 0);
+    this->bus->set_memory(address, result, MEMORY_ACCESS_TYPE::cpu);
 
     (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
 
@@ -1077,59 +1128,50 @@ int CPU::ins_RR(Byte* registerOne, Word address)
     Byte flagCarry = this->registers.get_flag(c);
     bool newCarry = 0;
 
+    this->registers.set_flag(n, 0);
+    this->registers.set_flag(h, 0);
+
     if (registerOne)
     {
         newCarry = (*registerOne & 0x1);
         *registerOne = ((*registerOne >> 1) | (flagCarry << 7 ));
 
         this->registers.set_flag(c, newCarry);
-        this->registers.set_flag(n, 0);
-        this->registers.set_flag(h, 0);
-
+        
         (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
 
         return 8;
     }
 
-    Byte temp = this->bus->get_memory(address);
+    Byte temp = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
     Byte result = ((temp >> 1) | (flagCarry << 7));
     newCarry = (temp & 0x01);
-    this->bus->set_memory(address, result);
+    this->bus->set_memory(address, result, MEMORY_ACCESS_TYPE::cpu);
 
     this->registers.set_flag(c, newCarry);
-    this->registers.set_flag(n, 0);
-    this->registers.set_flag(h, 0);
-
-
     (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-
-
     return 16;
 }
 
 int CPU::ins_SLA(Byte* registerOne, Word address)
 {
+    this->registers.set_flag(n, 0);
+    this->registers.set_flag(h, 0);
+
     if (registerOne)
     {
         this->registers.set_flag(c,(*registerOne & 0x80) >> 7);
         *registerOne = *registerOne << 1;
 
-        this->registers.set_flag(n, 0);
-        this->registers.set_flag(h, 0);
-
-
         (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
 
         return 8;
     }
-    Byte temp = this->bus->get_memory(address);
+    Byte temp = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
     Byte result = temp << 1;
 
     this->registers.set_flag(c, (temp & 0x80) >> 7);
-    this->bus->set_memory(address, result);
-
-    this->registers.set_flag(n, 0);
-    this->registers.set_flag(h, 0);
+    this->bus->set_memory(address, result, MEMORY_ACCESS_TYPE::cpu);
 
     (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
 
@@ -1138,6 +1180,10 @@ int CPU::ins_SLA(Byte* registerOne, Word address)
 
 int CPU::ins_SRA_n(Byte* registerOne, Word address)
 {
+    this->registers.set_flag(n, 0);
+    this->registers.set_flag(h, 0);
+
+
     Byte bit7 = 0;
     // shift right into carry, msb does not change
     if (registerOne)
@@ -1146,83 +1192,55 @@ int CPU::ins_SRA_n(Byte* registerOne, Word address)
         bit7 = *registerOne >> 7;
 
         *registerOne = (*registerOne >> 1) | (bit7 << 7);
-
-        this->registers.set_flag(n, 0);
-        this->registers.set_flag(h, 0);
-
-
         (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-
-
         return 8;
     }
-    Byte temp = this->bus->get_memory(address);
+    Byte temp = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
     Byte result = (temp >> 1) | (bit7 << 7);
     this->registers.set_flag(c, temp & 0x1);
     bit7 = temp >> 7;
-    this->bus->set_memory(address, result);
-
-    this->registers.set_flag(n, 0);
-    this->registers.set_flag(h, 0);
-
+    this->bus->set_memory(address, result, MEMORY_ACCESS_TYPE::cpu);
 
     (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-
 
     return 16;
 }
 
 int CPU::ins_SRL_n(Byte* registerOne, Word address)
 {
+    this->registers.set_flag(n, 0);
+    this->registers.set_flag(h, 0);
+
     // shift right into carry, msb does not change
     if (registerOne)
     {
         this->registers.set_flag(c, *registerOne & 0x1);
-
         *registerOne = *registerOne >> 1;
-
-        this->registers.set_flag(n, 0);
-        this->registers.set_flag(h, 0);
-
-
         (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-
-
         return 8;
     }
-    Byte temp = this->bus->get_memory(address);
+    Byte temp = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
     Byte result = temp >> 1;
 
     this->registers.set_flag(c, temp & 0x1);
 
-    this->bus->set_memory(address, result);
-
-    this->registers.set_flag(n, 0);
-    this->registers.set_flag(h, 0);
-
+    this->bus->set_memory(address, result, MEMORY_ACCESS_TYPE::cpu);
     (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-
-
     return 16;
 }
 
 int CPU::ins_BIT_b_r(Byte bit, Byte* registerOne, Word address)
 {
-    if (registerOne)
-    {
-        ((*registerOne & (1 << bit)) == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-
-        this->registers.set_flag(n,0);
-        this->registers.set_flag(h,1);
-
-        return 8;
-    }
-    
-    ((this->bus->get_memory(address) & (1 << bit)) == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 1);
 
+    if (registerOne)
+    {
+        ((*registerOne & (1 << bit)) == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+        return 8;
+    }
+    
+    ((this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) & (1 << bit)) == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
     return 16;
 }
 
@@ -1234,7 +1252,7 @@ int CPU::ins_SET_b_r(Byte bit, Byte* registerOne, Word address)
         return 8;
     }
 
-    this->bus->set_memory(address, this->bus->get_memory(address) | (1 << bit));
+    this->bus->set_memory(address, this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) | (1 << bit), MEMORY_ACCESS_TYPE::cpu);
     return 16;
 }
 
@@ -1246,7 +1264,7 @@ int CPU::ins_RES_b_r(Byte bit, Byte* registerOne, Word address)
         return 8;
     }
 
-    this->bus->set_memory(address, this->bus->get_memory(address) & ~(1 << bit));
+    this->bus->set_memory(address, this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) & ~(1 << bit), MEMORY_ACCESS_TYPE::cpu);
     return 16;
 }
 
@@ -1263,25 +1281,37 @@ int CPU::ins_JP_cc_nn(const enum JumpCondition condition, Word address)
         case NZ:
         {
             if (this->registers.get_flag(z) == 0)
+            {
                 this->ins_JP_nn(address);
+                return 16;
+            }
         } break;
     
         case Z:
         {
             if (this->registers.get_flag(z) == 1)
+            {
                 this->ins_JP_nn(address);
+                return 16;
+            }
         } break;
     
         case NC:
         {
             if (this->registers.get_flag(c) == 0)
+            {
                 this->ins_JP_nn(address);
+                return 16;
+            }
         } break;
     
         case C:
         {
             if (this->registers.get_flag(c) == 1)
+            {
                 this->ins_JP_nn(address);
+                return 16;
+            }
         } break;
     }
     return 12;
@@ -1297,35 +1327,50 @@ int CPU::ins_JR_n(Byte_s jumpOffset)
 {
     this->registers.pc += jumpOffset;
 
-    return 8;
+    return 12;
 }
 
 int CPU::ins_JR_cc_n(const enum JumpCondition condition, Byte_s jumpOffset)
 {
+    if (this->registers.b == 0 && this->registers.pc == 0x216)
+        jumpOffset = jumpOffset;
+
     switch (condition)
     {
     case NZ:
     {
         if (this->registers.get_flag(z) == 0)
+        {
             this->ins_JR_n(jumpOffset);
+            return 12;
+        }
     } break;
 
     case Z:
     {
         if (this->registers.get_flag(z) == 1)
+        {
             this->ins_JR_n(jumpOffset);
+            return 12;
+        }
     } break;
 
     case NC:
     {
         if (this->registers.get_flag(c) == 0)
+        {
             this->ins_JR_n(jumpOffset);
+            return 12;
+        }
     } break;
 
     case C:
     {
         if (this->registers.get_flag(c) == 1)
+        {
             this->ins_JR_n(jumpOffset);
+            return 12;
+        }
     } break;
     }
     return 8;
@@ -1340,30 +1385,43 @@ int CPU::ins_CALL_nn(Word address)
 
 int CPU::ins_CALL_cc_nn(enum JumpCondition condition, Word address)
 {
+
     switch (condition)
     {
     case NZ:
     {
         if (this->registers.get_flag(z) == 0)
+        {
             this->ins_CALL_nn(address);
+            return 24;
+        }
     } break;
 
     case Z:
     {
         if (this->registers.get_flag(z) == 1)
+        {
             this->ins_CALL_nn(address);
+            return 24;
+        }
     } break;
 
     case NC:
     {
         if (this->registers.get_flag(c) == 0)
+        {
             this->ins_CALL_nn(address);
+            return 24;
+        }
     } break;
 
     case C:
     {
         if (this->registers.get_flag(c) == 1)
+        {
             this->ins_CALL_nn(address);
+            return 24;
+        }
     } break;
     }
     return 12;
@@ -1371,55 +1429,67 @@ int CPU::ins_CALL_cc_nn(enum JumpCondition condition, Word address)
 
 int CPU::ins_RST_n(const Byte addrOffset)
 {
-    this->ins_PUSH_nn(this->registers.pc);
-    this->ins_JP_nn(0x0000 + addrOffset);
-    return 32;
+    this->ins_CALL_nn(0x0000 + addrOffset);
+    return 16;
 }
 
 int CPU::ins_RET()
 {
-    
-    this->registers.pc = this->bus->get_memory(this->registers.sp) << 8 | this->bus->get_memory(this->registers.sp+1);
+    Word SP = this->registers.sp;
+    this->registers.pc = this->bus->get_memory_word_lsbf(SP, MEMORY_ACCESS_TYPE::cpu);
     this->registers.sp += 2;
-    return 8;
+    return 16;
 }
 
 int CPU::ins_RETI()
 {
     this->ins_RET();
     this->interrupt_master_enable = 1;
-    return 12;
+    return 16;
 }
 
 int CPU::ins_RET_cc(const enum JumpCondition condition)
 {
     switch (condition)
     {
-    case NZ:
-    {
-        if (this->registers.get_flag(z) == 0)
-            this->ins_RET();
-    } break;
+        case NZ:
+        {
+            if (this->registers.get_flag(z) == 0)
+            {
+                this->ins_RET();
+                return 20;
+            }   
+        } break;
 
-    case Z:
-    {
-        if (this->registers.get_flag(z) == 1)
-            this->ins_RET();
-    } break;
+        case Z:
+        {
+            if (this->registers.get_flag(z) == 1)
+            {
+                this->ins_RET();
+                return 20;
+            }
+        } break;
 
-    case NC:
-    {
-        if (this->registers.get_flag(c) == 0)
-            this->ins_RET();
-    } break;
+        case NC:
+        {
+            if (this->registers.get_flag(c) == 0)
+            {
+                this->ins_RET();
+                return 20;
+            }
+        } break;
 
-    case C:
-    {
-        if (this->registers.get_flag(c) == 1)
-            this->ins_RET();
-    } break;
+        case C:
+        {
+            if (this->registers.get_flag(c) == 1)
+            {
+                this->ins_RET();
+                return 20;
+            }
+        } break;
     }
-    return 12;
+    // If we don't require jumping
+    return 8;
 }
 
 

@@ -55,7 +55,7 @@ int BUS::DEBUG_opcode_program(Word address, std::string byteString, int cycles)
     int i = 0;
     for (Byte byte : byteArray)
     {
-        this->set_memory(address + i, byte);
+        this->set_memory(address + i, byte, MEMORY_ACCESS_TYPE::debug);
         i++;
     }
 
@@ -101,7 +101,7 @@ void BUS::DEBUG_fill_ram(Word address, std::string byteString)
     int i = 0;
     for (Byte byte : byteArray)
     {
-        this->set_memory(address + i, byte);
+        this->set_memory(address + i, byte,MEMORY_ACCESS_TYPE::debug);
         i++;
     }
 }
@@ -166,17 +166,17 @@ void BUS::DEBUG_nintendo_logo()
     this->DEBUG_fill_ram(0x9910, "19 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00");
     this->DEBUG_fill_ram(0x9920, "00 00 00 00 0D 0E 0F 10 11 12 13 14 15 16 17 18");
 
-    this->set_memory(LY, 0);
-    this->set_memory(SCY, 0x40);
-    this->set_memory(SCX, 0x20);
+    this->set_memory(LY, 0, MEMORY_ACCESS_TYPE::debug);
+    this->set_memory(SCY, 0x40, MEMORY_ACCESS_TYPE::debug);
+    this->set_memory(SCX, 0x20, MEMORY_ACCESS_TYPE::debug);
     
     //this->set_memory(SCY, 0x0);
     //this->set_memory(SCX, 0x0);
 
 
-    this->set_memory(LCDC, 0x91);
-    this->set_memory(STAT, 0b00000011);
-    this->set_memory(0xFF47, 0xE4);
+    this->set_memory(LCDC, 0x91, MEMORY_ACCESS_TYPE::debug);
+    this->set_memory(STAT, 0b00000011, MEMORY_ACCESS_TYPE::debug);
+    this->set_memory(0xFF47, 0xE4, MEMORY_ACCESS_TYPE::debug);
 
 
 
@@ -186,6 +186,7 @@ BUS::BUS()
 {
     this->cpu.connect_to_bus(this);
     this->ppu.connect_to_bus(this);
+    this->dma_controller.connect_to_bus(this);
     this->init();
 }
 
@@ -238,7 +239,7 @@ void BUS::pressButton(const enum JoypadButtons button)
 // The gameboy is a memory mapped system, components are mapped
 // to indiviudial parts of the addressable memory, we can specify
 // what hardware we are reading from using if guards
-Byte BUS::get_memory(const Word address)
+Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
 {
     // boot rom area, or rom bank 0
     if (address <= 0x00FF) //from 0x0000
@@ -303,7 +304,7 @@ Byte BUS::get_memory(const Word address)
     if (address <= 0xFDFF) // from 0xE000
     {
         // echo ram, it is a copy of the ram above, we will just read memory 2000 addresses above instead
-        return this->get_memory(address - 0x2000);
+        return this->get_memory(address - 0x2000,access_type);
     }
 
     if (address <= 0xFE9F) // from 0xFE00
@@ -344,7 +345,7 @@ Byte BUS::get_memory(const Word address)
     if (address <= 0xFFFF) // from 0xFFFF, yep
     {
         // interrupt enabled register, cannot be accessed
-        return this->interrupt_enable_register;
+        //return this->interrupt_enable_register;
         return 0b0;
     }
 
@@ -352,7 +353,7 @@ Byte BUS::get_memory(const Word address)
     return 0;
 };
 
-void BUS::set_memory(const Word address, const Byte data)
+void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYPE access_type)
 {
 
     if (address == 0xFF50)
@@ -417,7 +418,7 @@ void BUS::set_memory(const Word address, const Byte data)
     if (address <= 0xFDFF)
     {
         // echo ram, it is a copy of the ram above, any calls to this address space will be redirected to address - 2000 spaces above
-        return this->set_memory(address - 0x2000, data);
+        return this->set_memory(address - 0x2000, data, access_type);
     }
 
     if (address <= 0xFE9F) // from 0xFE00
@@ -438,6 +439,11 @@ void BUS::set_memory(const Word address, const Byte data)
     }
     if (address <= 0xFF4B) // from ff00
     {
+        if (address == 0xF0FF)
+        {
+            this->io[address - 0xFF00] = (data | 0xE0);
+            return;
+        }
         if (address == STAT)
         {
             this->io[address - 0xFF00] = (this->io[address - 0xFF00] & 0x80) | (data & 0x7F);
@@ -462,6 +468,7 @@ void BUS::set_memory(const Word address, const Byte data)
 
         if (address == DMA)
         {
+            //this->dma_controller->DMA_triggered = true;
             this->cpu.dma_transfer(data);
             return;
         }
@@ -514,16 +521,16 @@ void BUS::set_memory(const Word address, const Byte data)
         return;
     }
 }
-void BUS::set_memory_word(const Word address, const Word data)
+void BUS::set_memory_word(const Word address, const Word data, enum MEMORY_ACCESS_TYPE access_type)
 {
     //store in little endian byte order 
-    this->set_memory(address, (data & 0x00ff));
-    this->set_memory(address + 1, ((data & 0xff00) >> 8));
+    this->set_memory(address, (data & 0x00ff),access_type);
+    this->set_memory(address + 1, ((data & 0xff00) >> 8), access_type);
 }
 
-const Word BUS::get_memory_word_lsbf(const Word address)
+const Word BUS::get_memory_word_lsbf(const Word address, enum MEMORY_ACCESS_TYPE access_type)
 {
-        return (this->get_memory(address) | (this->get_memory(address + 1) << 8));
+        return (this->get_memory(address, access_type) | (this->get_memory(address + 1, access_type) << 8));
 }
 
 void BUS::cycle_system_one_frame()
@@ -544,6 +551,14 @@ void BUS::cycle_system_one_frame()
         cyclesUsed += this->cpu.do_interrupts();
         this->ppu.update_graphics(cyclesUsed);
         currentCycles += cyclesUsed;
+
+        /*if (this->io[0xFF02 - IOOFFSET] == 0x81)
+        {
+            char c = this->io[0xFF01 - IOOFFSET];
+            printf("%c\n", c);
+            printf("something printed\n");
+            this->io[0xFF02 - IOOFFSET] = 0x0;
+        }*/
     }
 }
 

@@ -1,0 +1,3 @@
+0x27CC is where tetris starts copying tiles
+
+found diverengce, tetris rom 0x021b, writing of IF register, emulators don't write of IF but mine does

@@ -216,7 +216,7 @@
   <ItemGroup>
     <ClCompile Include="bus.cpp" />
     <ClCompile Include="cpu.cpp" />
-    <ClCompile Include="emuboy.cpp" />
+    <ClCompile Include="main.cpp" />
     <ClCompile Include="fetcher.cpp" />
     <ClCompile Include="fetch_decode_execute.cpp" />
     <ClCompile Include="fifo.cpp" />

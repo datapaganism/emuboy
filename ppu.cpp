@@ -265,7 +265,7 @@ Word PPU::get_tile_address_from_number(const Byte tile_number, const enum tile_t
 	case PPU::background:
 	case PPU::window:
 		{
-			bool addressing_mode = (this->bus->get_memory(LCDC) & (0b1 << 4));
+			bool addressing_mode = (this->bus->get_memory(LCDC, MEMORY_ACCESS_TYPE::ppu) & (0b1 << 4));
 			// LCDC.4 = 1, $8000 addressing
 			if (addressing_mode == 1) 
 			{
@@ -335,7 +335,7 @@ void PPU::add_to_framebuffer(const int x, const int y, const FIFO_pixel fifo_pix
 
 FRAMEBUFFER_PIXEL PPU::dmg_framebuffer_pixel_to_rgb(const FIFO_pixel fifo_pixel)
 {
-	Byte palette_register = this->bus->get_memory(0xFF47);
+	Byte palette_register = this->bus->get_memory(0xFF47, MEMORY_ACCESS_TYPE::ppu);
 	Byte id_to_palette_id = 0;
 	switch (fifo_pixel.colour)
 	{
@@ -469,7 +469,7 @@ TILE::TILE(BUS* bus, Word address)
 {
 	for (int i = 0; i < 16; i++)
 	{
-		this->bytes_per_tile[i] = bus->get_memory(address + i);
+		this->bytes_per_tile[i] = bus->get_memory(address + i, MEMORY_ACCESS_TYPE::ppu);
 	}	
 }
 

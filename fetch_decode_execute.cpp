@@ -7,8 +7,51 @@
 /// this function is so big it deserves its own file since its painful to navigate
 int CPU::fetch_decode_execute()
 {
+    
+    //system("cls");
+    //this->DEBUG_print_IO();
+
+
+    // ala 4.10 from tcagfb.pdf
+    if (this->is_halted)
+    {
+        if (this->interrupt_master_enable)
+        {
+            if ((this->bus->get_memory(0xFFFF, MEMORY_ACCESS_TYPE::cpu) && this->bus->get_memory(0xFF0F, MEMORY_ACCESS_TYPE::cpu) && 0x1F) != 0)
+            {
+                this->is_halted = false;
+                this->registers.pc++;
+                return 0; // system will get cycles from interrupt handling
+            }
+            return 1; // so system does something whilst halted.
+        }
+        if ((this->bus->get_memory(0xFFFF, MEMORY_ACCESS_TYPE::cpu) && this->bus->get_memory(0xFF0F, MEMORY_ACCESS_TYPE::cpu) && 0x1F) == 0)
+        {
+            this->is_halted = false;
+            this->registers.pc++;
+            return 0; // system will get cycles from interrupt handling
+        }
+        // HALT BUG, exit halt mode but do not increase pc, next instuction after halt is duplicated
+        if ((this->bus->get_memory(0xFFFF, MEMORY_ACCESS_TYPE::cpu) && this->bus->get_memory(0xFF0F, MEMORY_ACCESS_TYPE::cpu) && 0x1F) != 0)
+        {
+            this->is_halted = false;
+            this->registers.pc++;
+            this->halt_bug = true;
+            return 0; // system will get cycles from interrupt handling
+        }
+        return 1; // so system does something whilst halted.
+           
+    }
     // the program counter holds the address in memory for either instruction or data for an instruction.
+    
+    if (this->halt_bug)
+    {
+        this->registers.pc--;
+        this->halt_bug = false;
+    }
+    
     Byte opcode = this->get_byte_from_pc();
+    
     //std::cout << std::hex << opcode << std::dec <<" ";
    
     int cyclesUsed = 0;
@@ -149,7 +192,7 @@ int CPU::fetch_decode_execute()
     case 0x73: { cyclesUsed = this->ins_LD_r1_r2(nullptr, this->registers.get_HL(), &this->registers.e); } break;
     case 0x74: { cyclesUsed = this->ins_LD_r1_r2(nullptr, this->registers.get_HL(), &this->registers.h); } break;
     case 0x75: { cyclesUsed = this->ins_LD_r1_r2(nullptr, this->registers.get_HL(), &this->registers.l); } break;
-    case 0x76: { cyclesUsed = 4; } break; //HALT
+    case 0x76: { this->is_halted = true; return 0; } break; //HALT
     case 0x77: { cyclesUsed = this->ins_LD_r1_r2(nullptr, this->registers.get_HL(), &this->registers.a); } break;
     
     case 0x78: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.b); } break;
@@ -167,7 +210,7 @@ int CPU::fetch_decode_execute()
     case 0x83: { cyclesUsed = this->ins_ADD_A_n(&this->registers.e); } break;
     case 0x84: { cyclesUsed = this->ins_ADD_A_n(&this->registers.h); } break;
     case 0x85: { cyclesUsed = this->ins_ADD_A_n(&this->registers.l); } break;
-    case 0x86: { cyclesUsed = this->ins_ADD_A_n(nullptr, this->bus->get_memory(this->registers.get_HL())); } break;
+    case 0x86: { cyclesUsed = this->ins_ADD_A_n(nullptr, this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu)); } break;
     case 0x87: { cyclesUsed = this->ins_ADD_A_n(&this->registers.a); } break;
    
     case 0x88: { cyclesUsed = this->ins_ADC_A_n(&this->registers.b); } break;
@@ -176,7 +219,7 @@ int CPU::fetch_decode_execute()
     case 0x8B: { cyclesUsed = this->ins_ADC_A_n(&this->registers.e); } break;
     case 0x8C: { cyclesUsed = this->ins_ADC_A_n(&this->registers.h); } break;
     case 0x8D: { cyclesUsed = this->ins_ADC_A_n(&this->registers.l); } break;
-    case 0x8E: { cyclesUsed = this->ins_ADC_A_n(nullptr, this->bus->get_memory(this->registers.get_HL())); } break;
+    case 0x8E: { cyclesUsed = this->ins_ADC_A_n(nullptr, this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu)); } break;
     case 0x8F: { cyclesUsed = this->ins_ADC_A_n(&this->registers.a); } break;
 
     case 0x90: { cyclesUsed = this->ins_SUB_n(&this->registers.b); } break;
@@ -185,7 +228,7 @@ int CPU::fetch_decode_execute()
     case 0x93: { cyclesUsed = this->ins_SUB_n(&this->registers.e); } break;
     case 0x94: { cyclesUsed = this->ins_SUB_n(&this->registers.h); } break;
     case 0x95: { cyclesUsed = this->ins_SUB_n(&this->registers.l); } break;
-    case 0x96: { cyclesUsed = this->ins_SUB_n(nullptr, this->bus->get_memory(this->registers.get_HL())); } break;
+    case 0x96: { cyclesUsed = this->ins_SUB_n(nullptr, this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu)); } break;
     case 0x97: { cyclesUsed = this->ins_SUB_n(&this->registers.a); } break;
     
     case 0x98: { cyclesUsed = this->ins_SBC_A_n(&this->registers.b); } break;
@@ -194,7 +237,7 @@ int CPU::fetch_decode_execute()
     case 0x9B: { cyclesUsed = this->ins_SBC_A_n(&this->registers.e); } break;
     case 0x9C: { cyclesUsed = this->ins_SBC_A_n(&this->registers.h); } break;
     case 0x9D: { cyclesUsed = this->ins_SBC_A_n(&this->registers.l); } break;
-    case 0x9E: { cyclesUsed = this->ins_SBC_A_n(nullptr, this->bus->get_memory(this->registers.get_HL())); } break;
+    case 0x9E: { cyclesUsed = this->ins_SBC_A_n(nullptr, this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu)); } break;
     case 0x9F: { cyclesUsed = this->ins_SBC_A_n(&this->registers.a); } break;
 
     case 0xA0: { cyclesUsed = this->ins_AND_n(&this->registers.b); } break;
@@ -203,7 +246,7 @@ int CPU::fetch_decode_execute()
     case 0xA3: { cyclesUsed = this->ins_AND_n(&this->registers.e); } break;
     case 0xA4: { cyclesUsed = this->ins_AND_n(&this->registers.h); } break;
     case 0xA5: { cyclesUsed = this->ins_AND_n(&this->registers.l); } break;
-    case 0xA6: { cyclesUsed = this->ins_AND_n(nullptr, this->bus->get_memory(this->registers.get_HL())); } break;
+    case 0xA6: { cyclesUsed = this->ins_AND_n(nullptr, this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu)); } break;
     case 0xA7: { cyclesUsed = this->ins_AND_n(&this->registers.a); } break;
     
     case 0xA8: { cyclesUsed = this->ins_XOR_n(&this->registers.b); } break;
@@ -212,7 +255,7 @@ int CPU::fetch_decode_execute()
     case 0xAB: { cyclesUsed = this->ins_XOR_n(&this->registers.e); } break;
     case 0xAC: { cyclesUsed = this->ins_XOR_n(&this->registers.h); } break;
     case 0xAD: { cyclesUsed = this->ins_XOR_n(&this->registers.l); } break;
-    case 0xAE: { cyclesUsed = this->ins_XOR_n(nullptr, this->bus->get_memory(this->registers.get_HL())); } break;
+    case 0xAE: { cyclesUsed = this->ins_XOR_n(nullptr, this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu)); } break;
     case 0xAF: { cyclesUsed = this->ins_XOR_n(&this->registers.a); } break;
 
     case 0xB0: { cyclesUsed = this->ins_OR_n(&this->registers.b); } break;
@@ -221,7 +264,7 @@ int CPU::fetch_decode_execute()
     case 0xB3: { cyclesUsed = this->ins_OR_n(&this->registers.e); } break;
     case 0xB4: { cyclesUsed = this->ins_OR_n(&this->registers.h); } break;
     case 0xB5: { cyclesUsed = this->ins_OR_n(&this->registers.l); } break;
-    case 0xB6: { cyclesUsed = this->ins_OR_n(nullptr, this->bus->get_memory(this->registers.get_HL())); } break;
+    case 0xB6: { cyclesUsed = this->ins_OR_n(nullptr, this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu)); } break;
     case 0xB7: { cyclesUsed = this->ins_OR_n(&this->registers.a); } break;
     
     case 0xB8: { cyclesUsed = this->ins_CP_n(&this->registers.b); } break;
@@ -230,7 +273,7 @@ int CPU::fetch_decode_execute()
     case 0xBB: { cyclesUsed = this->ins_CP_n(&this->registers.e); } break;
     case 0xBC: { cyclesUsed = this->ins_CP_n(&this->registers.h); } break;
     case 0xBD: { cyclesUsed = this->ins_CP_n(&this->registers.l); } break;
-    case 0xBE: { cyclesUsed = this->ins_CP_n(nullptr, this->bus->get_memory(this->registers.get_HL())); } break;
+    case 0xBE: { cyclesUsed = this->ins_CP_n(nullptr, this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu)); } break;
     case 0xBF: { cyclesUsed = this->ins_CP_n(&this->registers.a); } break;
 
     case 0xC0: { cyclesUsed = this->ins_RET_cc(NZ); } break;
@@ -314,16 +357,20 @@ int CPU::fetch_decode_execute()
     this->interrupt_DI_EI_handler();
 
 #if DEBUG 1
-#define BREAKPOINTPC 0x029E
+//#define BREAKPOINTPC 0x27CC
+#define BREAKPOINTPC 0x021b
 #define BREAKPOINTHL 0x8010
 
     // the mission, get past 239
 
 
-    //this->DEBUG_printCurrentState();
+    this->DEBUG_printCurrentState();
+    
     if (this->registers.pc >= BREAKPOINTPC)
-        this->DEBUG_printCurrentState();
-
+    {
+        this->DEBUG_print_IO();
+        //this->DEBUG_printCurrentState();
+    }
     if (this->registers.pc == BREAKPOINTPC)
     {
         this->registers.pc = BREAKPOINTPC;
@@ -356,6 +403,7 @@ int CPU::CB_instruction_handler()
     Byte opcode = this->get_byte_from_pc();
     int cyclesUsed = 0;
 
+    
     
 
     switch (opcode)

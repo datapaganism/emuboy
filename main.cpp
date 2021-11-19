@@ -11,12 +11,19 @@
 #include <string>
 
 
+#include <sstream>
+#define to_hex_str(hex_val) (static_cast<std::stringstream const&>(std::stringstream() << "0x" << std::hex << hex_val)).str()
+
+
 
 int main(int argv, char** args)
 {
     BUS bus("./roms/TETRIS.gb", "bios.bin");
-    //BUS bus("./roms/blargg/10-bit ops.gb", "bios.bin");
+    //BUS bus("./roms/blargg/03-op sp,hl.gb", "bios.bin");
     RENDERER renderer;
+
+    /*bus.set_memory(0xFF01,0x30);
+    bus.set_memory(0xFF02,0x81);*/
 
     SDL_RendererInfo info;
     SDL_GetRendererInfo(renderer.renderer, &info);
@@ -93,14 +100,21 @@ int main(int argv, char** args)
             renderer.render_frame(&bus);
 
             std::string windowTitle("SCX: ");
-            windowTitle.append(std::to_string(bus.get_memory(SCX)));
+            windowTitle.append(std::to_string(bus.get_memory(SCX, MEMORY_ACCESS_TYPE::debug)));
             windowTitle.append(" SCY: ");
-            windowTitle.append(std::to_string(bus.get_memory(SCY)));
+            windowTitle.append(std::to_string(bus.get_memory(SCY, MEMORY_ACCESS_TYPE::debug)));
             //windowTitle.append(" LY: ");
             //windowTitle.append(std::to_string(bus.get_memory(LY)));
             windowTitle.append(" fps: ");
             //windowTitle.append(std::to_string(std::pow(tickDelta,-1)));
             windowTitle.append(std::to_string(1000 / tickDelta));
+
+            windowTitle.append(" PC: ");
+            windowTitle.append(to_hex_str((bus.cpu.registers.pc)));
+
+            windowTitle.append(" JOY: ");
+            windowTitle.append(to_hex_str(bus.get_memory(0xFF00, MEMORY_ACCESS_TYPE::debug)));
+
             SDL_SetWindowTitle(renderer.window, windowTitle.data());
             
 
