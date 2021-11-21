@@ -84,6 +84,8 @@ public:
     {
         *registerOne = ((value & 0xFF00) >> 8);
         *registerTwo = (value & 0xFF);
+        if (registerTwo == &this->f)
+            *registerTwo = (value & 0xF0);
     }
 };
 
@@ -177,8 +179,10 @@ private:
         void checkCarryWord(const int a, const int b);
         void checkHalfBorrow(const int a, const int b);
 
-        void checkBorrow(const int a, const int b);
+        void checkBorrow(const unsigned int a, const unsigned int b);
         void checkHalfBorrowWord(const int a, const int b);
+
+        void checkBorrowWord(const Word a, const Word_s b);
 
         Byte get_nibble(const Byte input, const bool getHi);
         void set_nibble(Byte* registerOne, const Byte value, const bool setHi);
@@ -196,7 +200,7 @@ private:
         int ins_LD_n_nn(Word* wordRegister = nullptr, Byte* registerOne = nullptr, Byte* registerTwo = nullptr, const Word value = NULL);
         int ins_LD_nn_nn(Word* wordRegisterOne, const Word value);
 
-        int ins_LDHL_SP_n(Byte* wordRegisterNibbleHi, Byte* wordRegisterNibbleLo, const Word stackPointerValue, const Byte value);
+        int ins_LDHL_SP_n(Byte* wordRegisterNibbleHi, Byte* wordRegisterNibbleLo, const Word stackPointerValue, const Byte_s value);
         int ins_LD_nn_SP(const Word address, const Word stackPointerValue);
 
         int ins_PUSH_nn(const Word wordRegisterValue);

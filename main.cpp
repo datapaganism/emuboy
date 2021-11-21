@@ -18,21 +18,21 @@
 
 int main(int argv, char** args)
 {
-    BUS bus("./roms/TETRIS.gb", "bios.bin");
-    //BUS bus("./roms/blargg/03-op sp,hl.gb", "bios.bin");
+    //BUS bus("./roms/TETRIS.gb", "bios.bin");
+    BUS bus("./roms/blargg/04-op r,imm.gb", "b ios.bin");
     RENDERER renderer;
 
     /*bus.set_memory(0xFF01,0x30);
     bus.set_memory(0xFF02,0x81);*/
 
-    SDL_RendererInfo info;
-    SDL_GetRendererInfo(renderer.renderer, &info);
-   std::cout << "Renderer name: " << info.name << std::endl;
-   std::cout << "Texture formats: " << std::endl;
-    for (Uint32 i = 0; i < info.num_texture_formats; i++)
-    {
-        std::cout << SDL_GetPixelFormatName(info.texture_formats[i]) << std::endl;
-    }
+   // SDL_RendererInfo info;
+   // SDL_GetRendererInfo(renderer.renderer, &info);
+   //std::cout << "Renderer name: " << info.name << std::endl;
+   //std::cout << "Texture formats: " << std::endl;
+   // for (Uint32 i = 0; i < info.num_texture_formats; i++)
+   // {
+   //     std::cout << SDL_GetPixelFormatName(info.texture_formats[i]) << std::endl;
+   // }
 
     //bus.DEBUG_nintendo_logo();
 
@@ -44,9 +44,7 @@ int main(int argv, char** args)
         std::cout << "\n";
     }
     */
-    unsigned int ticksNow = 0, ticksPrevious = 0;
-    
-    double tickDelta = 0;
+
 
     //mapping from sdl physical keys to virtual buttons for gameboy
    
@@ -55,6 +53,8 @@ int main(int argv, char** args)
     // 2. run cpu, update timers, run graphics and sound chips, and do interrupts
     // 3. renderer displays graphics from emulated state
     // rinse and repeat
+    unsigned int ticksNow = 0, ticksPrevious = 0;
+    double tickDelta = 0;
     while (renderer.isRunning)
     {
         // Process events and inputs

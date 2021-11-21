@@ -241,6 +241,28 @@ void BUS::pressButton(const enum JoypadButtons button)
 // what hardware we are reading from using if guards
 Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
 {
+    switch (access_type)
+    {
+        case MEMORY_ACCESS_TYPE::cpu:
+        {
+            if (this->dma_controller.dma_triggered)
+                if (!(0xFF80 >= address && address <= 0xFFFE))
+                    return 0x0; //read blocked for non HRAM addresses
+
+            if  (0xFE00 <= address && address <= 0xFE9F) // OAM
+                if ((this->ppu.lcd_enabled() && (this->ppu.get_ppu_state() == 0x3 || this->ppu.get_ppu_state() == 0x2)))
+                    return 0xFF;
+
+            if  (0x8000 <= address && address <= 0x9FFF) // VIDEO RAM
+                if ((this->ppu.lcd_enabled() && this->ppu.get_ppu_state() == 0x3))
+                    return 0xFF;
+
+        } break;
+
+
+        default: break;
+    }
+
     // boot rom area, or rom bank 0
     if (address <= 0x00FF) //from 0x0000
     {
@@ -268,25 +290,14 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
     }
 
     if (address <= 0x97FF) // from 0x8000         
-    {
-        //if ppu in pixel transfer mode
-        if (this->ppu.lcd_enabled() && ( (this->io[STAT - IOOFFSET] & 0b00000011) == 0x3))
-            return 0xFF;
-        
-        //else reutrn tile ram region
+    {       
         return this->video_ram[address - VIDEORAMOFFSET];
-//        return 0b0;
     }
 
     if (address <= 0x9FFF) // from 0x9800
     {
-        //if ppu in pixel transfer mode
-        if (this->ppu.lcd_enabled() && ((this->io[STAT - IOOFFSET] & 0b00000011) == 0x3))
-            return 0xFF;
-
         // background map region
         return this->video_ram[address - VIDEORAMOFFSET];
-        //return 0b0;
     }
 
     if (address <= 0xBFFF) // from 0xA000
@@ -311,8 +322,7 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
     {
         // object attribute memory
         //if ppu in pixel transfer mode
-        if ((this->ppu.lcd_enabled() && ((this->io[STAT - IOOFFSET] & 0b00000011) == 0x3 || (this->io[STAT - IOOFFSET] & 0b00000011) == 0x2)))
-            return 0xFF;
+        
         return this->oam_ram[address - OAMOFFSET];
     }
 
@@ -355,6 +365,29 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
 
 void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYPE access_type)
 {
+    if (address == 0xc242 && data == 0x89)
+        access_type = access_type;
+
+    switch (access_type)
+    {
+    case MEMORY_ACCESS_TYPE::cpu:
+    {
+        if (this->dma_controller.dma_triggered)
+            if (!(0xFF80 >= address && address <= 0xFFFE))
+                return; //read blocked for non HRAM addresses
+
+        if (0xFE00 <= address && address <= 0xFE9F) // OAM
+            if ((this->ppu.lcd_enabled() && (this->ppu.get_ppu_state() == 0x3 || this->ppu.get_ppu_state() == 0x2)))
+                return;
+
+        if (0x8000 <= address && address <= 0x9FFF) // VIDEO RAM
+            if ((this->ppu.lcd_enabled() && this->ppu.get_ppu_state() == 0x3))
+                return;
+
+    } break;
+
+    default: break;
+    }
 
     if (address == 0xFF50)
     {
@@ -382,21 +415,13 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
 
     if (address <= 0x97ff)
     {
-        // if ppu is enabled and pixel transfer mode then can't set data
-        if ((this->ppu.lcd_enabled() && ((this->io[STAT - IOOFFSET] & 0b00000011) == 0x3)))
-            return;
-
-        // Tile Ram region
+       // Tile Ram region
         this->video_ram[address - VIDEORAMOFFSET] = data;
         return;
     }
 
     if (address <= 0x9FFF)
     {
-        // if ppu is enabled and pixel transfer mode then can't set data
-        if ((this->ppu.lcd_enabled() && ((this->io[STAT - IOOFFSET] & 0b00000011) == 0x3)))
-            return;
-
         // background map region
         this->video_ram[address - VIDEORAMOFFSET] = data;
         return;
@@ -411,7 +436,12 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
     if (address <= 0xDFFF)
     {
         // working ram
+        if (address == 0xC242) {
+            auto workramm = this->work_ram.get() + 0x0242;
+            workramm = workramm;
+        }
         this->work_ram[address - 0xC000] = data;
+        
         return;
     }
 
@@ -423,11 +453,6 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
 
     if (address <= 0xFE9F) // from 0xFE00
     {
-        // object attribute memory
-        // if ppu is enabled and in pixel transfer mode or oam search then can't set data
-        if ((this->ppu.lcd_enabled() && ((this->io[STAT - IOOFFSET] & 0b00000011) == 0x3 || (this->io[STAT - IOOFFSET] & 0b00000011) == 0x2)))
-            return;
-
        this->oam_ram[address - OAMOFFSET] = data;
        return;
     }
@@ -439,7 +464,7 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
     }
     if (address <= 0xFF4B) // from ff00
     {
-        if (address == 0xF0FF)
+        if (address == 0xFF0F)
         {
             this->io[address - 0xFF00] = (data | 0xE0);
             return;
@@ -468,8 +493,7 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
 
         if (address == DMA)
         {
-            //this->dma_controller->DMA_triggered = true;
-            this->cpu.dma_transfer(data);
+            this->dma_controller.request_dma(data);
             return;
         }
 
@@ -533,32 +557,56 @@ const Word BUS::get_memory_word_lsbf(const Word address, enum MEMORY_ACCESS_TYPE
         return (this->get_memory(address, access_type) | (this->get_memory(address + 1, access_type) << 8));
 }
 
+Byte BUS::DEBUG_get_memory(const Word address)
+{
+    return this->get_memory(address, MEMORY_ACCESS_TYPE::debug);
+}
+
+void BUS::DEBUG_set_memory(const Word address, const Byte data)
+{
+    this->set_memory(address, data, MEMORY_ACCESS_TYPE::debug);   
+}
+
+void BUS::DEBUG_set_memory_word(const Word address, const Word data)
+{
+    this->set_memory_word(address, data, MEMORY_ACCESS_TYPE::debug);
+}
+
+const Word BUS::DEBUG_get_memory_word_lsbf(const Word address)
+{
+    return this->get_memory_word_lsbf(address, MEMORY_ACCESS_TYPE::debug);
+}
+
 void BUS::cycle_system_one_frame()
 {
     int currentCycles = 0;
 
     while (currentCycles <= CYCLES_PER_FRAME)
     {
-        /*int cyclesUsed = this->cpu.fetch_decode_execute();
-        currentCycles += cyclesUsed;
-        this->cpu.update_timers(cyclesUsed);
-        this->ppu.update_graphics(cyclesUsed);
-        currentCycles += this->cpu.do_interrupts();*/
 
+       /* auto work_ram_ptr = this->work_ram.get() + 0x0242;
+        if (*work_ram_ptr != 0x89 && *work_ram_ptr != 0x0 )
+            *work_ram_ptr = *work_ram_ptr;*/
 
         int cyclesUsed = this->cpu.fetch_decode_execute();
         this->cpu.update_timers(cyclesUsed);
         cyclesUsed += this->cpu.do_interrupts();
-        this->ppu.update_graphics(cyclesUsed);
+        this->dma_controller.update_dma(cyclesUsed);
+        //this->ppu.update_graphics(cyclesUsed);
         currentCycles += cyclesUsed;
 
-        /*if (this->io[0xFF02 - IOOFFSET] == 0x81)
+        //if (*work_ram_ptr == 0x89)
+        //    *work_ram_ptr = 0x89;
+        //    ;
+        //
+
+        if (this->io[0xFF02 - IOOFFSET] == 0x81)
         {
             char c = this->io[0xFF01 - IOOFFSET];
-            printf("%c\n", c);
-            printf("something printed\n");
+            printf("%c", c);
+            //printf("something printed\n");
             this->io[0xFF02 - IOOFFSET] = 0x0;
-        }*/
+        }
     }
 }
 

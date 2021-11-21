@@ -63,7 +63,7 @@ void PPU::update_graphics(const int cycles)
 
 			this->cycle_counter += cycles;
 
-			switch (this->bus->io[STAT - IOOFFSET] & 0b00000011)
+			switch (this->bus->get_memory(STAT,MEMORY_ACCESS_TYPE::ppu) & 0b00000011)
 			{
 			case 0: // h blank
 			{
@@ -347,6 +347,7 @@ FRAMEBUFFER_PIXEL PPU::dmg_framebuffer_pixel_to_rgb(const FIFO_pixel fifo_pixel)
 		id_to_palette_id = (palette_register & 0b00110000) >> 4; break;
 	case 3:
 		id_to_palette_id = (palette_register & 0b11000000) >> 6; break;
+	default: break;
 	}; 
 
 	switch (id_to_palette_id)
@@ -359,7 +360,13 @@ FRAMEBUFFER_PIXEL PPU::dmg_framebuffer_pixel_to_rgb(const FIFO_pixel fifo_pixel)
 		return FRAMEBUFFER_PIXEL(GB_PALLETE_10_r, GB_PALLETE_10_g, GB_PALLETE_10_b); // dark gray
 	case 3:
 		return FRAMEBUFFER_PIXEL(GB_PALLETE_11_r, GB_PALLETE_11_g, GB_PALLETE_11_b); // black
+	default: break;
 	}
+}
+
+Byte PPU::get_ppu_state()
+{
+	return this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0b00000011;
 }
 
 void PPU::new_scanline()
@@ -384,37 +391,40 @@ void PPU::new_scanline()
 
 void PPU::update_state(Byte new_state)
 {
-	Byte* lcdstat_register_ptr = &this->bus->io[STAT - IOOFFSET];
-	Byte original_mode = (*lcdstat_register_ptr & 0b00000011);
+	//Byte* lcdstat_register_ptr = &this->bus->io[STAT - IOOFFSET];
+	Byte lcdstat_register = this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu);
+	Byte original_mode = (lcdstat_register & 0b00000011);
 	bool irq_needed = false;
 
 	switch (new_state)
 	{
 		case 0: {
-			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000000); 
-			irq_needed = (*lcdstat_register_ptr & 0b00001000);
+			lcdstat_register = ((lcdstat_register & 0b11111100) | 0b00000000); 
+			irq_needed = (lcdstat_register & 0b00001000);
 		}break;
 
 		case 1: { 
-			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000001);
+			lcdstat_register = ((lcdstat_register & 0b11111100) | 0b00000001);
 			if (this->lcd_enabled())
-				irq_needed = (*lcdstat_register_ptr & 0b00010000);
+				irq_needed = (lcdstat_register & 0b00010000);
 		}break;
 
 		case 2: { 
-			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000010);
-			irq_needed = (*lcdstat_register_ptr & 0b00100000);
+			lcdstat_register = ((lcdstat_register & 0b11111100) | 0b00000010);
+			irq_needed = (lcdstat_register & 0b00100000);
 		}break;
 
 		case 3: { 
-			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000011); 
+			lcdstat_register = ((lcdstat_register & 0b11111100) | 0b00000011); 
 		}break;
-	
+
+		default: break;
 	}
 
-	//if mode hsa changed
+	
+	//if mode has changed
 
-	if (original_mode != (*lcdstat_register_ptr & 0b00000011) && irq_needed)
+	if (original_mode != (lcdstat_register & 0b00000011) && irq_needed)
 		this->bus->cpu.request_interrupt(lcdstat);
 
 	//time to check LYC = LY
@@ -422,13 +432,16 @@ void PPU::update_state(Byte new_state)
 //set register for equality
 	if (this->bus->io[LY - IOOFFSET] == this->bus->io[LYC - IOOFFSET])
 	{
-		*lcdstat_register_ptr |= 0b00000100;
+		lcdstat_register |= 0b00000100;
 		// if interrupt is enabled
-		if ((*lcdstat_register_ptr & 0b01000000))
+		if ((lcdstat_register & 0b01000000))
 			this->bus->cpu.request_interrupt(lcdstat);
 	}
 	else
-		*lcdstat_register_ptr &= ~0b00000100;
+		lcdstat_register &= ~0b00000100;
+
+	this->bus->set_memory(STAT, lcdstat_register, MEMORY_ACCESS_TYPE::ppu);
+
 }
 
 

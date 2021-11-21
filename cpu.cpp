@@ -85,26 +85,26 @@ const Word CPU::get_word_from_pc_lsbf()
 
 void CPU::DEBUG_print_IO()
 {
-    std::cout << "0xFF00  [JOYP]: ";  printf("%.2X\n",this->bus->get_memory(0xFF00, MEMORY_ACCESS_TYPE::cpu));
-    std::cout << "0xFF01    [SB]: ";  printf("%.2X\n", this->bus->get_memory(0xFF01, MEMORY_ACCESS_TYPE::cpu));
-    std::cout << "0xFF02    [SC]: ";  printf("%.2X\n", this->bus->get_memory(0xFF02, MEMORY_ACCESS_TYPE::cpu));
-    std::cout << "0xFF04   [DIV]: ";  printf("%.2X\n", this->bus->get_memory(0xFF04, MEMORY_ACCESS_TYPE::cpu));
-    std::cout << "0xFF05  [TIMA]: ";  printf("%.2X\n", this->bus->get_memory(0xFF05, MEMORY_ACCESS_TYPE::cpu));
-    std::cout << "0xFF06   [TMA]: ";  printf("%.2X\n", this->bus->get_memory(0xFF06, MEMORY_ACCESS_TYPE::cpu));
-    std::cout << "0xFF07   [TAC]: ";  printf("%.2X\n", this->bus->get_memory(0xFF07, MEMORY_ACCESS_TYPE::cpu));
-    std::cout << "0xFF0F    [IF]: ";  printf("%.2X\n", this->bus->get_memory(0xFF0F, MEMORY_ACCESS_TYPE::cpu));
-    std::cout << "0xFF40  [LCDC]: ";  printf("%.2X\n", this->bus->get_memory(0xFF40, MEMORY_ACCESS_TYPE::cpu));
-    std::cout << "0xFF41  [STAT]: ";  printf("%.2X\n", this->bus->get_memory(0xFF41, MEMORY_ACCESS_TYPE::cpu));
-    std::cout << "0xFF42   [SCY]: ";  printf("%.2X\n", this->bus->get_memory(0xFF42, MEMORY_ACCESS_TYPE::cpu));
-    std::cout << "0xFF43   [SCX]: ";  printf("%.2X\n", this->bus->get_memory(0xFF43, MEMORY_ACCESS_TYPE::cpu));
-    std::cout << "0xFF44    [LY]: ";  printf("%.2X\n", this->bus->get_memory(0xFF44, MEMORY_ACCESS_TYPE::cpu));
-    std::cout << "0xFF45   [LYC]: ";  printf("%.2X\n", this->bus->get_memory(0xFF45, MEMORY_ACCESS_TYPE::cpu));
-    std::cout << "0xFF47   [BGP]: ";  printf("%.2X\n", this->bus->get_memory(0xFF47, MEMORY_ACCESS_TYPE::cpu));
-    std::cout << "0xFF48  [OPB0]: ";  printf("%.2X\n", this->bus->get_memory(0xFF48, MEMORY_ACCESS_TYPE::cpu));
-    std::cout << "0xFF49  [OPB1]: ";  printf("%.2X\n", this->bus->get_memory(0xFF49, MEMORY_ACCESS_TYPE::cpu));
-    std::cout << "0xFF4A    [WY]: ";  printf("%.2X\n", this->bus->get_memory(0xFF4A, MEMORY_ACCESS_TYPE::cpu));
-    std::cout << "0xFF4B    [WX]: ";  printf("%.2X\n", this->bus->get_memory(0xFF4B, MEMORY_ACCESS_TYPE::cpu));
-    std::cout << "0xFFFF    [IE]: ";  printf("%.2X\n", this->bus->get_memory(0xFFFF, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "\t0xFF00  [JOYP]: ";  printf("%.2X\n",this->bus->get_memory(0xFF00, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "\t0xFF01    [SB]: ";  printf("%.2X\n", this->bus->get_memory(0xFF01, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "\t0xFF02    [SC]: ";  printf("%.2X\n", this->bus->get_memory(0xFF02, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "\t0xFF04   [DIV]: ";  printf("%.2X\n", this->bus->get_memory(0xFF04, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "\t0xFF05  [TIMA]: ";  printf("%.2X\n", this->bus->get_memory(0xFF05, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "\t0xFF06   [TMA]: ";  printf("%.2X\n", this->bus->get_memory(0xFF06, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "\t0xFF07   [TAC]: ";  printf("%.2X\n", this->bus->get_memory(0xFF07, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "\t0xFF0F    [IF]: ";  printf("%.2X\n", this->bus->get_memory(0xFF0F, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "\t0xFF40  [LCDC]: ";  printf("%.2X\n", this->bus->get_memory(0xFF40, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "\t0xFF41  [STAT]: ";  printf("%.2X\n", this->bus->get_memory(0xFF41, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "\t0xFF42   [SCY]: ";  printf("%.2X\n", this->bus->get_memory(0xFF42, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "\t0xFF43   [SCX]: ";  printf("%.2X\n", this->bus->get_memory(0xFF43, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "\t0xFF44    [LY]: ";  printf("%.2X\n", this->bus->get_memory(0xFF44, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "\t0xFF45   [LYC]: ";  printf("%.2X\n", this->bus->get_memory(0xFF45, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "\t0xFF47   [BGP]: ";  printf("%.2X\n", this->bus->get_memory(0xFF47, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "\t0xFF48  [OPB0]: ";  printf("%.2X\n", this->bus->get_memory(0xFF48, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "\t0xFF49  [OPB1]: ";  printf("%.2X\n", this->bus->get_memory(0xFF49, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "\t0xFF4A    [WY]: ";  printf("%.2X\n", this->bus->get_memory(0xFF4A, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "\t0xFF4B    [WX]: ";  printf("%.2X\n", this->bus->get_memory(0xFF4B, MEMORY_ACCESS_TYPE::cpu));
+    std::cout << "\t0xFFFF    [IE]: ";  printf("%.2X\n", this->bus->interrupt_enable_register);
 }
 
 void CPU::connect_to_bus(BUS *pBus)
@@ -198,7 +198,7 @@ void CPU::checkHalfBorrow(const int a, const int b)
     return;
 }
 
-void CPU::checkBorrow(const int a, const int b)
+void CPU::checkBorrow(const unsigned int a, const unsigned int b)
 {
 
     if (a >= b)
@@ -209,7 +209,19 @@ void CPU::checkBorrow(const int a, const int b)
     this->registers.set_flag(c, 1);
     return;
     
-}void CPU::checkHalfBorrowWord(const int a, const int b)
+}
+
+void CPU::checkBorrowWord(const Word a, const Word_s b)
+{
+    if ((((~a) & b) & 0xFFFF) == 0)
+    {
+        this->registers.set_flag(c, 0);
+        return;
+    }
+    this->registers.set_flag(c, 1);
+    return;
+}
+void CPU::checkHalfBorrowWord(const int a, const int b)
 {
     if ((a & 0xff) >= (b & 0xff))
     {
@@ -450,14 +462,28 @@ int CPU::ins_LD_nn_nn(Word* wordRegisterOne, const Word value)
     return 8;
 }
 
-int CPU::ins_LDHL_SP_n(Byte* wordRegisterNibbleHi, Byte* wordRegisterNibbleLo, const Word stackPointerValue, const Byte value)
+int CPU::ins_LDHL_SP_n(Byte* wordRegisterNibbleHi, Byte* wordRegisterNibbleLo, const Word stackPointerValue, const Byte_s value)
 {
     Word sum = stackPointerValue + value;
     this->registers.set_flag(z, 0);
     this->registers.set_flag(n, 0);
-    this->checkCarryWord(stackPointerValue, value);
-    // this is weird, wrong behaviour when using checkHalfCarryWord
-    this->checkHalfCarry(stackPointerValue, value);
+
+    /*if (value < 0)
+    {
+        this->checkBorrow(stackPointerValue, value & 0xff);
+        this->checkHalfCarry(stackPointerValue, value);
+    }*/
+    if (value < 0)
+    {
+        this->checkBorrowWord(stackPointerValue, value);
+        this->checkHalfCarry(stackPointerValue, value);
+    }
+    else
+    {
+        this->checkCarryWord(stackPointerValue, value);
+        // this is weird, wrong behaviour when using checkHalfCarryWord
+        this->checkHalfCarry(stackPointerValue, value);
+    }
 
     this->registers.set_word(wordRegisterNibbleHi, wordRegisterNibbleLo, sum);
     return 12;
@@ -563,16 +589,45 @@ int CPU::ins_ADD_A_n(const Byte* registerOne, const Byte immediateValue)
 
 int CPU::ins_ADC_A_n(const Byte* registerOne, const Byte immediateValue)
 {
-    // this function is a bit of cheat there is no point rewriting logic,
-    // we just call the normal addition instruction but pass the register as an immediate value + the carry flag
-    // the add ins would return 8 since we are passing an immediate but we can disregard that and return 4;
+    auto a = this->registers.a;
+    Byte b = 0;
+    auto C = this->registers.get_flag(c);
+
     if (registerOne)
     {
-        this->ins_ADD_A_n(nullptr, *registerOne + this->registers.get_flag(c));
+        b = *registerOne;
+
+        int sum = a + b + C;
+        int no_carry_sum = a ^ b ^ C;
+        int carry_into = sum ^ no_carry_sum;
+        bool half_carry = carry_into & 0x10;
+        bool carry = carry_into & 0x100;
+
+        this->registers.a = sum;
+
+        (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+        this->registers.set_flag(n, 0);
+        this->registers.set_flag(c, carry);
+        this->registers.set_flag(h, half_carry);
+
         return 4;
     }
-    this->ins_ADD_A_n(nullptr, immediateValue + this->registers.get_flag(c));
-    // while the call above would return 8 anyways, it is clearer to be explicit
+
+    b = immediateValue;
+
+    int sum = a + b + C;
+    int no_carry_sum = a ^ b ^ C;
+    int carry_into = sum ^ no_carry_sum;
+    bool half_carry = carry_into & 0x10;
+    bool carry = carry_into & 0x100;
+
+    this->registers.a = sum;
+
+    (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+    this->registers.set_flag(n, 0);
+    this->registers.set_flag(c, carry);
+    this->registers.set_flag(h, half_carry);
+
     return 8;
 }
 
@@ -611,15 +666,51 @@ int CPU::ins_SUB_n(const Byte* registerOne, const Byte immediateValue)
 
 int CPU::ins_SBC_A_n(const Byte* registerOne, const Byte immediateValue)
 {
-    bool carry = this->registers.get_flag(c);
+
+    auto a = this->registers.a;
+    Byte b = 0;
+    auto C = this->registers.get_flag(c);
+
     if (registerOne)
     {
-        this->ins_SUB_n(nullptr, *registerOne);
-        this->registers.a -= +carry;
+        b = *registerOne;
+
+        int sum = a - b - C;
+        bool half_carry = (a ^ b ^ sum) & 0x10;
+        bool carry = (a ^ b ^ sum) & 0x100;
+        if (C)
+        {
+            half_carry = (a ^ b ^ C ^ sum) & 0x10;
+            carry = (a ^ b ^ C ^ sum) & 0x100;
+        }
+        this->registers.a = sum;
+
+        (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+        this->registers.set_flag(n, 1);
+        this->registers.set_flag(c, carry);
+        this->registers.set_flag(h, half_carry);
+
         return 4;
     }
-    this->ins_SUB_n(nullptr, immediateValue);
-    this->registers.a -= +carry;
+
+    b = immediateValue;
+
+    int sum = a - b - C;
+    bool half_carry = (a ^ b ^ sum) & 0x10;
+    bool carry = (a ^ b ^ sum) & 0x100;
+    if (C)
+    {
+        half_carry = (a ^ b ^ C ^ sum) & 0x10;
+        carry = (a ^ b ^ C ^ sum) & 0x100;
+    }
+    this->registers.a = sum;
+
+    (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+    this->registers.set_flag(n, 1);
+    this->registers.set_flag(c, carry);
+    this->registers.set_flag(h, half_carry);
+
+
     return 8;
 }
 
@@ -893,10 +984,40 @@ int CPU::ins_DAA()
     bool flagN = this->registers.get_flag(n);
     bool flagH = this->registers.get_flag(h);
     bool flagC = this->registers.get_flag(c);
-    
+
     // temp store of value of the carry bit, set to reset
     bool need_carry = false;
 
+    if (!flagN)
+    {
+        if (flagH || ((this->registers.a & 0xF) > 0x9))
+            adjust += 0x6;
+
+        if (flagC || ((this->registers.a) > 0x9F))
+        {
+            adjust += 0x60;
+            need_carry = true;
+        }
+    }
+    else
+    {
+        if (flagH)
+            adjust -= 0x6;
+        if (flagC)
+            adjust -= 0x60;
+    }
+
+    (need_carry) ? this->registers.set_flag(c, 1) : this->registers.set_flag(c, 0);
+
+    this->registers.set_flag(h, 0);
+
+    this->registers.a += adjust;
+
+    (this->registers.a == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+
+
+    return 4;
+ 
     // check if lower nibble is bigger than 9 or flag H is set
     if (((this->registers.a) > 9) || flagH)
     {
@@ -940,6 +1061,8 @@ int CPU::ins_DAA()
     this->registers.a += adjust;
 
     (this->registers.a == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+
+   
 
     return 4;
 }
@@ -1332,14 +1455,11 @@ int CPU::ins_JR_n(Byte_s jumpOffset)
 
 int CPU::ins_JR_cc_n(const enum JumpCondition condition, Byte_s jumpOffset)
 {
-    if (this->registers.b == 0 && this->registers.pc == 0x216)
-        jumpOffset = jumpOffset;
-
     switch (condition)
     {
     case NZ:
     {
-        if (this->registers.get_flag(z) == 0)
+        if (!this->registers.get_flag(z))
         {
             this->ins_JR_n(jumpOffset);
             return 12;
@@ -1348,7 +1468,7 @@ int CPU::ins_JR_cc_n(const enum JumpCondition condition, Byte_s jumpOffset)
 
     case Z:
     {
-        if (this->registers.get_flag(z) == 1)
+        if (this->registers.get_flag(z))
         {
             this->ins_JR_n(jumpOffset);
             return 12;
@@ -1357,7 +1477,7 @@ int CPU::ins_JR_cc_n(const enum JumpCondition condition, Byte_s jumpOffset)
 
     case NC:
     {
-        if (this->registers.get_flag(c) == 0)
+        if (!this->registers.get_flag(c))
         {
             this->ins_JR_n(jumpOffset);
             return 12;
@@ -1366,12 +1486,14 @@ int CPU::ins_JR_cc_n(const enum JumpCondition condition, Byte_s jumpOffset)
 
     case C:
     {
-        if (this->registers.get_flag(c) == 1)
+        if (this->registers.get_flag(c))
         {
             this->ins_JR_n(jumpOffset);
             return 12;
         }
     } break;
+
+    default: break;
     }
     return 8;
 }
@@ -1388,41 +1510,43 @@ int CPU::ins_CALL_cc_nn(enum JumpCondition condition, Word address)
 
     switch (condition)
     {
-    case NZ:
-    {
-        if (this->registers.get_flag(z) == 0)
+        case NZ:
         {
-            this->ins_CALL_nn(address);
-            return 24;
-        }
-    } break;
+            if (!this->registers.get_flag(z))
+            {
+                this->ins_CALL_nn(address);
+                return 24;
+            }
+        } break;
 
-    case Z:
-    {
-        if (this->registers.get_flag(z) == 1)
+        case Z:
         {
-            this->ins_CALL_nn(address);
-            return 24;
-        }
-    } break;
+            if (this->registers.get_flag(z))
+            {
+                this->ins_CALL_nn(address);
+                return 24;
+            }
+        } break;
 
-    case NC:
-    {
-        if (this->registers.get_flag(c) == 0)
+        case NC:
         {
-            this->ins_CALL_nn(address);
-            return 24;
-        }
-    } break;
+            if (!this->registers.get_flag(c))
+            {
+                this->ins_CALL_nn(address);
+                return 24;
+            }
+        } break;
 
-    case C:
-    {
-        if (this->registers.get_flag(c) == 1)
+        case C:
         {
-            this->ins_CALL_nn(address);
-            return 24;
-        }
-    } break;
+            if (this->registers.get_flag(c))
+            {
+                this->ins_CALL_nn(address);
+                return 24;
+            }
+        } break;
+
+        default: break;
     }
     return 12;
 }
@@ -1432,6 +1556,7 @@ int CPU::ins_RST_n(const Byte addrOffset)
     this->ins_CALL_nn(0x0000 + addrOffset);
     return 16;
 }
+
 
 int CPU::ins_RET()
 {
@@ -1454,7 +1579,7 @@ int CPU::ins_RET_cc(const enum JumpCondition condition)
     {
         case NZ:
         {
-            if (this->registers.get_flag(z) == 0)
+            if (!this->registers.get_flag(z))
             {
                 this->ins_RET();
                 return 20;
@@ -1463,7 +1588,7 @@ int CPU::ins_RET_cc(const enum JumpCondition condition)
 
         case Z:
         {
-            if (this->registers.get_flag(z) == 1)
+            if (this->registers.get_flag(z))
             {
                 this->ins_RET();
                 return 20;
@@ -1472,7 +1597,7 @@ int CPU::ins_RET_cc(const enum JumpCondition condition)
 
         case NC:
         {
-            if (this->registers.get_flag(c) == 0)
+            if (!this->registers.get_flag(c))
             {
                 this->ins_RET();
                 return 20;
@@ -1481,12 +1606,14 @@ int CPU::ins_RET_cc(const enum JumpCondition condition)
 
         case C:
         {
-            if (this->registers.get_flag(c) == 1)
+            if (this->registers.get_flag(c))
             {
                 this->ins_RET();
                 return 20;
             }
         } break;
+
+        default: break;
     }
     // If we don't require jumping
     return 8;

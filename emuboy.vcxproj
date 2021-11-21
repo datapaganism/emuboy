@@ -216,6 +216,7 @@
   <ItemGroup>
     <ClCompile Include="bus.cpp" />
     <ClCompile Include="cpu.cpp" />
+    <ClCompile Include="dma_controller.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="fetcher.cpp" />
     <ClCompile Include="fetch_decode_execute.cpp" />
@@ -251,6 +252,7 @@
     <ClInclude Include="bus.hpp" />
     <ClInclude Include="config.h" />
     <ClInclude Include="cpu.hpp" />
+    <ClInclude Include="dma_controller.hpp" />
     <ClInclude Include="fetcher.hpp" />
     <ClInclude Include="fifo.hpp" />
     <ClInclude Include="FIFO_pixel.hpp" />

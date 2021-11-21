@@ -356,19 +356,28 @@ int CPU::fetch_decode_execute()
 
     this->interrupt_DI_EI_handler();
 
+#define DEBUG 1
 #if DEBUG 1
-//#define BREAKPOINTPC 0x27CC
-#define BREAKPOINTPC 0x021b
-#define BREAKPOINTHL 0x8010
+//#define BREAKPOINTPC 0xC241
+#define BREAKPOINTPC 0x0206
+#define BREAKPOINTDE 0xC242
 
     // the mission, get past 239
 
+    //0x020f frame 1, tick 61172
 
-    this->DEBUG_printCurrentState();
-    
+    //this->DEBUG_printCurrentState();
+    auto c242 = this->bus->work_ram[0x0242];
+    auto pc = this->registers.pc;
+    auto af = this->registers.get_AF();
+    auto bc = this->registers.get_BC();
+    auto de = this->registers.get_DE();
+    auto hl = this->registers.get_HL();
+    auto work_ram_ptr = this->bus->work_ram.get() + 0x0242;
+
     if (this->registers.pc >= BREAKPOINTPC)
     {
-        this->DEBUG_print_IO();
+        /*this->DEBUG_print_IO();*/
         //this->DEBUG_printCurrentState();
     }
     if (this->registers.pc == BREAKPOINTPC)
@@ -378,10 +387,18 @@ int CPU::fetch_decode_execute()
         //tile0.consolePrint();
         
     }
-
-    if (this->registers.get_HL() == BREAKPOINTHL)
+    if (this->registers.pc == BREAKPOINTPC && this->registers.a == 0xE0)
     {
-        this->registers.get_HL();
+        this->registers.pc = BREAKPOINTPC;
+        //TILE tile0(this->bus, this->bus->ppu.get_tile_address_from_number(25, PPU::background));
+        //tile0.consolePrint();
+
+    }
+
+
+    if (this->registers.get_DE() == BREAKPOINTDE && this->registers.pc == BREAKPOINTPC)
+    {
+        this->registers.get_DE();
 
     }
 

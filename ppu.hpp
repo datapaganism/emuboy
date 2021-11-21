@@ -114,6 +114,7 @@ public:
 	/// </summary>
 	/// <returns></returns>
 
+	Byte get_ppu_state();
 
 
 	void new_scanline();

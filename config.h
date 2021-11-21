@@ -2,8 +2,6 @@
 
 #include <cstdint>
 
-#define DEBUG 0
-#define TURBO 0
 
 
 #define GB_CLOCKSPEED  4194304 // Hz

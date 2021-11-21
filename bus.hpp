@@ -8,6 +8,7 @@
 #include <array>
 #include <memory>
 #include "joypad_mapping.h"
+#include "dma_controller.hpp"
 
 
 enum MEMORY_ACCESS_TYPE
@@ -17,46 +18,6 @@ enum MEMORY_ACCESS_TYPE
     cpu,
     debug,
 };
-
-
-//forward declaration of JoypadButtons mapping
-//enum JoypadButtons : int;
-
-class DMA_CONTROLLER
-{
-public:
-    bool dma_triggered = false;
-    int cycle_counter = 0;
-    const int max_cycles_t = 40;
-    BUS* bus_parent = nullptr;
-
-    Byte source_address_high_nibble = 0;
-    int i = 0;
-
-    void connect_to_bus(BUS* bus_ptr)
-    {
-        this->bus_parent = bus_ptr;
-    }
-
-    //void update_dma(int cyclesUsed);
-    //void update_dma(int cyclesUsed)
-    //{
-    //    int cycle_counter = cyclesUsed;
-
-    //    while (this->cycle_counter != 0)
-    //    {
-    //        this->cycle_counter--;
-
-    //        this->bus_parent->set_memory(OAM + i, this->bus_parent->get_memory((this->source_address_high_nibble << 8) + this->i, MEMORY_ACCESS_TYPE::dma_controller), MEMORY_ACCESS_TYPE::dma_controller);
-    //        //this->bus_parent->oam_ram[this->i] = this->bus_parent->get_memory((this->source_address_high_nibble << 8) + this->i, MEMORY_ACCESS_TYPE::dma_controller);
-    //        i++;           
-    //    }
-    //    if (i >= this->max_cycles_t * 4)
-    //        this->dma_triggered = false;
-    //}
-    
-};
-
 
 
 class BUS
@@ -96,6 +57,11 @@ public:
 
     const Word get_memory_word_lsbf(const Word address, enum MEMORY_ACCESS_TYPE access_type);
     
+    Byte DEBUG_get_memory(const Word address);
+    void DEBUG_set_memory(const Word address, const Byte data);
+    void DEBUG_set_memory_word(const Word address, const Word data);
+    const Word DEBUG_get_memory_word_lsbf(const Word address);
+
     
     /// <summary>
     /// Cycles the emulated system state by one frame (~70,221 cycles)
@@ -118,3 +84,4 @@ private:
     
 
 };
+

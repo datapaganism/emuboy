@@ -99,7 +99,8 @@ void FETCHER::update_fetcher(const int cycles)
 
 				Word bg_tile_map_area_address = ((bus->io[(LCDC) - IOOFFSET] & (0b1 << 4)) == 1) ? 0x9C00 : 0x9800;
 				this->tile_map_address = bg_tile_map_area_address + (this->fetcher_x) + ((this->fetcher_y / 8) * 0x20 );			
-				this->tile_number = bus->video_ram[this->tile_map_address - VIDEORAMOFFSET];
+				//this->tile_number = bus->video_ram[this->tile_map_address - VIDEORAMOFFSET];
+				this->tile_number = bus->get_memory(this->tile_address, MEMORY_ACCESS_TYPE::ppu);
 				this->tile_address = bus->ppu.get_tile_address_from_number(this->tile_number,PPU::background); // basically 0x8000 + (16 * tile_number)
 			}
 
@@ -142,7 +143,9 @@ Whether the Window is displayed can be toggled using LCDC bit 5. But in Non-CGB 
 			if (bg_active || window_active)
 			{
 				this->tile_address += (2 * (this->fetcher_y % 8));
-				this->data0 = bus->video_ram[this->tile_address - VIDEORAMOFFSET];
+				//this->data0 = bus->video_ram[this->tile_address - VIDEORAMOFFSET];
+				this->data0 = bus->get_memory(this->tile_address, MEMORY_ACCESS_TYPE::ppu);
+				
 			}
 			
 			this->state++;
@@ -157,7 +160,8 @@ Whether the Window is displayed can be toggled using LCDC bit 5. But in Non-CGB 
 			
 			if (bg_active || window_active)
 			{
-				this->data1 = bus->video_ram[++this->tile_address - VIDEORAMOFFSET];
+				//this->data1 = bus->video_ram[++this->tile_address - VIDEORAMOFFSET];
+				this->data1 = bus->get_memory(this->tile_address, MEMORY_ACCESS_TYPE::ppu);
 			}
 
 			for (int i = 0; i < 8; i++)
