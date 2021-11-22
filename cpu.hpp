@@ -186,6 +186,13 @@ private:
 
         Byte get_nibble(const Byte input, const bool getHi);
         void set_nibble(Byte* registerOne, const Byte value, const bool setHi);
+
+        /*bool checkCarry(const int a, const int b, const int shift);
+        bool checkBorrow(const int a, const int b, const int shift);*/
+
+        bool checkCarry(const int a, const int b, const int shift,  const int c = NULL);
+        bool checkBorrow(const int a, const int b, const int shift, const int c = NULL);
+
        
         // Instructions
         int ins_LD_nn_n(Byte* registerOne, const Byte value);

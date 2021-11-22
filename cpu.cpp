@@ -198,6 +198,18 @@ void CPU::checkHalfBorrow(const int a, const int b)
     return;
 }
 
+//bool CPU::checkCarry(const int a, const int b, const int shift)
+//{
+//    int carries = (a + b) ^ (a ^ b);
+//    return carries & (1 << shift);
+//}
+//
+//bool CPU::checkBorrow(const int a, const int b, const int shift)
+//{
+//    int borrows = (a - b) ^ (a ^ b);
+//    return borrows & (1 << shift);
+//}
+
 void CPU::checkBorrow(const unsigned int a, const unsigned int b)
 {
 
@@ -231,6 +243,19 @@ void CPU::checkHalfBorrowWord(const int a, const int b)
     this->registers.set_flag(h, 1);
     return;
 }
+
+bool CPU::checkCarry(const int a, const int b, const int shift, const int c)
+{
+    int carries = (a + b + c) ^ (a ^ b ^ c);
+    return carries & (1 << shift);
+}
+
+bool CPU::checkBorrow(const int a, const int b, const int shift, const int c)
+{
+    int borrows = (a - b - c) ^ (a ^ b ^ c);
+    return borrows & (1 << shift);
+}
+
 
 
 Byte CPU::get_nibble(const Byte input, const bool getHi)
@@ -589,47 +614,21 @@ int CPU::ins_ADD_A_n(const Byte* registerOne, const Byte immediateValue)
 
 int CPU::ins_ADC_A_n(const Byte* registerOne, const Byte immediateValue)
 {
-    auto a = this->registers.a;
-    Byte b = 0;
-    auto C = this->registers.get_flag(c);
+    Byte a = this->registers.a;
+    Byte b = (registerOne) ? *registerOne : immediateValue;
+    Byte C = (int)this->registers.get_flag(c);
+    Byte cyclesUsed = (registerOne) ? 4 : 8;
 
-    if (registerOne)
-    {
-        b = *registerOne;
-
-        int sum = a + b + C;
-        int no_carry_sum = a ^ b ^ C;
-        int carry_into = sum ^ no_carry_sum;
-        bool half_carry = carry_into & 0x10;
-        bool carry = carry_into & 0x100;
-
-        this->registers.a = sum;
-
-        (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-        this->registers.set_flag(n, 0);
-        this->registers.set_flag(c, carry);
-        this->registers.set_flag(h, half_carry);
-
-        return 4;
-    }
-
-    b = immediateValue;
-
-    int sum = a + b + C;
-    int no_carry_sum = a ^ b ^ C;
-    int carry_into = sum ^ no_carry_sum;
-    bool half_carry = carry_into & 0x10;
-    bool carry = carry_into & 0x100;
-
-    this->registers.a = sum;
+    this->registers.a = a + b + C;
 
     (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
     this->registers.set_flag(n, 0);
-    this->registers.set_flag(c, carry);
-    this->registers.set_flag(h, half_carry);
+    this->registers.set_flag(c, this->checkCarry(a, b, 8, C));
+    this->registers.set_flag(h, this->checkCarry(a, b, 4, C));
 
-    return 8;
+    return cyclesUsed;
 }
+
 
 int CPU::ins_SUB_n(const Byte* registerOne, const Byte immediateValue)
 {
@@ -667,51 +666,20 @@ int CPU::ins_SUB_n(const Byte* registerOne, const Byte immediateValue)
 int CPU::ins_SBC_A_n(const Byte* registerOne, const Byte immediateValue)
 {
 
-    auto a = this->registers.a;
-    Byte b = 0;
-    auto C = this->registers.get_flag(c);
+    Byte a = this->registers.a;
+    Byte b = (registerOne) ? *registerOne : immediateValue;
+    Byte C = (int)this->registers.get_flag(c);
+    Byte cyclesUsed = (registerOne) ? 4 : 8;
 
-    if (registerOne)
-    {
-        b = *registerOne;
-
-        int sum = a - b - C;
-        bool half_carry = (a ^ b ^ sum) & 0x10;
-        bool carry = (a ^ b ^ sum) & 0x100;
-        if (C)
-        {
-            half_carry = (a ^ b ^ C ^ sum) & 0x10;
-            carry = (a ^ b ^ C ^ sum) & 0x100;
-        }
-        this->registers.a = sum;
-
-        (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-        this->registers.set_flag(n, 1);
-        this->registers.set_flag(c, carry);
-        this->registers.set_flag(h, half_carry);
-
-        return 4;
-    }
-
-    b = immediateValue;
-
-    int sum = a - b - C;
-    bool half_carry = (a ^ b ^ sum) & 0x10;
-    bool carry = (a ^ b ^ sum) & 0x100;
-    if (C)
-    {
-        half_carry = (a ^ b ^ C ^ sum) & 0x10;
-        carry = (a ^ b ^ C ^ sum) & 0x100;
-    }
-    this->registers.a = sum;
+    this->registers.a = a - b - C;
 
     (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
     this->registers.set_flag(n, 1);
-    this->registers.set_flag(c, carry);
-    this->registers.set_flag(h, half_carry);
+    this->registers.set_flag(c, this->checkBorrow(a, b, 8, C));
+    this->registers.set_flag(h, this->checkBorrow(a, b, 4, C));
 
+    return cyclesUsed;
 
-    return 8;
 }
 
 int CPU::ins_AND_n(const Byte* registerOne, const Byte immediateValue)
