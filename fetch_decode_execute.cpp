@@ -346,7 +346,7 @@ int CPU::fetch_decode_execute()
     //case 0xFC: { } break;
     //case 0xFD: { } break;
     case 0xFE: { cyclesUsed = this->ins_CP_n(nullptr, this->get_byte_from_pc()); } break;
-    case 0xFF: { cyclesUsed = this->ins_RST_n(0xFF); } break;
+    case 0xFF: { cyclesUsed = this->ins_RST_n(0x38); } break;
     default:
     {
         printf("ILLEGAL OPCODE CALL %0.2X \n", opcode);
@@ -359,7 +359,7 @@ int CPU::fetch_decode_execute()
 #define DEBUG 1
 #if DEBUG 1
 //#define BREAKPOINTPC 0xC241
-#define BREAKPOINTPC 0x0206
+#define BREAKPOINTPC 0xDEF8
 #define BREAKPOINTDE 0xC242
 
     // the mission, get past 239
@@ -375,19 +375,28 @@ int CPU::fetch_decode_execute()
     auto hl = this->registers.get_HL();
     auto work_ram_ptr = this->bus->work_ram.get() + 0x0242;
 
-    if (this->registers.pc >= BREAKPOINTPC)
-    {
-        /*this->DEBUG_print_IO();*/
-        //this->DEBUG_printCurrentState();
-    }
+    //if (this->bus->DEBUG_PC_breakpoint_hit)
+    //{
+    //    /*this->DEBUG_print_IO();*/
+    //    this->DEBUG_printCurrentState();
+    //}
     if (this->registers.pc == BREAKPOINTPC)
     {
-        this->registers.pc = BREAKPOINTPC;
+         this->registers.pc = BREAKPOINTPC;
+        this->bus->DEBUG_PC_breakpoint_hit = true;
+
         //TILE tile0(this->bus, this->bus->ppu.get_tile_address_from_number(25, PPU::background));
         //tile0.consolePrint();
         
     }
-    if (this->registers.pc == BREAKPOINTPC && this->registers.a == 0xE0)
+    if (this->bus->DEBUG_PC_breakpoint_hit)
+    {
+        /*this->DEBUG_print_IO();*/
+        this->DEBUG_printCurrentState();
+    }
+    this->bus->DEBUG_PC_breakpoint_hit = false;
+
+    if (this->registers.pc == BREAKPOINTPC && this->bus->get_memory(this->registers.pc, MEMORY_ACCESS_TYPE::cpu) == 0xff)
     {
         this->registers.pc = BREAKPOINTPC;
         //TILE tile0(this->bus, this->bus->ppu.get_tile_address_from_number(25, PPU::background));

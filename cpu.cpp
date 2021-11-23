@@ -126,122 +126,6 @@ void CPU::interrupt_DI_EI_handler()
         this->EI_triggered = false;
         return;
     }
-
-
-}
-
-void CPU::checkHalfCarry(int a, int b)
-{
-    //add only the lower nibbles of the sum to each other
-    int sum = (a & 0xf) + (b & 0xf);
-
-    // if the 5th bit is set then we have had a carry over the nibble
-    if ((sum & 0x10) == 0x10)
-    {
-        this->registers.set_flag(h, 1);
-        return;
-    }
-    this->registers.set_flag(h, 0);
-    return;   
-}
-
-void CPU::checkHalfCarryWord(int a, int b)
-{
-    //make sum of lower bytes
-    int sum = (a & 0xFF) + (b & 0xFF);
-
-        if ((sum & 0x1000) == 0x1000)
-        {
-            this->registers.set_flag(h, 1);
-            return;
-        }
-        this->registers.set_flag(h, 0);
-        return;
-
-}
-
-void CPU::checkCarry(const int a, const int b)
-{
-    uint32_t sum = a + b;
-
-    if ((sum & 0x100) == 0x100)
-    {
-        this->registers.set_flag(c, 1);
-        return;
-    }
-    this->registers.set_flag(c, 0);
-    return;
-}
-
-void CPU::checkCarryWord(const int a, const int b)
-{
-    uint32_t sum = a + b;
-
-    
-    if ((sum & 0x10000) == 0x10000)
-    {
-        this->registers.set_flag(c, 1);
-        return;
-    }
-    this->registers.set_flag(c, 0);
-    return;
-}
-
-void CPU::checkHalfBorrow(const int a, const int b)
-{
-    if ((a & 0xf) >= (b & 0xf))
-    {
-        this->registers.set_flag(h, 0);
-        return;
-    }
-    this->registers.set_flag(h, 1);
-    return;
-}
-
-//bool CPU::checkCarry(const int a, const int b, const int shift)
-//{
-//    int carries = (a + b) ^ (a ^ b);
-//    return carries & (1 << shift);
-//}
-//
-//bool CPU::checkBorrow(const int a, const int b, const int shift)
-//{
-//    int borrows = (a - b) ^ (a ^ b);
-//    return borrows & (1 << shift);
-//}
-
-void CPU::checkBorrow(const unsigned int a, const unsigned int b)
-{
-
-    if (a >= b)
-    {
-        this->registers.set_flag(c, 0);
-        return;
-    }
-    this->registers.set_flag(c, 1);
-    return;
-    
-}
-
-void CPU::checkBorrowWord(const Word a, const Word_s b)
-{
-    if ((((~a) & b) & 0xFFFF) == 0)
-    {
-        this->registers.set_flag(c, 0);
-        return;
-    }
-    this->registers.set_flag(c, 1);
-    return;
-}
-void CPU::checkHalfBorrowWord(const int a, const int b)
-{
-    if ((a & 0xff) >= (b & 0xff))
-    {
-        this->registers.set_flag(h, 0);
-        return;
-    }
-    this->registers.set_flag(h, 1);
-    return;
 }
 
 bool CPU::checkCarry(const int a, const int b, const int shift, const int c)
@@ -255,7 +139,6 @@ bool CPU::checkBorrow(const int a, const int b, const int shift, const int c)
     int borrows = (a - b - c) ^ (a ^ b ^ c);
     return borrows & (1 << shift);
 }
-
 
 
 Byte CPU::get_nibble(const Byte input, const bool getHi)
@@ -493,21 +376,16 @@ int CPU::ins_LDHL_SP_n(Byte* wordRegisterNibbleHi, Byte* wordRegisterNibbleLo, c
     this->registers.set_flag(z, 0);
     this->registers.set_flag(n, 0);
 
-    /*if (value < 0)
-    {
-        this->checkBorrow(stackPointerValue, value & 0xff);
-        this->checkHalfCarry(stackPointerValue, value);
-    }*/
+
     if (value < 0)
     {
-        this->checkBorrowWord(stackPointerValue, value);
-        this->checkHalfCarry(stackPointerValue, value);
+        this->registers.set_flag(c, (sum & 0xFF) <= (stackPointerValue & 0xFF));
+        this->registers.set_flag(h, (sum & 0xF) <= (stackPointerValue & 0xF));
     }
     else
     {
-        this->checkCarryWord(stackPointerValue, value);
-        // this is weird, wrong behaviour when using checkHalfCarryWord
-        this->checkHalfCarry(stackPointerValue, value);
+        this->registers.set_flag(c, ((stackPointerValue & 0xFF) + value) > 0xFF);
+        this->registers.set_flag(h, ((stackPointerValue & 0xF) + value) > 0xF);
     }
 
     this->registers.set_word(wordRegisterNibbleHi, wordRegisterNibbleLo, sum);
@@ -583,9 +461,8 @@ int CPU::ins_ADD_A_n(const Byte* registerOne, const Byte immediateValue)
 {
     if (registerOne)
     {
-        //check carry and half carry flags, I realise this is out of order but it should work the same.
-        this->checkHalfCarry(this->registers.a, *registerOne);
-        this->checkCarry(this->registers.a, *registerOne);
+        this->registers.set_flag(c, this->checkCarry(this->registers.a, *registerOne, 8));
+        this->registers.set_flag(h, this->checkCarry(this->registers.a, *registerOne, 4));
 
         // perform addition
         this->registers.a += *registerOne;
@@ -597,10 +474,8 @@ int CPU::ins_ADD_A_n(const Byte* registerOne, const Byte immediateValue)
         return 4;
     }
     // else if immediate value passed
-
-    //check carry and half carry flags, I realise this is out of order but it should work the same.
-    this->checkHalfCarry(this->registers.a, immediateValue);
-    this->checkCarry(this->registers.a, immediateValue);
+    this->registers.set_flag(c, this->checkCarry(this->registers.a, immediateValue, 8));
+    this->registers.set_flag(h, this->checkCarry(this->registers.a, immediateValue, 4));
 
     // perform addition
     this->registers.a += immediateValue;
@@ -608,6 +483,7 @@ int CPU::ins_ADD_A_n(const Byte* registerOne, const Byte immediateValue)
     //evaluate z flag an clear the n flag
     (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
     this->registers.set_flag(n, 0);
+
 
     return 8;
 }
@@ -635,8 +511,8 @@ int CPU::ins_SUB_n(const Byte* registerOne, const Byte immediateValue)
     if (registerOne)
     {
         //check carry and half carry flags, I realise this is out of order but it should work the same.
-        this->checkHalfBorrow(this->registers.a, *registerOne);
-        this->checkBorrow(this->registers.a, *registerOne);
+        this->registers.set_flag(c, this->checkBorrow(this->registers.a, *registerOne, 8));
+        this->registers.set_flag(h, this->checkBorrow(this->registers.a, *registerOne, 4));
 
         // perform addition
         this->registers.a -= *registerOne;
@@ -650,8 +526,8 @@ int CPU::ins_SUB_n(const Byte* registerOne, const Byte immediateValue)
     // else if immediate value passed
 
     //check carry and half carry flags, I realise this is out of order but it should work the same.
-    this->checkHalfBorrow(this->registers.a, immediateValue);
-    this->checkBorrow(this->registers.a, immediateValue);
+    this->registers.set_flag(c, this->checkBorrow(this->registers.a, immediateValue, 8));
+    this->registers.set_flag(h, this->checkBorrow(this->registers.a, immediateValue, 4));
 
     // perform addition
     this->registers.a -= immediateValue;
@@ -770,10 +646,9 @@ int CPU::ins_CP_n(const Byte* registerOne, const Byte immediateValue)
 {
     if (registerOne)
     {
-        //check carry and half carry flags, I realise this is out of order but it should work the same.
-        this->checkHalfBorrow(this->registers.a, *registerOne);
-        this->checkBorrow(this->registers.a, *registerOne);
-
+        
+        this->registers.set_flag(c, this->checkBorrow(this->registers.a, *registerOne, 8));
+        this->registers.set_flag(h, this->checkBorrow(this->registers.a, *registerOne, 4));
 
         //evaluate z flag an clear the n flag
         (this->registers.a == *registerOne) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
@@ -782,10 +657,8 @@ int CPU::ins_CP_n(const Byte* registerOne, const Byte immediateValue)
         return 4;
     }
     // else if immediate value passed
-
-    //check carry and half carry flags, I realise this is out of order but it should work the same.
-    this->checkHalfBorrow(this->registers.a, immediateValue);
-    this->checkBorrow(this->registers.a, immediateValue);
+    this->registers.set_flag(c, this->checkBorrow(this->registers.a, immediateValue, 8));
+    this->registers.set_flag(h, this->checkBorrow(this->registers.a, immediateValue, 4));
 
     //evaluate z flag an clear the n flag
     (this->registers.a == immediateValue) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
@@ -798,8 +671,7 @@ int CPU::ins_INC_n(Byte* registerOne, Word address)
 {
     if (registerOne)
     {
-        //check carry and half carry flags, I realise this is out of order but it should work the same.
-        this->checkHalfCarry(*registerOne, 1);
+        this->registers.set_flag(h, this->checkCarry(*registerOne, 1, 4));
         
         // perform addition
         (*registerOne)++;
@@ -813,10 +685,12 @@ int CPU::ins_INC_n(Byte* registerOne, Word address)
     // else if immediate value passed
 
     //check carry and half carry flags, I realise this is out of order but it should work the same.
-    this->checkHalfCarry(this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu), 1);
+
+    auto temp = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
+    this->registers.set_flag(h, this->checkCarry(temp, 1, 4));
     
     // perform addition
-    this->bus->set_memory(address, (this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) + 1), MEMORY_ACCESS_TYPE::cpu);
+    this->bus->set_memory(address, (temp + 1), MEMORY_ACCESS_TYPE::cpu);
     //evaluate z flag an clear the n flag
     (this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
     this->registers.set_flag(n, 0);
@@ -828,9 +702,7 @@ int CPU::ins_DEC_n(Byte* registerOne, Word address)
 {
     if (registerOne)
     {
-        //check carry and half carry flags, I realise this is out of order but it should work the same.
-        this->checkHalfBorrow(*registerOne, 1);
-
+        this->registers.set_flag(h, this->checkBorrow(*registerOne, 1, 4));
         // perform addition
         (*registerOne)--;
 
@@ -841,12 +713,11 @@ int CPU::ins_DEC_n(Byte* registerOne, Word address)
         return 4;
     }
     // else if immediate value passed
-
-    //check carry and half carry flags, I realise this is out of order but it should work the same.
-    this->checkHalfBorrow(this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu), 1);
+    auto temp = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
+    this->registers.set_flag(h, this->checkBorrow(temp, 1, 4));
 
     // perform addition
-    this->bus->set_memory(address, (this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) - 1 ), MEMORY_ACCESS_TYPE::cpu);
+    this->bus->set_memory(address, (temp - 1), MEMORY_ACCESS_TYPE::cpu);
     //evaluate z flag an clear the n flag
     (this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
     this->registers.set_flag(n, 1);
@@ -857,8 +728,10 @@ int CPU::ins_DEC_n(Byte* registerOne, Word address)
 int CPU::ins_ADD_HL_n(const Word value)
 {
     Word HLvalue = this->registers.get_HL();
-    this->checkCarryWord(HLvalue, value);
-    this->checkHalfCarryWord(HLvalue, value);
+
+    
+    this->registers.set_flag(c, this->checkCarry(HLvalue, value, 16));
+    this->registers.set_flag(h, this->checkCarry(HLvalue, value, 12));
 
     this->registers.set_HL(HLvalue + value);
     
@@ -869,16 +742,18 @@ int CPU::ins_ADD_HL_n(const Word value)
 int CPU::ins_ADD_SP_n(const Byte_s value)
 {
     //if negative
+
     if (value < 0)
     {
-        this->checkBorrow((this->registers.sp & 0xff), value);
-        this->checkHalfCarry(this->registers.sp, value);
+        this->registers.set_flag(c, ((this->registers.sp + value) & 0xFF) <= (this->registers.sp & 0xFF));
+        this->registers.set_flag(h, ((this->registers.sp + value) & 0xF)  <= (this->registers.sp & 0xF));
     }
     else
     {
-        this->checkCarry((Byte)(this->registers.sp & 0xff), value);
-        this->checkHalfCarry(this->registers.sp, value);
+        this->registers.set_flag(c, ((this->registers.sp & 0xFF) + value) > 0xFF);
+        this->registers.set_flag(h, ((this->registers.sp & 0xF) + value) > 0xF);
     }
+
     this->registers.sp += value;
     this->registers.set_flag(z, 0);
     this->registers.set_flag(n, 0);
@@ -1064,7 +939,7 @@ int CPU::ins_SCF()
 int CPU::ins_RLCA()
 {
     //set c flag to whatever is the value of the leftest bit from register a
-    this->registers.set_flag(c, (this->registers.a & 0x80 >> 7));
+    this->registers.set_flag(c, (this->registers.a & 0x80));
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
 
@@ -1274,7 +1149,6 @@ int CPU::ins_SRA_n(Byte* registerOne, Word address)
     this->registers.set_flag(n, 0);
     this->registers.set_flag(h, 0);
 
-
     Byte bit7 = 0;
     // shift right into carry, msb does not change
     if (registerOne)
@@ -1286,10 +1160,13 @@ int CPU::ins_SRA_n(Byte* registerOne, Word address)
         (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
         return 8;
     }
+
     Byte temp = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
-    Byte result = (temp >> 1) | (bit7 << 7);
+    
     this->registers.set_flag(c, temp & 0x1);
     bit7 = temp >> 7;
+
+    Byte result = (temp >> 1) | (bit7 << 7);
     this->bus->set_memory(address, result, MEMORY_ACCESS_TYPE::cpu);
 
     (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);

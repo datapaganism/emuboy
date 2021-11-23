@@ -171,28 +171,12 @@ private:
         int CB_instruction_handler();
 
         int STOP_instruction_handler();
-        void checkHalfCarry(const int a, const int b);
-
-        void checkHalfCarryWord(int a, int b);
-        void checkCarry(const int a, const int b);
-        
-        void checkCarryWord(const int a, const int b);
-        void checkHalfBorrow(const int a, const int b);
-
-        void checkBorrow(const unsigned int a, const unsigned int b);
-        void checkHalfBorrowWord(const int a, const int b);
-
-        void checkBorrowWord(const Word a, const Word_s b);
-
+       
         Byte get_nibble(const Byte input, const bool getHi);
         void set_nibble(Byte* registerOne, const Byte value, const bool setHi);
 
-        /*bool checkCarry(const int a, const int b, const int shift);
-        bool checkBorrow(const int a, const int b, const int shift);*/
-
         bool checkCarry(const int a, const int b, const int shift,  const int c = NULL);
         bool checkBorrow(const int a, const int b, const int shift, const int c = NULL);
-
        
         // Instructions
         int ins_LD_nn_n(Byte* registerOne, const Byte value);

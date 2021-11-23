@@ -19,7 +19,7 @@
 int main(int argv, char** args)
 {
     //BUS bus("./roms/TETRIS.gb", "bios.bin");
-    BUS bus("./roms/blargg/04-op r,imm.gb", "b ios.bin");
+    BUS bus("./roms/blargg/07-jr,jp,call,ret,rst.gb", "b ios.bin");
     RENDERER renderer;
 
     /*bus.set_memory(0xFF01,0x30);

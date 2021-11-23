@@ -6,3 +6,5 @@ writing to work ram issue, C241 of workram fails to be written to
 
 something is overwriting the work ram
 its the ppu but idk where
+
+okay jr test, def8 is the wram address where the instructions are called

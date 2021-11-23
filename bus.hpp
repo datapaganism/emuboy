@@ -45,7 +45,7 @@ public:
     /// <param name="address"></param>
     /// <param name="byteString"></param>
     int DEBUG_opcode_program(Word address, std::string byteString, int cycles);
-
+    bool DEBUG_PC_breakpoint_hit = false;
 
     BUS();
     BUS(const std::string game_name, const std::string bios_name);
