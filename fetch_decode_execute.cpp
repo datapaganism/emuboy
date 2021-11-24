@@ -356,7 +356,7 @@ int CPU::fetch_decode_execute()
 
     this->interrupt_DI_EI_handler();
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG 1
 //#define BREAKPOINTPC 0xC241
 #define BREAKPOINTPC 0xDEF8

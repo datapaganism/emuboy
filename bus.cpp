@@ -212,6 +212,7 @@ void BUS::depressButton(const enum JoypadButtons button)
     
     case dDown:
     case bStart: { this->io[0xFF00 - IOOFFSET] |= (0b1 << 3) ; } break;
+    default: throw "Unreachable button press"; break;
     }
 }
 
@@ -230,6 +231,7 @@ void BUS::pressButton(const enum JoypadButtons button)
     
     case dDown:
     case bStart: { this->io[0xFF00 - IOOFFSET] &= ~(0b1 << 3) ; } break;
+    default: throw "Unreachable button press"; break;
     }
 
     this->cpu.request_interrupt(joypad);
@@ -258,8 +260,6 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
                     return 0xFF;
 
         } break;
-
-
         default: break;
     }
 
@@ -592,7 +592,7 @@ void BUS::cycle_system_one_frame()
         this->cpu.update_timers(cyclesUsed);
         cyclesUsed += this->cpu.do_interrupts();
         this->dma_controller.update_dma(cyclesUsed);
-        //this->ppu.update_graphics(cyclesUsed);
+        this->ppu.update_graphics(cyclesUsed);
         currentCycles += cyclesUsed;
 
         //if (*work_ram_ptr == 0x89)

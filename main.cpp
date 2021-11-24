@@ -1,25 +1,24 @@
 #define _CRT_SECURE_NO_WARNINGS
+
 #include "bus.hpp"
 #include "renderer.hpp"
-
-#define main SDL_main
 #include "config.h"
 #include <iostream>
 #include <bitset>
 #include <memory>
 #include "joypad_mapping.h"
 #include <string>
-
-
 #include <sstream>
+
+
 #define to_hex_str(hex_val) (static_cast<std::stringstream const&>(std::stringstream() << "0x" << std::hex << hex_val)).str()
 
 
-
+#define main SDL_main
 int main(int argv, char** args)
 {
     //BUS bus("./roms/TETRIS.gb", "bios.bin");
-    BUS bus("./roms/blargg/07-jr,jp,call,ret,rst.gb", "b ios.bin");
+    BUS bus("./roms/TETRIS.gb", "bios.bin");
     RENDERER renderer;
 
     /*bus.set_memory(0xFF01,0x30);

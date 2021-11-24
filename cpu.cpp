@@ -190,6 +190,7 @@ int CPU::do_interrupts()
                 case InterruptTypes::timer   : { this->registers.pc = 0x0050; } break;
                 case InterruptTypes::serial  : { this->registers.pc = 0x0058; } break;
                 case InterruptTypes::joypad  : { this->registers.pc = 0x0060; } break;
+                default: throw "Unreachable intterupt type"; break;
                 }
 
                 cyclesUsed += 20;
@@ -256,6 +257,7 @@ void CPU::update_timerCounter()
     case 1: { this->timerCounter = GB_CLOCKSPEED / 262144; } break;
     case 2: { this->timerCounter = GB_CLOCKSPEED / 65536; } break;
     case 3: { this->timerCounter = GB_CLOCKSPEED / 16382; } break;
+    default: throw "Unreachable timer frequency"; break;
     }
 }
 
@@ -1281,6 +1283,8 @@ int CPU::ins_JP_cc_nn(const enum JumpCondition condition, Word address)
                 return 16;
             }
         } break;
+
+        default: throw "Unreachable Jump condition"; break;
     }
     return 12;
 }
@@ -1302,43 +1306,42 @@ int CPU::ins_JR_cc_n(const enum JumpCondition condition, Byte_s jumpOffset)
 {
     switch (condition)
     {
-    case NZ:
-    {
-        if (!this->registers.get_flag(z))
+        case NZ:
         {
-            this->ins_JR_n(jumpOffset);
-            return 12;
-        }
-    } break;
+            if (!this->registers.get_flag(z))
+            {
+                this->ins_JR_n(jumpOffset);
+                return 12;
+            }
+        } break;
 
-    case Z:
-    {
-        if (this->registers.get_flag(z))
+        case Z:
         {
-            this->ins_JR_n(jumpOffset);
-            return 12;
-        }
-    } break;
+            if (this->registers.get_flag(z))
+            {
+                this->ins_JR_n(jumpOffset);
+                return 12;
+            }
+        } break;
 
-    case NC:
-    {
-        if (!this->registers.get_flag(c))
+        case NC:
         {
-            this->ins_JR_n(jumpOffset);
-            return 12;
-        }
-    } break;
+            if (!this->registers.get_flag(c))
+            {
+                this->ins_JR_n(jumpOffset);
+                return 12;
+            }
+        } break;
 
-    case C:
-    {
-        if (this->registers.get_flag(c))
+        case C:
         {
-            this->ins_JR_n(jumpOffset);
-            return 12;
-        }
-    } break;
-
-    default: break;
+            if (this->registers.get_flag(c))
+            {
+                this->ins_JR_n(jumpOffset);
+                return 12;
+            }
+        } break;
+        default: throw "Unreachable Jump condition"; break;
     }
     return 8;
 }
@@ -1390,8 +1393,7 @@ int CPU::ins_CALL_cc_nn(enum JumpCondition condition, Word address)
                 return 24;
             }
         } break;
-
-        default: break;
+        default: throw "Unreachable Jump condition"; break;
     }
     return 12;
 }
@@ -1457,8 +1459,7 @@ int CPU::ins_RET_cc(const enum JumpCondition condition)
                 return 20;
             }
         } break;
-
-        default: break;
+        default: throw "Unreachable Jump condition"; break;
     }
     // If we don't require jumping
     return 8;
