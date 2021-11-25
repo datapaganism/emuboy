@@ -15,9 +15,6 @@ PPU::PPU()
 	for (int i = 0; i < XRES * YRES; i++)
 	{
 		this->framebuffer[i] = FRAMEBUFFER_PIXEL(GB_PALLETE_00_r, GB_PALLETE_00_g, GB_PALLETE_00_b);
-#if DEBUG 1
-		this->framebuffer[i] = FRAMEBUFFER_PIXEL(0xFF, 0xFF, 0xFF);
-#endif
 	}
 }
 
@@ -63,7 +60,7 @@ void PPU::update_graphics(const int cycles)
 
 			this->cycle_counter += cycles;
 
-			switch (this->bus->get_memory(STAT,MEMORY_ACCESS_TYPE::ppu) & 0b00000011)
+			switch (this->bus->io[STAT - IOOFFSET] & 0b00000011)
 			{
 			case 0: // h blank
 			{
@@ -103,6 +100,8 @@ void PPU::update_graphics(const int cycles)
 				//if (this->scanline_x >= 8)
 					//this->new_scanline();
 			} break;
+
+			default: throw "Unreachable PPU STAT"; break;
 			}
 
 	return;
@@ -276,6 +275,8 @@ Word PPU::get_tile_address_from_number(const Byte tile_number, const enum tile_t
 			return (tile_number > 127) ? (0x8800 + tile_number * 16) : (0x9000 + tile_number * 16);
 			break;
 		}
+
+	default: throw "Unreachable tile_type"; break;
 	}
 }
 
@@ -330,7 +331,7 @@ Word PPU::get_tile_address_from_number(const Byte tile_number, const enum tile_t
 
 void PPU::add_to_framebuffer(const int x, const int y, const FIFO_pixel fifo_pixel)
 {
-	this->framebuffer[x + (XRES * y)] = this->dmg_framebuffer_pixel_to_rgb(fifo_pixel);
+	this->framebuffer[static_cast<long long>(x) + (XRES * static_cast<long long>(y))] = this->dmg_framebuffer_pixel_to_rgb(fifo_pixel);
 }
 
 FRAMEBUFFER_PIXEL PPU::dmg_framebuffer_pixel_to_rgb(const FIFO_pixel fifo_pixel)
@@ -347,7 +348,6 @@ FRAMEBUFFER_PIXEL PPU::dmg_framebuffer_pixel_to_rgb(const FIFO_pixel fifo_pixel)
 		id_to_palette_id = (palette_register & 0b00110000) >> 4; break;
 	case 3:
 		id_to_palette_id = (palette_register & 0b11000000) >> 6; break;
-	default: break;
 	}; 
 
 	switch (id_to_palette_id)
@@ -360,13 +360,8 @@ FRAMEBUFFER_PIXEL PPU::dmg_framebuffer_pixel_to_rgb(const FIFO_pixel fifo_pixel)
 		return FRAMEBUFFER_PIXEL(GB_PALLETE_10_r, GB_PALLETE_10_g, GB_PALLETE_10_b); // dark gray
 	case 3:
 		return FRAMEBUFFER_PIXEL(GB_PALLETE_11_r, GB_PALLETE_11_g, GB_PALLETE_11_b); // black
-	default: break;
+	default: throw "Unreachable id_to_palette_id"; break;
 	}
-}
-
-Byte PPU::get_ppu_state()
-{
-	return this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0b00000011;
 }
 
 void PPU::new_scanline()
@@ -391,40 +386,38 @@ void PPU::new_scanline()
 
 void PPU::update_state(Byte new_state)
 {
-	//Byte* lcdstat_register_ptr = &this->bus->io[STAT - IOOFFSET];
-	Byte lcdstat_register = this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu);
-	Byte original_mode = (lcdstat_register & 0b00000011);
+	Byte* lcdstat_register_ptr = &this->bus->io[STAT - IOOFFSET];
+	Byte original_mode = (*lcdstat_register_ptr & 0b00000011);
 	bool irq_needed = false;
 
 	switch (new_state)
 	{
 		case 0: {
-			lcdstat_register = ((lcdstat_register & 0b11111100) | 0b00000000); 
-			irq_needed = (lcdstat_register & 0b00001000);
+			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000000); 
+			irq_needed = (*lcdstat_register_ptr & 0b00001000);
 		}break;
 
 		case 1: { 
-			lcdstat_register = ((lcdstat_register & 0b11111100) | 0b00000001);
+			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000001);
 			if (this->lcd_enabled())
-				irq_needed = (lcdstat_register & 0b00010000);
+				irq_needed = (*lcdstat_register_ptr & 0b00010000);
 		}break;
 
 		case 2: { 
-			lcdstat_register = ((lcdstat_register & 0b11111100) | 0b00000010);
-			irq_needed = (lcdstat_register & 0b00100000);
+			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000010);
+			irq_needed = (*lcdstat_register_ptr & 0b00100000);
 		}break;
 
 		case 3: { 
-			lcdstat_register = ((lcdstat_register & 0b11111100) | 0b00000011); 
+			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000011); 
 		}break;
-
-		default: break;
+	
+		default: throw "Unreachable PPU new state"; break;
 	}
 
-	
-	//if mode has changed
+	//if mode hsa changed
 
-	if (original_mode != (lcdstat_register & 0b00000011) && irq_needed)
+	if (original_mode != (*lcdstat_register_ptr & 0b00000011) && irq_needed)
 		this->bus->cpu.request_interrupt(lcdstat);
 
 	//time to check LYC = LY
@@ -432,19 +425,19 @@ void PPU::update_state(Byte new_state)
 //set register for equality
 	if (this->bus->io[LY - IOOFFSET] == this->bus->io[LYC - IOOFFSET])
 	{
-		lcdstat_register |= 0b00000100;
+		*lcdstat_register_ptr |= 0b00000100;
 		// if interrupt is enabled
-		if ((lcdstat_register & 0b01000000))
+		if ((*lcdstat_register_ptr & 0b01000000))
 			this->bus->cpu.request_interrupt(lcdstat);
 	}
 	else
-		lcdstat_register &= ~0b00000100;
-
-	this->bus->set_memory(STAT, lcdstat_register, MEMORY_ACCESS_TYPE::ppu);
-
+		*lcdstat_register_ptr &= ~0b00000100;
 }
 
-
+Byte PPU::get_ppu_state()
+{
+	return this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0b00000011;
+}
 
 void TILE::consolePrint()
 {    
@@ -463,8 +456,8 @@ void TILE::getPixelColour(int x, int y)
 {
 	int offset = (0b1 << (7 - x));
 
-	bool bit0 = this->bytes_per_tile[2 * y] & offset;
-	bool bit1 = this->bytes_per_tile[(2 * y) + 1] & offset;
+	bool bit0 = this->bytes_per_tile[2 * static_cast<long long>(y)] & offset;
+	bool bit1 = this->bytes_per_tile[(2 * static_cast<long long>(y)) + 1] & offset;
 
 	Byte result = (((Byte)bit0 << 1) | (Byte)bit1);
 
