@@ -28,7 +28,7 @@ void PPU::update_graphics(const int cycles)
 {
 	// one frame takes 70221 cycles
 	// one scanline is 456 cycles 
-	
+
 	// the cpu may have modified the registers since the last cycle, it is time to check and update any changes of the lcd stat.
 	//this->update_lcdstat();
 
@@ -54,70 +54,70 @@ void PPU::update_graphics(const int cycles)
 	this->bus->set_memory(0x800D, 0xC3);
 	this->bus->set_memory(0x800E, 0xFF);
 	this->bus->set_memory(0x800F, 0x42);*/
-	
+
 	if (this->lcd_enabled())
 	{
 
-			this->cycle_counter += cycles;
+		this->cycle_counter += cycles;
 
-			switch (this->bus->io[STAT - IOOFFSET] & 0b00000011)
+		switch (this->bus->io[STAT - IOOFFSET] & 0b00000011)
+		{
+		case 0: // h blank
+		{
+			if (this->cycle_counter >= (456 / 4))
 			{
-			case 0: // h blank
-			{
-				if (this->cycle_counter >= (456/4))
-				{
-					this->new_scanline();
-				}
-			} break;
-
-			case 1: // v blank
-			{
-				if (this->cycle_counter >= (456 / 4))
-				{
-					this->new_scanline();
-				}
-			} break;
-
-			case 2: // oam search
-			{
-				// do stuff
-				if (this->cycle_counter >= (80/4))
-				{
-					this->update_state(3);
-				}
-			} break;
-
-			case 3: // graphics transfer
-			{
-				// update bg/win fetcher and fifo
-				this->fifo_bg.fetcher.update_fetcher(cycles);
-				this->fifo_bg.update_fifo(cycles);
-				
-
-				if (this->scanline_x >= 160)
-					this->update_state(0);
-				
-				//if (this->scanline_x >= 8)
-					//this->new_scanline();
-			} break;
-
-			default: throw "Unreachable PPU STAT"; break;
+				this->new_scanline();
 			}
+		} break;
 
-	return;
+		case 1: // v blank
+		{
+			if (this->cycle_counter >= (456 / 4))
+			{
+				this->new_scanline();
+			}
+		} break;
+
+		case 2: // oam search
+		{
+			// do stuff
+			if (this->cycle_counter >= (80 / 4))
+			{
+				this->update_state(3);
+			}
+		} break;
+
+		case 3: // graphics transfer
+		{
+			// update bg/win fetcher and fifo
+			this->fifo_bg.fetcher.update_fetcher(cycles);
+			this->fifo_bg.update_fifo(cycles);
+
+
+			if (this->scanline_x >= 160)
+				this->update_state(0);
+
+			//if (this->scanline_x >= 8)
+				//this->new_scanline();
+		} break;
+
+		default: throw "Unreachable PPU STAT"; break;
+		}
+
+		return;
 	}
-	
+
 	// reset to the start of the drawing routine, set ly back to 0
 	this->cycle_counter = 0;
 	Byte* ly_ptr = &this->bus->io[LY - IOOFFSET];
 	*ly_ptr = 0;
-		
+
 	//update register to mode one
 	this->update_state(0);
-		
+
 	return;
-		
-	
+
+
 
 
 
@@ -246,7 +246,7 @@ void PPU::update_graphics(const int cycles)
 bool PPU::lcd_enabled()
 {
 	return (bool)(this->bus->io[LCDC - IOOFFSET] & (0b1 << 7));
-	
+
 }
 
 
@@ -258,23 +258,23 @@ Word PPU::get_tile_address_from_number(const Byte tile_number, const enum tile_t
 	switch (tile_type)
 	{
 	case PPU::sprite:
-			return 0x8000 + (tile_number * 16);
-			break;
+		return 0x8000 + (tile_number * 16);
+		break;
 
 	case PPU::background:
 	case PPU::window:
+	{
+		bool addressing_mode = (this->bus->get_memory(LCDC, MEMORY_ACCESS_TYPE::ppu) & (0b1 << 4));
+		// LCDC.4 = 1, $8000 addressing
+		if (addressing_mode == 1)
 		{
-			bool addressing_mode = (this->bus->get_memory(LCDC, MEMORY_ACCESS_TYPE::ppu) & (0b1 << 4));
-			// LCDC.4 = 1, $8000 addressing
-			if (addressing_mode == 1) 
-			{
-				return 0x8000 + (tile_number * 16);
-				break;
-			}
-			// LCDC.4 = 0, $9000 addressing
-			return (tile_number > 127) ? (0x8800 + tile_number * 16) : (0x9000 + tile_number * 16);
+			return 0x8000 + (tile_number * 16);
 			break;
 		}
+		// LCDC.4 = 0, $9000 addressing
+		return (tile_number > 127) ? (0x8800 + tile_number * 16) : (0x9000 + tile_number * 16);
+		break;
+	}
 
 	default: throw "Unreachable tile_type"; break;
 	}
@@ -348,7 +348,7 @@ FRAMEBUFFER_PIXEL PPU::dmg_framebuffer_pixel_to_rgb(const FIFO_pixel fifo_pixel)
 		id_to_palette_id = (palette_register & 0b00110000) >> 4; break;
 	case 3:
 		id_to_palette_id = (palette_register & 0b11000000) >> 6; break;
-	}; 
+	};
 
 	switch (id_to_palette_id)
 	{
@@ -392,27 +392,27 @@ void PPU::update_state(Byte new_state)
 
 	switch (new_state)
 	{
-		case 0: {
-			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000000); 
-			irq_needed = (*lcdstat_register_ptr & 0b00001000);
-		}break;
+	case 0: {
+		*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000000);
+		irq_needed = (*lcdstat_register_ptr & 0b00001000);
+	}break;
 
-		case 1: { 
-			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000001);
-			if (this->lcd_enabled())
-				irq_needed = (*lcdstat_register_ptr & 0b00010000);
-		}break;
+	case 1: {
+		*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000001);
+		if (this->lcd_enabled())
+			irq_needed = (*lcdstat_register_ptr & 0b00010000);
+	}break;
 
-		case 2: { 
-			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000010);
-			irq_needed = (*lcdstat_register_ptr & 0b00100000);
-		}break;
+	case 2: {
+		*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000010);
+		irq_needed = (*lcdstat_register_ptr & 0b00100000);
+	}break;
 
-		case 3: { 
-			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000011); 
-		}break;
-	
-		default: throw "Unreachable PPU new state"; break;
+	case 3: {
+		*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000011);
+	}break;
+
+	default: throw "Unreachable PPU new state"; break;
 	}
 
 	//if mode hsa changed
@@ -440,15 +440,15 @@ Byte PPU::get_ppu_state()
 }
 
 void TILE::consolePrint()
-{    
+{
 	for (int y = 0; y < 8; y++)
 	{
-	    for (int x = 0; x < 8; x++)
-	    {
-	        this->getPixelColour(x, y);
-	        std::cout << " ";
-	    }
-	    std::cout << "\n";
+		for (int x = 0; x < 8; x++)
+		{
+			this->getPixelColour(x, y);
+			std::cout << " ";
+		}
+		std::cout << "\n";
 	}
 }
 
@@ -462,11 +462,11 @@ void TILE::getPixelColour(int x, int y)
 	Byte result = (((Byte)bit0 << 1) | (Byte)bit1);
 
 	if (result != 0)
-		std::cout<< "";
+		std::cout << "";
 	if (result == 00)
 		std::cout << "  ";
 	else
-	std::cout << std::bitset<2>{result};
+		std::cout << std::bitset<2>{result};
 
 	//return result;
 }
@@ -476,7 +476,7 @@ TILE::TILE(BUS* bus, Word address)
 	for (int i = 0; i < 16; i++)
 	{
 		this->bytes_per_tile[i] = bus->get_memory(address + i, MEMORY_ACCESS_TYPE::ppu);
-	}	
+	}
 }
 
 TILE::TILE()
