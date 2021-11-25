@@ -16,6 +16,7 @@ void CPU::DEBUG_printCurrentState()
     printf("%s:0x%.2X%.2X  ","HL", this->registers.h,this->registers.l);
     printf("%s:0x%.4X  ","SP", this->registers.sp);
     printf("%s:0x%.4X  ","STAT", this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::cpu));
+    printf("%s:%i  ","IME", this->interrupt_master_enable);
     
     /*printf("%s:%i  ","z", this->registers.get_flag(z));
     printf("%s:%i  ","n", this->registers.get_flag(n));
@@ -1413,8 +1414,8 @@ int CPU::ins_RET()
 
 int CPU::ins_RETI()
 {
-    this->ins_RET();
     this->interrupt_master_enable = 1;
+    this->ins_RET();
     return 16;
 }
 

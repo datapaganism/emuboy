@@ -333,7 +333,7 @@ int CPU::fetch_decode_execute()
     case 0xF0: { cyclesUsed = this->ins_LD_r1_nn(&this->registers.a, 0xFF00 + this->get_byte_from_pc(), 12); } break;
     case 0xF1: { cyclesUsed = this->ins_POP_nn(&this->registers.a, &this->registers.f); } break;
     case 0xF2: { cyclesUsed = this->ins_LD_r1_r2(&this->registers.a, 0xFF00 + this->registers.c); } break;
-    case 0xF3: { this->DI_triggered = true; return 4; } break; //DI is set to trigger, finish instruction
+    case 0xF3: { cyclesUsed = 4;  this->DI_triggered = true; } break; //DI is set to trigger, finish instruction
     //case 0xF4: { } break;
     case 0xF5: { cyclesUsed = this->ins_PUSH_nn(this->registers.get_AF()); } break;
     case 0xF6: { cyclesUsed = this->ins_OR_n(nullptr, this->get_byte_from_pc()); } break;
@@ -342,7 +342,7 @@ int CPU::fetch_decode_execute()
     case 0xF8: { cyclesUsed = this->ins_LDHL_SP_n(&this->registers.h, &this->registers.l, this->registers.sp, this->get_byte_from_pc()); } break;
     case 0xF9: { cyclesUsed = this->ins_LD_nn_nn(&this->registers.sp, this->registers.get_HL()); } break;
     case 0xFA: { cyclesUsed = this->ins_LD_r1_nn(&this->registers.a, this->get_word_from_pc_lsbf(), 16); } break;
-    case 0xFB: { cyclesUsed = this->EI_triggered = true; return 4; } break; // EI is set to trigger, finish instruction
+    case 0xFB: { this->EI_triggered = true; return 4; } break; // EI is set to trigger, finish instruction
     //case 0xFC: { } break;
     //case 0xFD: { } break;
     case 0xFE: { cyclesUsed = this->ins_CP_n(nullptr, this->get_byte_from_pc()); } break;
@@ -358,8 +358,8 @@ int CPU::fetch_decode_execute()
 
 #define DEBUG 1
 #if DEBUG 1
-//#define BREAKPOINTPC 0xC241
-#define BREAKPOINTPC 0xDEF8
+//#define BREAKPOINTPC 0xC2b5
+#define BREAKPOINTPC 0xC319
 #define BREAKPOINTDE 0xC242
 
     // the mission, get past 239
@@ -394,7 +394,7 @@ int CPU::fetch_decode_execute()
         /*this->DEBUG_print_IO();*/
         this->DEBUG_printCurrentState();
     }
-    this->bus->DEBUG_PC_breakpoint_hit = false;
+    //this->bus->DEBUG_PC_breakpoint_hit = false;
 
     if (this->registers.pc == BREAKPOINTPC && this->bus->get_memory(this->registers.pc, MEMORY_ACCESS_TYPE::cpu) == 0xff)
     {
