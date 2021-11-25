@@ -260,6 +260,12 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
                     return 0xFF;
 
         } break;
+
+        case MEMORY_ACCESS_TYPE::interrupt_handler:
+        {
+            if (address == 0xFFFF)
+                return this->interrupt_enable_register;
+        } break;
         default: break;
     }
 
@@ -710,7 +716,6 @@ void BUS::load_bios(const std::string bios_name)
     file.close();
 
 };
-
 
 // initializes the hardware registers on startup
 void BUS::init()

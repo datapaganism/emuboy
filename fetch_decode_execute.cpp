@@ -359,7 +359,7 @@ int CPU::fetch_decode_execute()
 #define DEBUG 0
 #if DEBUG 1
 //#define BREAKPOINTPC 0xC2b5
-#define BREAKPOINTPC 0xC319
+#define BREAKPOINTPC 0xC2BE
 #define BREAKPOINTDE 0xC242
 
     // the mission, get past 239

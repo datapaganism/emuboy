@@ -16,6 +16,7 @@ enum MEMORY_ACCESS_TYPE
     dma_controller,
     ppu,
     cpu,
+    interrupt_handler,
     debug,
 };
 
@@ -73,8 +74,6 @@ public:
 
     void pressButton(const enum JoypadButtons button);
     void depressButton(const enum JoypadButtons button);
-
-
 
     void DEBUG_fill_ram(Word address, std::string byteString);
     void DEBUG_nintendo_logo();

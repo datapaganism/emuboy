@@ -278,12 +278,13 @@ void CPU::dma_transfer(Byte data)
 
 Byte CPU::get_interrupt_flag(const enum InterruptTypes type, Word address)
 {
-    return this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) & type;
+    return this->bus->get_memory(address, MEMORY_ACCESS_TYPE::interrupt_handler) & type;
 }
 
 void CPU::set_interrupt_flag(const enum InterruptTypes type, const bool value, Word address)
 {
-    (value) ? this->bus->set_memory(address, this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) | type, MEMORY_ACCESS_TYPE::cpu) : this->bus->set_memory(address, this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) & ~type, MEMORY_ACCESS_TYPE::cpu);
+    auto mem_type = MEMORY_ACCESS_TYPE::interrupt_handler;
+    (value) ? this->bus->set_memory(address, this->bus->get_memory(address, mem_type) | type, mem_type) : this->bus->set_memory(address, this->bus->get_memory(address, mem_type) & ~type, mem_type);
 }
 
 
