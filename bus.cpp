@@ -464,67 +464,140 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
     }
     if (address <= 0xFF4B) // from ff00
     {
-        if (address == 0xFF0F)
+        switch (address)
         {
-            this->io[address - 0xFF00] = (data | 0xE0);
-            return;
-        }
-        if (address == STAT)
-        {
-            this->io[address - 0xFF00] = (this->io[address - 0xFF00] & 0x80) | (data & 0x7F);
-
-            return;
-        }
-
-        //if changing timers
-        if (address == TAC)
-        {
-            this->io[address - 0xFF00] = data;
-            this->cpu.update_timerCounter();
-            return;
-        }
-        if (address == DIV)
-        {
+        case 0xFF00:
+            this->io[address - 0xFF00] = (data | 0xCF);
+            break;
+        case 0xFF02:
+            this->io[address - 0xFF00] = (data | 0x7E);
+            break;
+        case 0xFF04:
             this->io[address - 0xFF00] = 0;
-            return;
-        }
-
-        // i/o registers
-
-        if (address == DMA)
-        {
-            this->dma_controller.request_dma(data);
-            return;
-        }
-
-
-        // LY register gets reset if written to
-        if (address == LY)
-        {
-            //this->io[LY - IOOFFSET] = 0;
-            return;
-        }
-
-        if (address == 0xFF26) // NR52
-        {
-            this->io[0xFF26 - IOOFFSET] |= (data & 0x80);
-
-            if ((this->io[0xFF26 - IOOFFSET] & 0x80) == 0)
+            break;
+        case 0xFF07:
+            this->io[address - 0xFF00] = (data | 0xF8);
+            this->cpu.update_timerCounter();
+            break;
+        case 0xFF0F:
+            this->io[address - 0xFF00] = (data | 0xE0);
+            break;
+        case 0xFF10:
+            this->io[address - 0xFF00] = (data | 0x80);
+            break;
+        case 0xFF14:
+            this->io[address - 0xFF00] = (data | 0xB8);
+            break;
+        case 0xFF15:
+            this->io[address - 0xFF00] = 0xFF;
+            break;
+        case 0xFF19:
+            this->io[address - 0xFF00] = (data | 0xB8);
+            break;
+        case 0xFF1A:
+            this->io[address - 0xFF00] = (data | 0x7F);
+            break;
+        case 0xFF1C:
+            this->io[address - 0xFF00] = (data | 0x9F);
+            break;
+        case 0xFF1E:
+            this->io[address - 0xFF00] = (data | 0xB8);
+            break;
+        case 0xFF1F:
+            this->io[address - 0xFF00] = 0xFF;
+            break;
+        case 0xFF20:
+            this->io[address - 0xFF00] = (data | 0xC0);
+            break;
+        case 0xFF23:
+            this->io[address - 0xFF00] = (data | 0xBF);
+            break;
+        case 0xFF26:
+            this->io[address - 0xFF00] = (data | 0x70);
+            if ((this->io[0xFF26 - IOOFFSET] & 0x8F) == 0)
             {
                 //destroy sound registers.
             }
+            break;
+        case 0xFF41:
+            this->io[address - 0xFF00] = (data | 0x80);
+            break;
+        case 0xFF44: // LY
+            break;
+        case 0xFF46: // dma
+           this->dma_controller.request_dma(data);
+           break;
+        case 0xFF50:
+            this->io[0xFF50 - IOOFFSET] = 0x1; // disable bootrom
+            break;
 
-            return;
+
+        default:
+            this->io[address - 0xFF00] = data;
         }
-
-        if (address == 0xFF50)
-        {
-            this->io[0xFF50 - IOOFFSET] = 0x1;
-            return;
-        }
-
-        this->io[address - 0xFF00] = data;
         return;
+
+        //if (address == 0xFF0F)
+        //{
+        //    this->io[address - 0xFF00] = (data | 0xE0);
+        //    return;
+        //}
+        //if (address == STAT)
+        //{
+        //    this->io[address - 0xFF00] = (this->io[address - 0xFF00] & 0x80) | (data & 0x7F);
+
+        //    return;
+        //}
+
+        ////if changing timers
+        //if (address == TAC)
+        //{
+        //    this->io[address - 0xFF00] = data;
+        //    this->cpu.update_timerCounter();
+        //    return;
+        //}
+        //if (address == DIV)
+        //{
+        //    this->io[address - 0xFF00] = 0;
+        //    return;
+        //}
+
+        //// i/o registers
+
+        //if (address == DMA)
+        //{
+        //    this->dma_controller.request_dma(data);
+        //    return;
+        //}
+
+
+        //// LY register gets reset if written to
+        //if (address == LY)
+        //{
+        //    //this->io[LY - IOOFFSET] = 0;
+        //    return;
+        //}
+
+        //if (address == 0xFF26) // NR52
+        //{
+        //    this->io[0xFF26 - IOOFFSET] |= (data & 0x80);
+
+        //    if ((this->io[0xFF26 - IOOFFSET] & 0x80) == 0)
+        //    {
+        //        //destroy sound registers.
+        //    }
+
+        //    return;
+        //}
+
+        //if (address == 0xFF50)
+        //{
+        //    this->io[0xFF50 - IOOFFSET] = 0x1;
+        //    return;
+        //}
+
+        //this->io[address - 0xFF00] = data;
+        //return;
     }
     if (address <= 0xFF7F)
     {
@@ -592,19 +665,19 @@ void BUS::cycle_system_one_frame()
         this->cpu.update_timers(cyclesUsed);
         cyclesUsed += this->cpu.do_interrupts();
         this->dma_controller.update_dma(cyclesUsed);
-        this->ppu.update_graphics(cyclesUsed);
+        //this->ppu.update_graphics(cyclesUsed);
         currentCycles += cyclesUsed;
 
         //if (*work_ram_ptr == 0x89)
         //    *work_ram_ptr = 0x89;
         //    ;
         //
-
-        if (this->io[0xFF02 - IOOFFSET] == 0x81)
+        
+        // Serial monitoring
+        if ((this->io[0xFF02 - IOOFFSET] & ~0x7E) == 0x81)
         {
             char c = this->io[0xFF01 - IOOFFSET];
             printf("%c", c);
-            //printf("something printed\n");
             this->io[0xFF02 - IOOFFSET] = 0x0;
         }
     }
