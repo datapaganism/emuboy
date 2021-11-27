@@ -1,5 +1,45 @@
 #include "bus.hpp"
 
+void BUS::cycle_system_one_frame()
+{
+    int currentCycles = 0;
+
+    while (currentCycles <= CYCLES_PER_FRAME)
+    {
+
+        /* auto work_ram_ptr = this->work_ram.get() + 0x0242;
+         if (*work_ram_ptr != 0x89 && *work_ram_ptr != 0x0 )
+             *work_ram_ptr = *work_ram_ptr;*/
+
+        Byte* looking = this->work_ram.get() + 0x240;
+       /* if (*looking == 0x77)
+        {
+            printf("break");
+        }*/
+
+
+        int cyclesUsed = this->cpu.fetch_decode_execute();
+
+        this->cpu.update_timers(cyclesUsed);
+
+        cyclesUsed += this->cpu.do_interrupts();
+
+        this->dma_controller.update_dma(cyclesUsed);
+
+        this->ppu.update_graphics(cyclesUsed);
+
+        currentCycles += cyclesUsed;
+
+        // Serial monitoring
+        if ((this->io[0xFF02 - IOOFFSET] & ~0x7E) == 0x81)
+        {
+            char c = this->io[0xFF01 - IOOFFSET];
+            printf("%c", c);
+            this->io[0xFF02 - IOOFFSET] = 0x0;
+        }
+    }
+}
+
 Byte BUS::DEBUG_ascii_to_hex(char character)
 {
     Byte temp = 0x0;
@@ -656,38 +696,7 @@ const Word BUS::DEBUG_get_memory_word_lsbf(const Word address)
     return this->get_memory_word_lsbf(address, MEMORY_ACCESS_TYPE::debug);
 }
 
-void BUS::cycle_system_one_frame()
-{
-    int currentCycles = 0;
 
-    while (currentCycles <= CYCLES_PER_FRAME)
-    {
-
-       /* auto work_ram_ptr = this->work_ram.get() + 0x0242;
-        if (*work_ram_ptr != 0x89 && *work_ram_ptr != 0x0 )
-            *work_ram_ptr = *work_ram_ptr;*/
-
-        int cyclesUsed = this->cpu.fetch_decode_execute();
-        this->cpu.update_timers(cyclesUsed);
-        cyclesUsed += this->cpu.do_interrupts();
-        this->dma_controller.update_dma(cyclesUsed);
-        //this->ppu.update_graphics(cyclesUsed);
-        currentCycles += cyclesUsed;
-
-        //if (*work_ram_ptr == 0x89)
-        //    *work_ram_ptr = 0x89;
-        //    ;
-        //
-        
-        // Serial monitoring
-        if ((this->io[0xFF02 - IOOFFSET] & ~0x7E) == 0x81)
-        {
-            char c = this->io[0xFF01 - IOOFFSET];
-            printf("%c", c);
-            this->io[0xFF02 - IOOFFSET] = 0x0;
-        }
-    }
-}
 
 
 

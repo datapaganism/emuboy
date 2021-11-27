@@ -37,22 +37,27 @@ FIFO_pixel FIFO::pop()
 
 		return temp;
 	}
+	throw "unreachable pop";
 }
 
 void FIFO::update_fifo(int cyclesUsed)
 {
+
 	this->fifo_cycle_counter += cyclesUsed;
+
 
 	while (this->fifo_cycle_counter >= (4/4))
 	{
 		this->fifo_cycle_counter -= (4/4);
 
+
+		// while fifo not empty
 		if (this->tail_pos > -1)
 		{
 			BUS* pBus = this->ppu_parent->bus;
 			Byte ly = pBus->io[LY - IOOFFSET];
 			
-			
+			// between 0 and 159 pixels portion of the scanline
 			if ( this->ppu_parent->scanline_x < 160)
 			{
 				/*
@@ -72,9 +77,14 @@ void FIFO::update_fifo(int cyclesUsed)
 
 					All models before the CGB - D read the Y coordinate once for each bitplane(so a very precisely timed SCY write allows “desyncing” them), but CGB - D and later use the same Y coordinate for both no matter what.
 					*/
-				this->ppu_parent->add_to_framebuffer(this->ppu_parent->scanline_x, ly, this->pop());
+				if (ly < 144 && this->ppu_parent->scanline_x < 160)
+					this->ppu_parent->add_to_framebuffer(this->ppu_parent->scanline_x, ly, this->pop());
+
+
 				this->ppu_parent->scanline_x++;
 			}
+
+
 		}
 	}
 }

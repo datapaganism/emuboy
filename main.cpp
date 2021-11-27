@@ -17,8 +17,13 @@
 #define main SDL_main
 int main(int argv, char** args)
 {
-    //BUS bus("./roms/TETRIS.gb", "bios.bin");
-    BUS bus("./roms/blargg/02-interrupts.gb", "bio s.bin");
+    std::string file_name;
+    if (args[1] != NULL)
+        file_name = args[1];
+    else
+        file_name = "./roms/ppu/m3_bgp_change.gb";
+
+    BUS bus(file_name, "bios.bin");
     RENDERER renderer;
 
     /*bus.set_memory(0xFF01,0x30);
@@ -78,16 +83,12 @@ int main(int argv, char** args)
                 int keyPressed = event.key.keysym.sym;
                 enum JoypadButtons pressed = keyToEnum(keyPressed);
                 if (pressed != UNKNOWN)
-                    bus.pressButton(pressed);
+                    bus.depressButton(pressed);
             } break;
             };
         }
         ticksNow = SDL_GetTicks();
         tickDelta = ticksNow - ticksPrevious;
-
-
-        
-
 
         // Emulate a single frame's worth of CPU instructions
         if (tickDelta > 1000/VSYNC)

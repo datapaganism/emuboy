@@ -358,8 +358,10 @@ int CPU::fetch_decode_execute()
 
 #define DEBUG 0
 #if DEBUG 1
+
+    //C240 is where it the memory addresses change
 //#define BREAKPOINTPC 0xC2b5
-#define BREAKPOINTPC 0xC2BE
+#define BREAKPOINTPC 0xC5f1
 #define BREAKPOINTDE 0xC242
 
     // the mission, get past 239
@@ -367,19 +369,24 @@ int CPU::fetch_decode_execute()
     //0x020f frame 1, tick 61172
 
     //this->DEBUG_printCurrentState();
-    auto c242 = this->bus->work_ram[0x0242];
+    Byte c240 = this->bus->work_ram[0x0240];
+    this->bus->work_ram.get() + 0x240;
+    Word c240w = this->bus->DEBUG_get_memory_word_lsbf(0xC240);
     auto pc = this->registers.pc;
     auto af = this->registers.get_AF();
     auto bc = this->registers.get_BC();
     auto de = this->registers.get_DE();
     auto hl = this->registers.get_HL();
-    auto work_ram_ptr = this->bus->work_ram.get() + 0x0242;
+    auto work_ram_ptr = this->bus->work_ram.get() + 0x0240;
+
+
 
     //if (this->bus->DEBUG_PC_breakpoint_hit)
     //{
     //    /*this->DEBUG_print_IO();*/
     //    this->DEBUG_printCurrentState();
     //}
+    //if (this->registers.pc == BREAKPOINTPC  && this->registers.get_AF() == 0x9140 && this->registers.get_DE() == 0x6402)
     if (this->registers.pc == BREAKPOINTPC)
     {
          this->registers.pc = BREAKPOINTPC;
@@ -394,6 +401,8 @@ int CPU::fetch_decode_execute()
         /*this->DEBUG_print_IO();*/
         this->DEBUG_printCurrentState();
     }
+
+
     //this->bus->DEBUG_PC_breakpoint_hit = false;
 
     if (this->registers.pc == BREAKPOINTPC && this->bus->get_memory(this->registers.pc, MEMORY_ACCESS_TYPE::cpu) == 0xff)

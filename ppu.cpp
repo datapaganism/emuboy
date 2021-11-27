@@ -60,7 +60,8 @@ void PPU::update_graphics(const int cycles)
 
 		this->cycle_counter += cycles;
 
-		switch (this->bus->io[STAT - IOOFFSET] & 0b00000011)
+		//switch (this->bus->io[STAT - IOOFFSET] & 0b00000011)
+		switch (this->bus->get_memory(STAT,MEMORY_ACCESS_TYPE::ppu) & 0b00000011)
 		{
 		case 0: // h blank
 		{
@@ -331,12 +332,16 @@ Word PPU::get_tile_address_from_number(const Byte tile_number, const enum tile_t
 
 void PPU::add_to_framebuffer(const int x, const int y, const FIFO_pixel fifo_pixel)
 {
-	this->framebuffer[static_cast<long long>(x) + (XRES * static_cast<long long>(y))] = this->dmg_framebuffer_pixel_to_rgb(fifo_pixel);
+	if (x < XRES && y < YRES)
+		this->framebuffer[static_cast<long long>(x) + (XRES * static_cast<long long>(y))] = this->dmg_framebuffer_pixel_to_rgb(fifo_pixel);
 }
+
 
 FRAMEBUFFER_PIXEL PPU::dmg_framebuffer_pixel_to_rgb(const FIFO_pixel fifo_pixel)
 {
+
 	Byte palette_register = this->bus->get_memory(0xFF47, MEMORY_ACCESS_TYPE::ppu);
+
 	Byte id_to_palette_id = 0;
 	switch (fifo_pixel.colour)
 	{
@@ -386,38 +391,42 @@ void PPU::new_scanline()
 
 void PPU::update_state(Byte new_state)
 {
-	Byte* lcdstat_register_ptr = &this->bus->io[STAT - IOOFFSET];
-	Byte original_mode = (*lcdstat_register_ptr & 0b00000011);
+	//Byte* lcdstat_register_ptr = &this->bus->io[STAT - IOOFFSET];
+	Byte original_mode = (this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0x3);
 	bool irq_needed = false;
 
 	switch (new_state)
 	{
 	case 0: {
-		*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000000);
-		irq_needed = (*lcdstat_register_ptr & 0b00001000);
+		//*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000000);
+		this->bus->set_memory(STAT, ((this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0xFC) | 0x0), MEMORY_ACCESS_TYPE::ppu);
+		irq_needed = (this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0b00001000);
 	}break;
 
 	case 1: {
-		*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000001);
+		//*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000001);
+		this->bus->set_memory(STAT, ((this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0xFC) | 0x1), MEMORY_ACCESS_TYPE::ppu);
 		if (this->lcd_enabled())
-			irq_needed = (*lcdstat_register_ptr & 0b00010000);
+			irq_needed = (this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0b00010000);
 	}break;
 
 	case 2: {
-		*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000010);
-		irq_needed = (*lcdstat_register_ptr & 0b00100000);
+		//*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000010);
+		this->bus->set_memory(STAT, ((this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0xFC) | 0x2), MEMORY_ACCESS_TYPE::ppu);
+		irq_needed = (this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0b00100000);
 	}break;
 
 	case 3: {
-		*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000011);
+		//*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000011);
+		this->bus->set_memory(STAT, ((this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0xFC) | 0x3), MEMORY_ACCESS_TYPE::ppu);
 	}break;
 
 	default: throw "Unreachable PPU new state"; break;
 	}
 
-	//if mode hsa changed
+	//if mode has changed
 
-	if (original_mode != (*lcdstat_register_ptr & 0b00000011) && irq_needed)
+	if ((original_mode != (this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0x3)) && irq_needed)
 		this->bus->cpu.request_interrupt(lcdstat);
 
 	//time to check LYC = LY
@@ -425,13 +434,15 @@ void PPU::update_state(Byte new_state)
 //set register for equality
 	if (this->bus->io[LY - IOOFFSET] == this->bus->io[LYC - IOOFFSET])
 	{
-		*lcdstat_register_ptr |= 0b00000100;
+		//*lcdstat_register_ptr |= 0b00000100;
+		this->bus->set_memory(STAT, (this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) | 0b00000100), MEMORY_ACCESS_TYPE::ppu);
 		// if interrupt is enabled
-		if ((*lcdstat_register_ptr & 0b01000000))
+		if ((this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0b01000000))
 			this->bus->cpu.request_interrupt(lcdstat);
 	}
 	else
-		*lcdstat_register_ptr &= ~0b00000100;
+		this->bus->set_memory(STAT, (this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & ~0b00000100), MEMORY_ACCESS_TYPE::ppu);
+		//*lcdstat_register_ptr &= ~0b00000100;
 }
 
 Byte PPU::get_ppu_state()

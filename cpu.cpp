@@ -194,7 +194,7 @@ int CPU::do_interrupts()
                 default: throw "Unreachable intterupt type"; break;
                 }
 
-                cyclesUsed += 20;
+                //cyclesUsed += 20;
             }
         }
     }
