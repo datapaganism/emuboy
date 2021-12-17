@@ -26,3 +26,9 @@ static enum JoypadButtons keyToEnum(int key)
     }
     return UNKNOWN;
 };
+
+enum JoypadButtonsDebug
+{
+    pause = SDLK_p,
+    showVRAM = SDLK_o,
+};

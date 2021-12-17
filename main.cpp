@@ -2,6 +2,7 @@
 
 #include "bus.hpp"
 #include "renderer.hpp"
+#include "vram_renderer.hpp"
 #include "config.h"
 #include <iostream>
 #include <bitset>
@@ -25,6 +26,9 @@ int main(int argv, char** args)
 
     BUS bus(file_name, "bios.bin");
     RENDERER renderer;
+    VRAM_RENDERER vram_renderer;
+    SDL_SetWindowTitle(vram_renderer.window, "VRAM VIEWER");
+    
 
     /*bus.set_memory(0xFF01,0x30);
     bus.set_memory(0xFF02,0x81);*/
@@ -57,6 +61,9 @@ int main(int argv, char** args)
     // 2. run cpu, update timers, run graphics and sound chips, and do interrupts
     // 3. renderer displays graphics from emulated state
     // rinse and repeat
+
+    bool show_vram = false;
+
     unsigned int ticksNow = 0, ticksPrevious = 0;
     double tickDelta = 0;
     while (renderer.isRunning)
@@ -77,6 +84,12 @@ int main(int argv, char** args)
                 enum JoypadButtons pressed = keyToEnum(keyPressed);
                 if (pressed != UNKNOWN)
                     bus.pressButton(pressed);
+
+                if (keyPressed == JoypadButtonsDebug::pause)
+                    bus.paused = !bus.paused;
+
+                if (keyPressed == JoypadButtonsDebug::showVRAM)
+                    show_vram = !show_vram;
             } break;
             case SDL_KEYUP:
             {
@@ -95,9 +108,17 @@ int main(int argv, char** args)
         {
             //std::cout << "fps: " << 1000 / tickDelta << std::endl;
             ticksPrevious = ticksNow;
-
-            bus.cycle_system_one_frame();
+            if (!bus.paused)
+            {
+                bus.cycle_system_one_frame();
+            }
             renderer.render_frame(&bus);
+
+            if (show_vram)
+            {
+                
+                vram_renderer.render_vram_tiles(&bus);
+            }
 
             std::string windowTitle("SCX: ");
             windowTitle.append(std::to_string(bus.get_memory(SCX, MEMORY_ACCESS_TYPE::debug)));
@@ -114,6 +135,9 @@ int main(int argv, char** args)
 
             windowTitle.append(" JOY: ");
             windowTitle.append(to_hex_str(bus.get_memory(0xFF00, MEMORY_ACCESS_TYPE::debug)));
+
+            if (bus.paused)
+                windowTitle = std::string("PAUSED");
 
             SDL_SetWindowTitle(renderer.window, windowTitle.data());
             

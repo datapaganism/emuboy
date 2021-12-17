@@ -224,6 +224,7 @@
     <ClCompile Include="gamepak.cpp" />
     <ClCompile Include="ppu.cpp" />
     <ClCompile Include="renderer.cpp" />
+    <ClCompile Include="vram_renderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="bios.bin" />
@@ -260,6 +261,7 @@
     <ClInclude Include="joypad_mapping.h" />
     <ClInclude Include="ppu.hpp" />
     <ClInclude Include="renderer.hpp" />
+    <ClInclude Include="vram_renderer.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
