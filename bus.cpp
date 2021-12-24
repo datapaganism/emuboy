@@ -1,4 +1,5 @@
 #include "bus.hpp"
+#include <iterator>
 
 void BUS::cycle_system_one_frame()
 {
@@ -54,7 +55,7 @@ Byte BUS::DEBUG_ascii_to_hex(char character)
 // 3E 18 06 FF 90
 int BUS::DEBUG_opcode_program(Word address, std::string byteString, int cycles)
 {
-#include <iterator>
+
     std::vector<Byte> byteArray;
 
     Word temp = 0x0;

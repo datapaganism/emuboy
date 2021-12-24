@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SDL.h"
+
 enum JoypadButtons
 {
     dUp = SDLK_UP,

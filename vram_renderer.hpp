@@ -14,6 +14,8 @@ class VRAM_RENDERER
         SDL_Texture* texture = nullptr;
 
         void render_vram_tiles(BUS *bus);
+
+        std::array<FRAMEBUFFER_PIXEL, 8 * 16 * 8 * 24> generate_vram_framebuffer(BUS* bus);
     private:
         
 };

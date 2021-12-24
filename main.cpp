@@ -11,18 +11,18 @@
 #include <string>
 #include <sstream>
 
+#include "SDL.h"
 
 #define to_hex_str(hex_val) (static_cast<std::stringstream const&>(std::stringstream() << "0x" << std::hex << hex_val)).str()
 
 
-#define main SDL_main
 int main(int argv, char** args)
 {
     std::string file_name;
     if (args[1] != NULL)
         file_name = args[1];
     else
-        file_name = "./roms/ppu/m3_bgp_change.gb";
+        file_name = "./roms/TETRIS.gb";
 
     BUS bus(file_name, "bios.bin");
     RENDERER renderer;
@@ -62,7 +62,7 @@ int main(int argv, char** args)
     // 3. renderer displays graphics from emulated state
     // rinse and repeat
 
-    bool show_vram = false;
+    bool show_vram = true;
 
     unsigned int ticksNow = 0, ticksPrevious = 0;
     double tickDelta = 0;

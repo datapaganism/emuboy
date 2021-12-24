@@ -357,7 +357,7 @@ int CPU::fetch_decode_execute()
     this->interrupt_DI_EI_handler();
 
 #define DEBUG 0
-#if DEBUG 1
+#if DEBUG == 1
 
     //C240 is where it the memory addresses change
 //#define BREAKPOINTPC 0xC2b5
