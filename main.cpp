@@ -3,6 +3,7 @@
 #include "bus.hpp"
 #include "renderer.hpp"
 #include "vram_renderer.hpp"
+#include "bg_map_renderer.hpp"
 #include "config.h"
 #include <iostream>
 #include <bitset>
@@ -22,12 +23,14 @@ int main(int argv, char** args)
     if (args[1] != NULL)
         file_name = args[1];
     else
-        file_name = "./roms/TETRIS.gb";
+        file_name = "./roms/blargg/03-op sp,hl.gb";
 
     BUS bus(file_name, "bios.bin");
     RENDERER renderer;
     VRAM_RENDERER vram_renderer;
     SDL_SetWindowTitle(vram_renderer.window, "VRAM VIEWER");
+    BG_MAP_RENDERER bg_renderer;
+    SDL_SetWindowTitle(bg_renderer.window, "BG VIEWER");
     
 
     /*bus.set_memory(0xFF01,0x30);
@@ -118,6 +121,7 @@ int main(int argv, char** args)
             {
                 
                 vram_renderer.render_vram_tiles(&bus);
+                bg_renderer.render_vram_tiles(&bus);
             }
 
             std::string windowTitle("SCX: ");

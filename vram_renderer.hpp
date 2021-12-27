@@ -15,7 +15,7 @@ class VRAM_RENDERER
 
         void render_vram_tiles(BUS *bus);
 
-        std::array<FRAMEBUFFER_PIXEL, 8 * 16 * 8 * 24> generate_vram_framebuffer(BUS* bus);
+        std::unique_ptr<FRAMEBUFFER_PIXEL[]> generate_vram_framebuffer(BUS* bus);
     private:
         
 };

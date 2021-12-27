@@ -35,7 +35,7 @@ void VRAM_RENDERER::render_vram_tiles(BUS *bus)
 
 
     //convert tile data into argb8888 pixels and then feed it into this function
-    SDL_UpdateTexture(this->texture, NULL, generate_vram_framebuffer(bus).data(), 8 * 16 * sizeof(FRAMEBUFFER_PIXEL));
+    SDL_UpdateTexture(this->texture, NULL, generate_vram_framebuffer(bus).get(), 8 * 16 * sizeof(FRAMEBUFFER_PIXEL));
     SDL_RenderCopy(this->renderer, this->texture, NULL, NULL);        
 
     SDL_RenderPresent(this->renderer);
@@ -44,19 +44,19 @@ void VRAM_RENDERER::render_vram_tiles(BUS *bus)
 // 16 tiles wide
 // by 24 tall
 
-std::array<FRAMEBUFFER_PIXEL, 8 * 16 * 8 * 24> VRAM_RENDERER::generate_vram_framebuffer(BUS* bus)
+std::unique_ptr<FRAMEBUFFER_PIXEL[]> VRAM_RENDERER::generate_vram_framebuffer(BUS* bus)
 {
-    std::array<FRAMEBUFFER_PIXEL, 8 * 16 * 8 * 24> temp_framebuffer_buffer;
+    std::unique_ptr<FRAMEBUFFER_PIXEL[]> temp_framebuffer_buffer = std::make_unique<FRAMEBUFFER_PIXEL[]>(8 * 16 * 8 * 24);
     int temp_framebuffer_buffer_itr = 0;
     FIFO_pixel temp_pixel_buffer;
     Word start_memory_address = 0x8000;
-    Byte tile_no_x = 0, tile_no_y = 0, y = 0;
+    Byte tile_no_x = 0, tile_no_y = 0, scanline_y = 0, tile_x = 0;
     Byte data0 = 0, data1 = 0;
     Byte width = 16;
 
-    for (int i = 0 ; i < width + 26 * 8; i++)
+    for (int i = 0; i < width * 8 * 24; i++)
     {
-        Word address = start_memory_address + (0x10 * tile_no_x) + (0x100 * tile_no_y) + (2 * (y % 8));
+        Word address = start_memory_address + (0x10 * tile_no_x) + (0x100 * tile_x) + (2 * (scanline_y % 8));
 
         data0 = bus->get_memory(address, MEMORY_ACCESS_TYPE::ppu);
         data1 = bus->get_memory(address +1, MEMORY_ACCESS_TYPE::ppu);
@@ -71,20 +71,23 @@ std::array<FRAMEBUFFER_PIXEL, 8 * 16 * 8 * 24> VRAM_RENDERER::generate_vram_fram
 
             //push to fifo
             temp_pixel_buffer = (FIFO_pixel(colour, 0, 0, 0));
-            //temp_framebuffer_buffer[temp_framebuffer_buffer_itr++] = bus->ppu.dmg_framebuffer_pixel_to_rgb(temp_pixel_buffer);
-            temp_framebuffer_buffer[static_cast<long long>(temp_framebuffer_buffer_itr++) + (16*8 * static_cast<long long>(y))] = bus->ppu.dmg_framebuffer_pixel_to_rgb(temp_pixel_buffer);
+            temp_framebuffer_buffer[static_cast<long long>(temp_framebuffer_buffer_itr++) + (width * 8 * static_cast<long long>(scanline_y))] = bus->ppu.dmg_framebuffer_pixel_to_rgb(temp_pixel_buffer);
         }
         tile_no_x++;
+        if (temp_framebuffer_buffer_itr % (width * 8) == 0 && temp_framebuffer_buffer_itr != 0)
+        {
+            temp_framebuffer_buffer_itr = 0;
+            tile_no_y++;
+            scanline_y++;
+        }
+        if (temp_framebuffer_buffer_itr % (width * 8) == 0 && scanline_y % 8 == 0)
+        {
+            tile_x++;
+        }
         if (tile_no_x >= width)
         {
+            tile_no_x = tile_no_x;
             tile_no_x = 0;
-            y++;
-            address = 0;
-        }
-        if (y > 8) 
-        {
-            y = 0;
-            tile_no_y++;
         }
     }
     return temp_framebuffer_buffer;

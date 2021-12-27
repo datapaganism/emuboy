@@ -49,7 +49,7 @@ struct TILE
 	std::array<Byte, 16> bytes_per_tile = { 0, };
 
 	void consolePrint();
-	void getPixelColour(int x, int y);
+	Byte getPixelColour(int x, int y);
 	TILE(BUS *bus, Word address);
 
 	TILE();

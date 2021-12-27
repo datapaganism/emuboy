@@ -463,7 +463,7 @@ void TILE::consolePrint()
 	}
 }
 
-void TILE::getPixelColour(int x, int y)
+Byte TILE::getPixelColour(int x, int y)
 {
 	int offset = (0b1 << (7 - x));
 
@@ -472,14 +472,14 @@ void TILE::getPixelColour(int x, int y)
 
 	Byte result = (((Byte)bit0 << 1) | (Byte)bit1);
 
-	if (result != 0)
+	/*if (result != 0)
 		std::cout << "";
 	if (result == 00)
 		std::cout << "  ";
 	else
 		std::cout << std::bitset<2>{result};
-
-	//return result;
+	*/
+	return result;
 }
 
 TILE::TILE(BUS* bus, Word address)

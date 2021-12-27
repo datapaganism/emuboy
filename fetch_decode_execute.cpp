@@ -7,10 +7,8 @@
 /// this function is so big it deserves its own file since its painful to navigate
 int CPU::fetch_decode_execute()
 {
-    
     //system("cls");
     //this->DEBUG_print_IO();
-
 
     // ala 4.10 from tcagfb.pdf
     if (this->is_halted)
