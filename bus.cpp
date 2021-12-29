@@ -1,6 +1,9 @@
 #include "bus.hpp"
 #include <iterator>
 
+#include "vram_renderer.hpp"
+#include "bg_map_renderer.hpp"
+
 void BUS::cycle_system_one_frame()
 {
     int currentCycles = 0;
@@ -401,9 +404,11 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
 
 void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYPE access_type)
 {
-    if (address == 0xc242 && data == 0x89)
-        access_type = access_type;
-
+   /* if (0x9800 <= address && 0x9BFF >= address && this->DEBUG_PC_breakpoint_hit) {
+        this->DEBUG_fill_ram(0x8200, "3C 00 42 00 B9 00 A5 00 B9 00 A5 00 42 00 3C 00");
+        this->vram_ptr->render_vram_tiles(this);
+        this->bg_map_ptr->render_vram_tiles(this);
+    }*/
     switch (access_type)
     {
     case MEMORY_ACCESS_TYPE::cpu:
@@ -416,6 +421,7 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
             if ((this->ppu.lcd_enabled() && (this->ppu.get_ppu_state() == 0x3 || this->ppu.get_ppu_state() == 0x2)))
                 return;
 
+        //this breaks the tests
         if (0x8000 <= address && address <= 0x9FFF) // VIDEO RAM
             if ((this->ppu.lcd_enabled() && this->ppu.get_ppu_state() == 0x3))
                 return;

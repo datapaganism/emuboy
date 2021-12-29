@@ -21,9 +21,16 @@ enum MEMORY_ACCESS_TYPE
 };
 
 
+class VRAM_RENDERER;
+class BG_MAP_RENDERER;
+
 class BUS
 {
 public:
+
+    //extra debug
+    VRAM_RENDERER* vram_ptr = nullptr;
+    BG_MAP_RENDERER* bg_map_ptr = nullptr;
 
     PPU ppu;
     CPU cpu;

@@ -33,9 +33,9 @@ void VRAM_RENDERER::render_vram_tiles(BUS *bus)
 {
     SDL_RenderClear(this->renderer);
 
-
+    this->generate_vram_framebuffer(bus);
     //convert tile data into argb8888 pixels and then feed it into this function
-    SDL_UpdateTexture(this->texture, NULL, generate_vram_framebuffer(bus).get(), 8 * 16 * sizeof(FRAMEBUFFER_PIXEL));
+    SDL_UpdateTexture(this->texture, NULL, this->framebuffer.get(), 8 * 16 * sizeof(FRAMEBUFFER_PIXEL));
     SDL_RenderCopy(this->renderer, this->texture, NULL, NULL);        
 
     SDL_RenderPresent(this->renderer);
@@ -44,9 +44,8 @@ void VRAM_RENDERER::render_vram_tiles(BUS *bus)
 // 16 tiles wide
 // by 24 tall
 
-std::unique_ptr<FRAMEBUFFER_PIXEL[]> VRAM_RENDERER::generate_vram_framebuffer(BUS* bus)
+void VRAM_RENDERER::generate_vram_framebuffer(BUS* bus)
 {
-    std::unique_ptr<FRAMEBUFFER_PIXEL[]> temp_framebuffer_buffer = std::make_unique<FRAMEBUFFER_PIXEL[]>(8 * 16 * 8 * 24);
     int temp_framebuffer_buffer_itr = 0;
     FIFO_pixel temp_pixel_buffer;
     Word start_memory_address = 0x8000;
@@ -71,7 +70,7 @@ std::unique_ptr<FRAMEBUFFER_PIXEL[]> VRAM_RENDERER::generate_vram_framebuffer(BU
 
             //push to fifo
             temp_pixel_buffer = (FIFO_pixel(colour, 0, 0, 0));
-            temp_framebuffer_buffer[static_cast<long long>(temp_framebuffer_buffer_itr++) + (width * 8 * static_cast<long long>(scanline_y))] = bus->ppu.dmg_framebuffer_pixel_to_rgb(temp_pixel_buffer);
+            this->framebuffer[static_cast<long long>(temp_framebuffer_buffer_itr++) + (width * 8 * static_cast<long long>(scanline_y))] = bus->ppu.dmg_framebuffer_pixel_to_rgb(temp_pixel_buffer);
         }
         tile_no_x++;
         if (temp_framebuffer_buffer_itr % (width * 8) == 0 && temp_framebuffer_buffer_itr != 0)
@@ -89,12 +88,7 @@ std::unique_ptr<FRAMEBUFFER_PIXEL[]> VRAM_RENDERER::generate_vram_framebuffer(BU
             tile_no_x = tile_no_x;
             tile_no_x = 0;
         }
-    }
-    return temp_framebuffer_buffer;
-
-
-
-    
+    }    
 }
 
 

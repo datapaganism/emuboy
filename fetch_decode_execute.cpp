@@ -49,6 +49,7 @@ int CPU::fetch_decode_execute()
     }
     
     Byte opcode = this->get_byte_from_pc();
+
     
     //std::cout << std::hex << opcode << std::dec <<" ";
    
@@ -354,76 +355,17 @@ int CPU::fetch_decode_execute()
 
     this->interrupt_DI_EI_handler();
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG == 1
 
     //C240 is where it the memory addresses change
 //#define BREAKPOINTPC 0xC2b5
-#define BREAKPOINTPC 0xC5f1
-#define BREAKPOINTDE 0xC242
-
-    // the mission, get past 239
-
-    //0x020f frame 1, tick 61172
-
-    //this->DEBUG_printCurrentState();
-    Byte c240 = this->bus->work_ram[0x0240];
-    this->bus->work_ram.get() + 0x240;
-    Word c240w = this->bus->DEBUG_get_memory_word_lsbf(0xC240);
-    auto pc = this->registers.pc;
-    auto af = this->registers.get_AF();
-    auto bc = this->registers.get_BC();
-    auto de = this->registers.get_DE();
-    auto hl = this->registers.get_HL();
-    auto work_ram_ptr = this->bus->work_ram.get() + 0x0240;
+#define BREAKPOINTPC 0xC803
 
 
-
-    //if (this->bus->DEBUG_PC_breakpoint_hit)
-    //{
-    //    /*this->DEBUG_print_IO();*/
-    //    this->DEBUG_printCurrentState();
-    //}
-    //if (this->registers.pc == BREAKPOINTPC  && this->registers.get_AF() == 0x9140 && this->registers.get_DE() == 0x6402)
     if (this->registers.pc == BREAKPOINTPC)
-    {
-         this->registers.pc = BREAKPOINTPC;
-        this->bus->DEBUG_PC_breakpoint_hit = true;
-
-        //TILE tile0(this->bus, this->bus->ppu.get_tile_address_from_number(25, PPU::background));
-        //tile0.consolePrint();
-        
-    }
-    if (this->bus->DEBUG_PC_breakpoint_hit)
-    {
-        /*this->DEBUG_print_IO();*/
-        this->DEBUG_printCurrentState();
-    }
-
-
-    //this->bus->DEBUG_PC_breakpoint_hit = false;
-
-    if (this->registers.pc == BREAKPOINTPC && this->bus->get_memory(this->registers.pc, MEMORY_ACCESS_TYPE::cpu) == 0xff)
-    {
-        this->registers.pc = BREAKPOINTPC;
-        //TILE tile0(this->bus, this->bus->ppu.get_tile_address_from_number(25, PPU::background));
-        //tile0.consolePrint();
-
-    }
-
-
-    if (this->registers.get_DE() == BREAKPOINTDE && this->registers.pc == BREAKPOINTPC)
-    {
-        this->registers.get_DE();
-
-    }
-
-   /* if (this->bus->video_ram[0x8010 - 0x8000] != 0){
-        int i = 0;
-        TILE tile0(this->bus, 0x8010 + (16 * i));
-        tile0.consolePrint();
-        std::cout << "\n";
-    }*/
+      this->bus->DEBUG_PC_breakpoint_hit = true;
+    
 
 #endif // DEBUG
 

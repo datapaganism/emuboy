@@ -23,14 +23,17 @@ int main(int argv, char** args)
     if (args[1] != NULL)
         file_name = args[1];
     else
-        file_name = "./roms/blargg/03-op sp,hl.gb";
+        file_name = "./roms/TETRIS.gb";
 
-    BUS bus(file_name, "bios.bin");
+    BUS bus(file_name, "./bios.bin");
     RENDERER renderer;
     VRAM_RENDERER vram_renderer;
     SDL_SetWindowTitle(vram_renderer.window, "VRAM VIEWER");
     BG_MAP_RENDERER bg_renderer;
     SDL_SetWindowTitle(bg_renderer.window, "BG VIEWER");
+
+    bus.vram_ptr = &vram_renderer;
+    bus.bg_map_ptr = &bg_renderer;
     
 
     /*bus.set_memory(0xFF01,0x30);

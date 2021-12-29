@@ -34,7 +34,8 @@ void BG_MAP_RENDERER::render_vram_tiles(BUS* bus)
     SDL_RenderClear(this->renderer);
 
     //convert tile data into argb8888 pixels and then feed it into this function
-    SDL_UpdateTexture(this->texture, NULL, generate_bg_framebuffer(bus).get(), 8 * 32 * sizeof(FRAMEBUFFER_PIXEL));
+    this->generate_bg_framebuffer(bus);
+    SDL_UpdateTexture(this->texture, NULL, this->framebuffer.get(), 8 * 32 * sizeof(FRAMEBUFFER_PIXEL));
     SDL_RenderCopy(this->renderer, this->texture, NULL, NULL);
 
     SDL_RenderPresent(this->renderer);
@@ -43,9 +44,8 @@ void BG_MAP_RENDERER::render_vram_tiles(BUS* bus)
 // 16 tiles wide
 // by 24 tall
 
-std::unique_ptr<FRAMEBUFFER_PIXEL[]> BG_MAP_RENDERER::generate_bg_framebuffer(BUS* bus)
+void BG_MAP_RENDERER::generate_bg_framebuffer(BUS* bus)
 {
-    std::unique_ptr<FRAMEBUFFER_PIXEL[]> temp_framebuffer_buffer = std::make_unique<FRAMEBUFFER_PIXEL[]>(8 * 32 * 8 * 32);
     int temp_framebuffer_buffer_itr = 0;
     FIFO_pixel temp_pixel_buffer;
 
@@ -87,7 +87,7 @@ std::unique_ptr<FRAMEBUFFER_PIXEL[]> BG_MAP_RENDERER::generate_bg_framebuffer(BU
                     tile_pixels_scanline_worth[tile_x] = bus->ppu.dmg_framebuffer_pixel_to_rgb(temp_pixel_buffer);
                 }
                 int offset = (8*x) + ((width * 8) * ((8 * y) + tile_y));
-                memcpy(temp_framebuffer_buffer.get() + offset, tile_pixels_scanline_worth, sizeof(FRAMEBUFFER_PIXEL) * 8);
+                memcpy(this->framebuffer.get() + offset, tile_pixels_scanline_worth, sizeof(FRAMEBUFFER_PIXEL) * 8);
             }
         }
     }
@@ -132,12 +132,6 @@ std::unique_ptr<FRAMEBUFFER_PIXEL[]> BG_MAP_RENDERER::generate_bg_framebuffer(BU
     //        bg_map_tile_pointer_y++;
     //    }
     //}
-    
-    return temp_framebuffer_buffer;
-
-
-
-
 }
 
 

@@ -15,7 +15,9 @@ public:
 
     void render_vram_tiles(BUS* bus);
 
-    std::unique_ptr<FRAMEBUFFER_PIXEL[]> generate_bg_framebuffer(BUS* bus);
+    void generate_bg_framebuffer(BUS* bus);
+
+    std::unique_ptr<FRAMEBUFFER_PIXEL[]> framebuffer = std::make_unique<FRAMEBUFFER_PIXEL[]>(8 * 32 * 8 * 32);
 private:
 
 };
