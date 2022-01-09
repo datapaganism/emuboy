@@ -69,7 +69,7 @@ void Window::handleWindowEvent(SDL_Event& e)
 		bool updateCaption = false;
 		switch (e.window.event)
 		{
-		case SDL_WINDOWEVENT_SHOWN: { this->mShown = true; } break;
+		case SDL_WINDOWEVENT_SHOWN: { this->mShown = true; SDL_RenderPresent(this->mRenderer); } break;
 		
 		case SDL_WINDOWEVENT_HIDDEN: { this->mShown = false; } break;
 		

@@ -2,12 +2,14 @@
 #include <array>
 #include <memory>
 
+#include "Window.hpp"
 #include "cpu.hpp"
 #include "gamepak.hpp"
 #include "ppu.hpp"
 #include "config.hpp"
 #include "joypad_mapping.hpp"
 #include "dma_controller.hpp"
+
 
 
 enum MEMORY_ACCESS_TYPE
@@ -20,16 +22,13 @@ enum MEMORY_ACCESS_TYPE
 };
 
 
-class VRAM_RENDERER;
-class BG_MAP_RENDERER;
-
-class BUS
+class BUS : public Window
 {
 public:
 
-    //extra debug
-    VRAM_RENDERER* vram_ptr = nullptr;
-    BG_MAP_RENDERER* bg_map_ptr = nullptr;
+    void handleEvent(SDL_Event& e);
+    void updateState();
+    void updateRender();
 
     PPU ppu;
     CPU cpu;
@@ -43,6 +42,8 @@ public:
     std::unique_ptr<Byte[]> video_ram = std::make_unique<Byte[]>(0x2000);
     std::unique_ptr<Byte[]> oam_ram   = std::make_unique<Byte[]>(0x100);
     Byte interrupt_enable_register = 0;
+
+    std::unique_ptr<FRAMEBUFFER_PIXEL[]> framebuffer = std::make_unique<FRAMEBUFFER_PIXEL[]>(XRES * YRES);
     
 
     Byte DEBUG_ascii_to_hex(char character);
@@ -54,11 +55,8 @@ public:
     int DEBUG_opcode_program(Word address, std::string byteString, int cycles);
     bool DEBUG_PC_breakpoint_hit = false;
     
-    bool paused = false;
-
-    BUS();
-    BUS(const std::string game_name, const std::string bios_name);
-    void load_game_and_bios(const std::string rom_path, const std::string bios_path);
+    BUS(const std::string rom_path, const std::string bios_path, int width, int height, int scaling, const char* title, bool shownOnStart);
+    
     void init();
     void bios_init();
     Byte get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type);
@@ -78,7 +76,6 @@ public:
     /// </summary>
     void cycle_system_one_frame();
     
-
     bool biosLoaded = false;
 
     void pressButton(const enum JoypadButtons button);

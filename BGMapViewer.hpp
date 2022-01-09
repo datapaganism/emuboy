@@ -3,7 +3,6 @@
 #include <iostream>
 
 #include "Window.hpp"
-#include "Emulator.hpp"
 #include "bus.hpp"
 
 

@@ -78,7 +78,7 @@ public:
 	void init();
 	void connect_to_bus(BUS* pBus);
 
-	std::unique_ptr<FRAMEBUFFER_PIXEL[]> framebuffer = std::make_unique<FRAMEBUFFER_PIXEL[]>(XRES * YRES);
+	
 	
 	TILE tile;
 

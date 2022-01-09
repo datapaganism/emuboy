@@ -8,14 +8,8 @@
 
 PPU::PPU()
 {
-
 	this->fifo_bg.connect_to_ppu(this);
 	this->fifo_sprite.connect_to_ppu(this);
-
-	for (int i = 0; i < XRES * YRES; i++)
-	{
-		this->framebuffer[i] = FRAMEBUFFER_PIXEL(GB_PALLETE_00_r, GB_PALLETE_00_g, GB_PALLETE_00_b);
-	}
 }
 
 
@@ -333,7 +327,7 @@ Word PPU::get_tile_address_from_number(const Byte tile_number, const enum tile_t
 void PPU::add_to_framebuffer(const int x, const int y, const FIFO_pixel fifo_pixel)
 {
 	if (x < XRES && y < YRES)
-		this->framebuffer[static_cast<long long>(x) + (XRES * static_cast<long long>(y))] = this->dmg_framebuffer_pixel_to_rgb(fifo_pixel);
+		this->bus->framebuffer[static_cast<long long>(x) + (XRES * static_cast<long long>(y))] = this->dmg_framebuffer_pixel_to_rgb(fifo_pixel);
 }
 
 

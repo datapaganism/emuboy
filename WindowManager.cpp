@@ -1,6 +1,5 @@
 #include "WindowManager.hpp"
 #include "config.hpp"
-#include "Emulator.hpp"
 #include "VRAMViewer.hpp"
 #include "BGMapViewer.hpp"
 
@@ -18,7 +17,7 @@ WindowManager::WindowManager(const std::string rom_path, const std::string bios_
     {
 
         //attempt making first window of type emulator
-        this->windows.push_back(std::unique_ptr<Window>(std::make_unique<Emulator>(rom_path, bios_path,XRES, YRES, RES_SCALING, EMULATOR_WINDOW_TITLE, true)));
+        this->windows.push_back(std::unique_ptr<Window>(std::make_unique<BUS>(rom_path, bios_path, XRES, YRES, RES_SCALING, EMULATOR_WINDOW_TITLE, true)));
         if (!this->windows[0].get()->initSuccess())
         {
             std::cout << "Window 0 could not be created!\n";
@@ -42,15 +41,16 @@ void WindowManager::run()
         std::cout << "Failed to initialize!\n";
     else
     {
-        BUS* bus_ptr = static_cast<Emulator*>(this->windows[0].get())->getBusPtr();
+        BUS* bus_ptr = static_cast<BUS*>(this->windows[0].get());
 
-        this->windows.push_back(std::unique_ptr<Window>(std::make_unique<VRAMViewer>(bus_ptr,(8 * 16), (8 * 24), 2, "VRAMViewer", false)));
-        this->windows.push_back(std::unique_ptr<Window>(std::make_unique<BGMapViewer>(bus_ptr,(8 * 32), (8 * 32), 2, "BGMapViewer", false)));
-        
-        
+        this->windows.push_back(std::unique_ptr<Window>(std::make_unique<VRAMViewer>(bus_ptr, (8 * 16), (8 * 24), 2, "VRAMViewer", false)));
+        this->windows.push_back(std::unique_ptr<Window>(std::make_unique<BGMapViewer>(bus_ptr, (8 * 32), (8 * 32), 2, "BGMapViewer", false)));
+
+
         bool quit = false;
+        bool pause = false;
 
-        
+
         unsigned int ticksNow = 0, ticksPrevious = 0;
         double tickDelta = 0;
         while (!quit)
@@ -71,7 +71,7 @@ void WindowManager::run()
                 for (auto& window : this->windows)
                     window.get()->handleEvent(e);
 
-                // switch windows
+                // switch windows and perform other functions
                 if (e.type == SDL_KEYDOWN)
                 {
                     switch (e.key.keysym.sym)
@@ -87,9 +87,16 @@ void WindowManager::run()
                     case SDLK_3:
                         this->windows[2].get()->focus();
                         break;
+
+                    case JoypadButtonsDebug::pause:
+                        pause = !pause;
+                        break;
                     }
                 }
             }
+
+            // tick at custom frequency
+
             ticksNow = SDL_GetTicks();
             tickDelta = ticksNow - ticksPrevious;
 
@@ -97,11 +104,14 @@ void WindowManager::run()
             {
                 ticksPrevious = ticksNow;
 
-                // render each window
-                for (auto& window : this->windows)
+                 // render each window
+                if (!pause)
                 {
-                    window.get()->updateState();
-                    window.get()->render();
+                    for (auto& window : this->windows)
+                    {
+                        window.get()->updateState();
+                        window.get()->render();
+                    }
                 }
             }
 

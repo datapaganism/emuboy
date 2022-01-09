@@ -31,6 +31,47 @@ void BUS::cycle_system_one_frame()
     }
 }
 
+void BUS::handleEvent(SDL_Event& e)
+{
+    if (e.type == SDL_WINDOWEVENT && e.window.windowID == this->mWindowID)
+    {
+        while (SDL_PollEvent(&e))
+        {
+            switch (e.type)
+            {
+            case SDL_KEYDOWN:
+            {
+                int keyPressed = e.key.keysym.sym;
+                enum JoypadButtons pressed = keyToEnum(keyPressed);
+                if (pressed != UNKNOWN)
+                    this->pressButton(pressed);
+            } break;
+            case SDL_KEYUP:
+            {
+                int keyPressed = e.key.keysym.sym;
+                enum JoypadButtons pressed = keyToEnum(keyPressed);
+                if (pressed != UNKNOWN)
+                    this->depressButton(pressed);
+            } break;
+            };
+        }
+    }
+}
+
+void BUS::updateState()
+{
+    this->cycle_system_one_frame();
+}
+
+void BUS::updateRender()
+{
+    if (this->ppu.lcd_enabled())
+    {
+        SDL_UpdateTexture(this->mTexture, NULL, this->framebuffer.get(), XRES * sizeof(FRAMEBUFFER_PIXEL));
+        SDL_RenderCopy(this->mRenderer, this->mTexture, NULL, NULL);
+    }
+}
+
 Byte BUS::DEBUG_ascii_to_hex(char character)
 {
     Byte temp = 0x0;
@@ -213,28 +254,22 @@ void BUS::DEBUG_nintendo_logo()
 
 }
 
-BUS::BUS()
+BUS::BUS(const std::string rom_path, const std::string bios_path, int width, int height, int scaling, const char* title, bool shownOnStart) : Window(width, height, scaling,  title, shownOnStart)
 {
     this->cpu.connect_to_bus(this);
     this->ppu.connect_to_bus(this);
     this->dma_controller.connect_to_bus(this);
     this->init();
-}
 
-BUS::BUS(const std::string game_name, const std::string bios_name) : BUS::BUS()
-{
-    this->gamepak = GAMEPAK(game_name);
-    this->load_bios(bios_name);
-}
-
-void BUS::load_game_and_bios(const std::string rom_path, const std::string bios_path)
-{
     this->gamepak = GAMEPAK(rom_path);
     this->load_bios(bios_path);
+
+    //fill framebuffer
+    for (int i = 0; i < XRES * YRES; i++)
+    {
+        this->framebuffer[i] = FRAMEBUFFER_PIXEL(GB_PALLETE_00_r, GB_PALLETE_00_g, GB_PALLETE_00_b);
+    }
 }
-
-
-
 
 
 void BUS::depressButton(const enum JoypadButtons button)
@@ -585,68 +620,6 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
             this->io[address - 0xFF00] = data;
         }
         return;
-
-        //if (address == 0xFF0F)
-        //{
-        //    this->io[address - 0xFF00] = (data | 0xE0);
-        //    return;
-        //}
-        //if (address == STAT)
-        //{
-        //    this->io[address - 0xFF00] = (this->io[address - 0xFF00] & 0x80) | (data & 0x7F);
-
-        //    return;
-        //}
-
-        ////if changing timers
-        //if (address == TAC)
-        //{
-        //    this->io[address - 0xFF00] = data;
-        //    this->cpu.update_timerCounter();
-        //    return;
-        //}
-        //if (address == DIV)
-        //{
-        //    this->io[address - 0xFF00] = 0;
-        //    return;
-        //}
-
-        //// i/o registers
-
-        //if (address == DMA)
-        //{
-        //    this->dma_controller.request_dma(data);
-        //    return;
-        //}
-
-
-        //// LY register gets reset if written to
-        //if (address == LY)
-        //{
-        //    //this->io[LY - IOOFFSET] = 0;
-        //    return;
-        //}
-
-        //if (address == 0xFF26) // NR52
-        //{
-        //    this->io[0xFF26 - IOOFFSET] |= (data & 0x80);
-
-        //    if ((this->io[0xFF26 - IOOFFSET] & 0x80) == 0)
-        //    {
-        //        //destroy sound registers.
-        //    }
-
-        //    return;
-        //}
-
-        //if (address == 0xFF50)
-        //{
-        //    this->io[0xFF50 - IOOFFSET] = 0x1;
-        //    return;
-        //}
-
-        //this->io[address - 0xFF00] = data;
-        //return;
     }
     if (address <= 0xFF7F)
     {
