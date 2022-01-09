@@ -1,7 +1,9 @@
 #pragma once
-
 #include <cstdint>
 
+const int DEFAULT_SCREEN_WIDTH = 640;
+const int DEFAULT_SCREEN_HEIGHT = 480;
+const bool shownOnStart = false;
 
 
 #define GB_CLOCKSPEED  4194304 // Hz
@@ -18,7 +20,7 @@
 #define XRES 160
 #define YRES 144
 
-#define RES_SCALING 2 // defined integer scaling
+#define RES_SCALING 3 // defined integer scaling
 
 #define EMULATOR_WINDOW_TITLE "emulator"
 
