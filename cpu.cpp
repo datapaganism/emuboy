@@ -284,7 +284,9 @@ Byte CPU::get_interrupt_flag(const enum InterruptTypes type, Word address)
 void CPU::set_interrupt_flag(const enum InterruptTypes type, const bool value, Word address)
 {
     auto mem_type = MEMORY_ACCESS_TYPE::interrupt_handler;
-    (value) ? this->bus->set_memory(address, this->bus->get_memory(address, mem_type) | type, mem_type) : this->bus->set_memory(address, this->bus->get_memory(address, mem_type) & ~type, mem_type);
+    auto original_value = this->bus->get_memory(address, mem_type);
+    auto new_value = (value) ? (original_value | type) : (original_value & ~type);
+    this->bus->set_memory(address, new_value, mem_type);
 }
 
 
@@ -416,37 +418,7 @@ int CPU::ins_PUSH_nn(const Word wordRegisterValue)
   
     return 16;
 }
-//old push
-//int CPU::ins_PUSH_nn(const Word wordRegisterValue)
-//{
-//    // move low byte to higher (sp)
-//    this->registers.sp--;
-//    this->bus->set_memory(this->registers.sp, (wordRegisterValue & 0x00ff));
-//
-//    
-//    this->registers.sp--;
-//    // move high byte to lower (sp)
-//    this->bus->set_memory(this->registers.sp, ((wordRegisterValue & 0xff00) >> 8));
-//
-//
-//
-//    return 16;
-//}
 
-
-
-//old pop
-//int CPU::ins_POP_nn(Byte* registerOne, Byte* registerTwo)
-//{
-//    *registerOne = this->bus->get_memory(this->registers.sp);
-//    this->registers.sp++;
-//    *registerTwo = this->bus->get_memory(this->registers.sp);
-//    this->registers.sp++;
-//
-//    return 12;
-//}
-
-//new pop
 int CPU::ins_POP_nn(Byte* registerOne, Byte* registerTwo)
 // a f
 {
@@ -472,7 +444,7 @@ int CPU::ins_ADD_A_n(const Byte* registerOne, const Byte immediateValue)
         this->registers.a += *registerOne;
 
         //evaluate z flag an clear the n flag
-        (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+        this->registers.set_flag(z, (this->registers.a == 0x0));
         this->registers.set_flag(n, 0);
        
         return 4;
@@ -485,7 +457,7 @@ int CPU::ins_ADD_A_n(const Byte* registerOne, const Byte immediateValue)
     this->registers.a += immediateValue;
 
     //evaluate z flag an clear the n flag
-    (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+    this->registers.set_flag(z, (this->registers.a == 0x0));
     this->registers.set_flag(n, 0);
 
 
@@ -501,7 +473,7 @@ int CPU::ins_ADC_A_n(const Byte* registerOne, const Byte immediateValue)
 
     this->registers.a = a + b + C;
 
-    (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+    this->registers.set_flag(z, (this->registers.a == 0x0));
     this->registers.set_flag(n, 0);
     this->registers.set_flag(c, this->checkCarry(a, b, 8, C));
     this->registers.set_flag(h, this->checkCarry(a, b, 4, C));
@@ -522,7 +494,7 @@ int CPU::ins_SUB_n(const Byte* registerOne, const Byte immediateValue)
         this->registers.a -= *registerOne;
 
         //evaluate z flag an clear the n flag
-        (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+        this->registers.set_flag(z, (this->registers.a == 0x0));
         this->registers.set_flag(n, 1);
 
         return 4;
@@ -537,7 +509,7 @@ int CPU::ins_SUB_n(const Byte* registerOne, const Byte immediateValue)
     this->registers.a -= immediateValue;
 
     //evaluate z flag an clear the n flag
-    (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+    this->registers.set_flag(z, (this->registers.a == 0x0));
     this->registers.set_flag(n, 1);
 
     return 8;
@@ -553,7 +525,7 @@ int CPU::ins_SBC_A_n(const Byte* registerOne, const Byte immediateValue)
 
     this->registers.a = a - b - C;
 
-    (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+    this->registers.set_flag(z, (this->registers.a == 0x0));
     this->registers.set_flag(n, 1);
     this->registers.set_flag(c, this->checkBorrow(a, b, 8, C));
     this->registers.set_flag(h, this->checkBorrow(a, b, 4, C));
@@ -569,7 +541,7 @@ int CPU::ins_AND_n(const Byte* registerOne, const Byte immediateValue)
         this->registers.a &= *registerOne;
 
         //evaluate z flag an clear the n flag
-        (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+        this->registers.set_flag(z, (this->registers.a == 0x0));
         this->registers.set_flag(h, 1);
         this->registers.set_flag(n, 0);
         this->registers.set_flag(c, 0);
@@ -581,7 +553,7 @@ int CPU::ins_AND_n(const Byte* registerOne, const Byte immediateValue)
     this->registers.a &= immediateValue;
 
     //evaluate z flag an clear the n flag
-    (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+    this->registers.set_flag(z, (this->registers.a == 0x0));
     this->registers.set_flag(h, 1);
     this->registers.set_flag(n, 0);
     this->registers.set_flag(c, 0);
@@ -597,7 +569,7 @@ int CPU::ins_OR_n(const Byte* registerOne, const Byte immediateValue)
         this->registers.a |= *registerOne;
 
         //evaluate z flag an clear the n flag
-        (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+        this->registers.set_flag(z, (this->registers.a == 0x0));
         this->registers.set_flag(h, 0);
         this->registers.set_flag(n, 0);
         this->registers.set_flag(c, 0);
@@ -609,7 +581,7 @@ int CPU::ins_OR_n(const Byte* registerOne, const Byte immediateValue)
     this->registers.a |= immediateValue;
 
     //evaluate z flag an clear the n flag
-    (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+    this->registers.set_flag(z, (this->registers.a == 0x0));
     this->registers.set_flag(h, 0);
     this->registers.set_flag(n, 0);
     this->registers.set_flag(c, 0);
@@ -625,7 +597,7 @@ int CPU::ins_XOR_n(const Byte* registerOne, const Byte immediateValue)
         this->registers.a ^= *registerOne;
 
         //evaluate z flag an clear the n flag
-        (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+        this->registers.set_flag(z, (this->registers.a == 0x0));
         this->registers.set_flag(h, 0);
         this->registers.set_flag(n, 0);
         this->registers.set_flag(c, 0);
@@ -637,7 +609,7 @@ int CPU::ins_XOR_n(const Byte* registerOne, const Byte immediateValue)
     this->registers.a ^= immediateValue;
 
     //evaluate z flag an clear the n flag
-    (this->registers.a == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+    this->registers.set_flag(z, (this->registers.a == 0x0));
     this->registers.set_flag(h, 0);
     this->registers.set_flag(n, 0);
     this->registers.set_flag(c, 0);
