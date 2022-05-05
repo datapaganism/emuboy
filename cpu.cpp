@@ -172,7 +172,6 @@ int CPU::do_interrupts()
         // iterate through all types, this allows us to check each interrupt and also service them in order of priority
         for (const auto type : InterruptTypes_all)
         {
-            
             // if it has been requested and its corresponding flag is enabled
             if (this->get_interrupt_flag(type, IF_REGISTER) && this->get_interrupt_flag(type, IE_REGISTER))
             {
@@ -191,7 +190,7 @@ int CPU::do_interrupts()
                 case InterruptTypes::timer   : { this->registers.pc = 0x0050; } break;
                 case InterruptTypes::serial  : { this->registers.pc = 0x0058; } break;
                 case InterruptTypes::joypad  : { this->registers.pc = 0x0060; } break;
-                default: throw "Unreachable intterupt type"; break;
+                default: throw "Unreachable interrupt type"; break;
                 }
 
                 //cyclesUsed += 20;
@@ -290,1154 +289,701 @@ void CPU::set_interrupt_flag(const enum InterruptTypes type, const bool value, W
 }
 
 
-
-
-
-// INSTRUCTION HANDLING
-
-
-int CPU::ins_LD_nn_n(Byte* registerOne, Byte value)
+void CPU::mStepCPU()
 {
-    //LD nn,n
-    *registerOne = value;
-    return 8;
-}
-
-int CPU::ins_LD_r1_r2(Byte* registerOne, Word address, Byte* registerTwo, Byte value)
-{
-    if (registerOne && registerTwo)
+    if (this->isExecutingInstruction)
     {
-        *registerOne = *registerTwo;
-        return 4;
+        this->instruction_handler();
+        if (!this->isExecutingInstruction)
+            this->check_for_interrupts();
+        return;
     }
-    if (registerOne && address)
-    {
-        *registerOne = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
-        return 8;
-    }
-    if (address && registerTwo)
-    {
-        this->bus->set_memory(address, *registerTwo, MEMORY_ACCESS_TYPE::cpu);
-        return 8;
-    }
-    // if (address && value)
-    
-    this->bus->set_memory(address, value, MEMORY_ACCESS_TYPE::cpu);
-    return 12;
-    
-}
 
-int CPU::ins_LD_r1_nn(Byte* registerOne, const Word address, const int cyclesUsed)
-{
-    // Cycles used is a param since it can change
-    //take value pointed to by nn and put into register one,
-    // LD a,(nn), mem byte eg: FA 34 12, ld a,(1234)
-    // check memory at address 0x1234, put that data into register one
-
-    *registerOne = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
-    return cyclesUsed;
-};
-// Take value from registerOne, place at memory location 
-int CPU::ins_LD_nn_r1(Word address, Byte* registerOne)
-{
-    this->bus->set_memory(address, *registerOne, MEMORY_ACCESS_TYPE::cpu);
-    return 16;
+    // if not, fetch instruction
+    this->mCyclesUsed = 0;
+    this->currentRunningOpcode = this->get_byte_from_pc(); // read opcode
+    this->isExecutingInstruction = true;
 };
 
-int CPU::ins_LDDI_nn_r1(Word address, const Byte* registerOne, Byte* registerTwo, Byte* registerThree, const int addSubValue)
+void CPU::check_for_interrupts() 
 {
-    this->bus->set_memory(address, *registerOne, MEMORY_ACCESS_TYPE::cpu);
-    this->registers.set_word(registerTwo, registerThree, (this->registers.get_word(registerTwo, registerThree) + addSubValue));
-    return 8;
-};
-
-int CPU::ins_LDDI_r1_nn(Byte* registerOne, const Word address, Byte* registerTwo, Byte* registerThree, const int addSubValue)
-{
-    *registerOne = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
-    this->registers.set_word(registerTwo, registerThree, (this->registers.get_word(registerTwo, registerThree) + addSubValue));
-    return 8;
-}
-
-int CPU::ins_LD_n_nn(Word* wordRegister, Byte* registerOne, Byte* registerTwo, const Word value)
-{
-    if (wordRegister)
+    //check master to see if interrupts are enabled
+    if (this->interrupt_master_enable == true)
     {
-        *wordRegister = value;
-        return 12;
-    }
-    
-    this->registers.set_word(registerOne, registerTwo, value);
-    return 12;
-}
-
-int CPU::ins_LD_nn_nn(Word* wordRegisterOne, const Word value)
-{
-    *wordRegisterOne = value;
-    return 8;
-}
-
-int CPU::ins_LDHL_SP_n(Byte* wordRegisterNibbleHi, Byte* wordRegisterNibbleLo, const Word stackPointerValue, const Byte_s value)
-{
-    Word sum = stackPointerValue + value;
-    this->registers.set_flag(z, 0);
-    this->registers.set_flag(n, 0);
-
-
-    if (value < 0)
-    {
-        this->registers.set_flag(c, (sum & 0xFF) <= (stackPointerValue & 0xFF));
-        this->registers.set_flag(h, (sum & 0xF) <= (stackPointerValue & 0xF));
-    }
-    else
-    {
-        this->registers.set_flag(c, ((stackPointerValue & 0xFF) + value) > 0xFF);
-        this->registers.set_flag(h, ((stackPointerValue & 0xF) + value) > 0xF);
-    }
-
-    this->registers.set_word(wordRegisterNibbleHi, wordRegisterNibbleLo, sum);
-    return 12;
-}
-
-int CPU::ins_LD_nn_SP(const Word address, const Word stackPointerValue)
-{
-    //place value of SP into memory at address and address + 1
-    this->bus->set_memory_word(address, stackPointerValue, MEMORY_ACCESS_TYPE::cpu);
-    return 20;
-}
-
-//new push, pushes addr -1 then addr -2
-int CPU::ins_PUSH_nn(const Word wordRegisterValue)
-{
-    // move low byte to higher (sp)
-    this->registers.sp--;
-      this->bus->set_memory(this->registers.sp, ((wordRegisterValue & 0xff00) >> 8), MEMORY_ACCESS_TYPE::cpu);
-
-    this->registers.sp--;
-    // move high byte to lower (sp)
-    this->bus->set_memory(this->registers.sp, (wordRegisterValue & 0x00ff), MEMORY_ACCESS_TYPE::cpu);
-  
-    return 16;
-}
-
-int CPU::ins_POP_nn(Byte* registerOne, Byte* registerTwo)
-// a f
-{
-    *registerTwo = this->bus->get_memory(this->registers.sp, MEMORY_ACCESS_TYPE::cpu);
-    if (registerTwo == &this->registers.f)
-        *registerTwo &= 0xF0;
-
-    this->registers.sp++;
-    *registerOne = this->bus->get_memory(this->registers.sp, MEMORY_ACCESS_TYPE::cpu);
-    this->registers.sp++;
-
-    return 12;
-}
-
-int CPU::ins_ADD_A_n(const Byte* registerOne, const Byte immediateValue)
-{
-    if (registerOne)
-    {
-        this->registers.set_flag(c, this->checkCarry(this->registers.a, *registerOne, 8));
-        this->registers.set_flag(h, this->checkCarry(this->registers.a, *registerOne, 4));
-
-        // perform addition
-        this->registers.a += *registerOne;
-
-        //evaluate z flag an clear the n flag
-        this->registers.set_flag(z, (this->registers.a == 0x0));
-        this->registers.set_flag(n, 0);
-       
-        return 4;
-    }
-    // else if immediate value passed
-    this->registers.set_flag(c, this->checkCarry(this->registers.a, immediateValue, 8));
-    this->registers.set_flag(h, this->checkCarry(this->registers.a, immediateValue, 4));
-
-    // perform addition
-    this->registers.a += immediateValue;
-
-    //evaluate z flag an clear the n flag
-    this->registers.set_flag(z, (this->registers.a == 0x0));
-    this->registers.set_flag(n, 0);
-
-
-    return 8;
-}
-
-int CPU::ins_ADC_A_n(const Byte* registerOne, const Byte immediateValue)
-{
-    Byte a = this->registers.a;
-    Byte b = (registerOne) ? *registerOne : immediateValue;
-    Byte C = (int)this->registers.get_flag(c);
-    Byte cyclesUsed = (registerOne) ? 4 : 8;
-
-    this->registers.a = a + b + C;
-
-    this->registers.set_flag(z, (this->registers.a == 0x0));
-    this->registers.set_flag(n, 0);
-    this->registers.set_flag(c, this->checkCarry(a, b, 8, C));
-    this->registers.set_flag(h, this->checkCarry(a, b, 4, C));
-
-    return cyclesUsed;
-}
-
-
-int CPU::ins_SUB_n(const Byte* registerOne, const Byte immediateValue)
-{
-    if (registerOne)
-    {
-        //check carry and half carry flags, I realise this is out of order but it should work the same.
-        this->registers.set_flag(c, this->checkBorrow(this->registers.a, *registerOne, 8));
-        this->registers.set_flag(h, this->checkBorrow(this->registers.a, *registerOne, 4));
-
-        // perform addition
-        this->registers.a -= *registerOne;
-
-        //evaluate z flag an clear the n flag
-        this->registers.set_flag(z, (this->registers.a == 0x0));
-        this->registers.set_flag(n, 1);
-
-        return 4;
-    }
-    // else if immediate value passed
-
-    //check carry and half carry flags, I realise this is out of order but it should work the same.
-    this->registers.set_flag(c, this->checkBorrow(this->registers.a, immediateValue, 8));
-    this->registers.set_flag(h, this->checkBorrow(this->registers.a, immediateValue, 4));
-
-    // perform addition
-    this->registers.a -= immediateValue;
-
-    //evaluate z flag an clear the n flag
-    this->registers.set_flag(z, (this->registers.a == 0x0));
-    this->registers.set_flag(n, 1);
-
-    return 8;
-}
-
-int CPU::ins_SBC_A_n(const Byte* registerOne, const Byte immediateValue)
-{
-
-    Byte a = this->registers.a;
-    Byte b = (registerOne) ? *registerOne : immediateValue;
-    Byte C = (int)this->registers.get_flag(c);
-    Byte cyclesUsed = (registerOne) ? 4 : 8;
-
-    this->registers.a = a - b - C;
-
-    this->registers.set_flag(z, (this->registers.a == 0x0));
-    this->registers.set_flag(n, 1);
-    this->registers.set_flag(c, this->checkBorrow(a, b, 8, C));
-    this->registers.set_flag(h, this->checkBorrow(a, b, 4, C));
-
-    return cyclesUsed;
-
-}
-
-int CPU::ins_AND_n(const Byte* registerOne, const Byte immediateValue)
-{
-    if (registerOne)
-    {
-        this->registers.a &= *registerOne;
-
-        //evaluate z flag an clear the n flag
-        this->registers.set_flag(z, (this->registers.a == 0x0));
-        this->registers.set_flag(h, 1);
-        this->registers.set_flag(n, 0);
-        this->registers.set_flag(c, 0);
-
-        return 4;
-    }
-    // else if immediate value passed
-
-    this->registers.a &= immediateValue;
-
-    //evaluate z flag an clear the n flag
-    this->registers.set_flag(z, (this->registers.a == 0x0));
-    this->registers.set_flag(h, 1);
-    this->registers.set_flag(n, 0);
-    this->registers.set_flag(c, 0);
-
-
-    return 8;
-}
-
-int CPU::ins_OR_n(const Byte* registerOne, const Byte immediateValue)
-{
-    if (registerOne)
-    {
-        this->registers.a |= *registerOne;
-
-        //evaluate z flag an clear the n flag
-        this->registers.set_flag(z, (this->registers.a == 0x0));
-        this->registers.set_flag(h, 0);
-        this->registers.set_flag(n, 0);
-        this->registers.set_flag(c, 0);
-
-        return 4;
-    }
-    // else if immediate value passed
-
-    this->registers.a |= immediateValue;
-
-    //evaluate z flag an clear the n flag
-    this->registers.set_flag(z, (this->registers.a == 0x0));
-    this->registers.set_flag(h, 0);
-    this->registers.set_flag(n, 0);
-    this->registers.set_flag(c, 0);
-
-
-    return 8;
-}
-
-int CPU::ins_XOR_n(const Byte* registerOne, const Byte immediateValue)
-{
-    if (registerOne)
-    {
-        this->registers.a ^= *registerOne;
-
-        //evaluate z flag an clear the n flag
-        this->registers.set_flag(z, (this->registers.a == 0x0));
-        this->registers.set_flag(h, 0);
-        this->registers.set_flag(n, 0);
-        this->registers.set_flag(c, 0);
-
-        return 4;
-    }
-    // else if immediate value passed
-
-    this->registers.a ^= immediateValue;
-
-    //evaluate z flag an clear the n flag
-    this->registers.set_flag(z, (this->registers.a == 0x0));
-    this->registers.set_flag(h, 0);
-    this->registers.set_flag(n, 0);
-    this->registers.set_flag(c, 0);
-
-
-    return 8;
-}
-
-int CPU::ins_CP_n(const Byte* registerOne, const Byte immediateValue)
-{
-    if (registerOne)
-    {
-        
-        this->registers.set_flag(c, this->checkBorrow(this->registers.a, *registerOne, 8));
-        this->registers.set_flag(h, this->checkBorrow(this->registers.a, *registerOne, 4));
-
-        //evaluate z flag an clear the n flag
-        (this->registers.a == *registerOne) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-        this->registers.set_flag(n, 1);
-
-        return 4;
-    }
-    // else if immediate value passed
-    this->registers.set_flag(c, this->checkBorrow(this->registers.a, immediateValue, 8));
-    this->registers.set_flag(h, this->checkBorrow(this->registers.a, immediateValue, 4));
-
-    //evaluate z flag an clear the n flag
-    (this->registers.a == immediateValue) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-    this->registers.set_flag(n, 1);
-
-    return 8;
-}
-
-int CPU::ins_INC_n(Byte* registerOne, Word address)
-{
-    if (registerOne)
-    {
-        this->registers.set_flag(h, this->checkCarry(*registerOne, 1, 4));
-        
-        // perform addition
-        (*registerOne)++;
-
-        //evaluate z flag an clear the n flag
-        (*registerOne == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-        this->registers.set_flag(n, 0);
-
-        return 4;
-    }
-    // else if immediate value passed
-
-    //check carry and half carry flags, I realise this is out of order but it should work the same.
-
-    auto temp = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
-    this->registers.set_flag(h, this->checkCarry(temp, 1, 4));
-    
-    // perform addition
-    this->bus->set_memory(address, (temp + 1), MEMORY_ACCESS_TYPE::cpu);
-    //evaluate z flag an clear the n flag
-    (this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-    this->registers.set_flag(n, 0);
-
-    return 12;
-}
-
-int CPU::ins_DEC_n(Byte* registerOne, Word address)
-{
-    if (registerOne)
-    {
-        this->registers.set_flag(h, this->checkBorrow(*registerOne, 1, 4));
-        // perform addition
-        (*registerOne)--;
-
-        //evaluate z flag an clear the n flag
-        (*registerOne == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-        this->registers.set_flag(n, 1);
-
-        return 4;
-    }
-    // else if immediate value passed
-    auto temp = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
-    this->registers.set_flag(h, this->checkBorrow(temp, 1, 4));
-
-    // perform addition
-    this->bus->set_memory(address, (temp - 1), MEMORY_ACCESS_TYPE::cpu);
-    //evaluate z flag an clear the n flag
-    (this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-    this->registers.set_flag(n, 1);
-
-    return 12;
-}
-
-int CPU::ins_ADD_HL_n(const Word value)
-{
-    Word HLvalue = this->registers.get_HL();
-
-    
-    this->registers.set_flag(c, this->checkCarry(HLvalue, value, 16));
-    this->registers.set_flag(h, this->checkCarry(HLvalue, value, 12));
-
-    this->registers.set_HL(HLvalue + value);
-    
-    this->registers.set_flag(n, 0);
-    return 8;
-}
-
-int CPU::ins_ADD_SP_n(const Byte_s value)
-{
-    //if negative
-
-    if (value < 0)
-    {
-        this->registers.set_flag(c, ((this->registers.sp + value) & 0xFF) <= (this->registers.sp & 0xFF));
-        this->registers.set_flag(h, ((this->registers.sp + value) & 0xF)  <= (this->registers.sp & 0xF));
-    }
-    else
-    {
-        this->registers.set_flag(c, ((this->registers.sp & 0xFF) + value) > 0xFF);
-        this->registers.set_flag(h, ((this->registers.sp & 0xF) + value) > 0xF);
-    }
-
-    this->registers.sp += value;
-    this->registers.set_flag(z, 0);
-    this->registers.set_flag(n, 0);
-    return 16;
-
-}
-
-int CPU::ins_INC_nn(Byte* registerOne, Byte* registerTwo, Word* stackPointer)
-{
-    if (stackPointer)
-    {
-        this->registers.sp++;
-        return 8;
-    }
-    this->registers.set_word(registerOne, registerTwo, (this->registers.get_word(registerOne, registerTwo)+1));
-    return 8;
-}
-
-int CPU::ins_DEC_nn(Byte* registerOne, Byte* registerTwo, Word* stackPointer)
-{
-    if (stackPointer)
-    {
-        this->registers.sp--;
-        return 8;
-    }
-    this->registers.set_word(registerOne, registerTwo, (this->registers.get_word(registerOne, registerTwo)-1));
-    return 8;
-}
-
-int CPU::ins_SWAP_nn(Byte* registerOne, Word address)
-{
-    int cyclesUsed = 0;
-    if (registerOne)
-    {
-        *registerOne = (this->get_nibble(*registerOne, false) << 4) + this->get_nibble(*registerOne, true);
-        (*registerOne == 0x0) ? this->registers.set_flag(z, true) : this->registers.set_flag(z, false);
-        cyclesUsed = 8;
-    }
-    else
-    {
-        this->bus->set_memory(address, (this->get_nibble(this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu), false) << 4) + this->get_nibble(this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu), true), MEMORY_ACCESS_TYPE::cpu);
-        (this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) == 0x0) ? this->registers.set_flag(z, true) : this->registers.set_flag(z, false);
-        cyclesUsed = 16;
-    }
-    this->registers.set_flag(n, false);
-    this->registers.set_flag(h, false);
-    this->registers.set_flag(c, false);
-
-    return cyclesUsed;
-}
-
-int CPU::ins_DAA()
-{
-    // this is a weird one, take whatever is in register a and re shuffle it to a packed binary coded decimal
-    // since we only have 1 byte of space to work with then we can only display upto 99 using BCD
-    // which would require to set the overflow flag.
-
-    // to actually convert binary to binary coded decimal, its fairly simple
-    // an order of magnitude is represented by a nibble, if a nibble in binary is larger than 9, then
-    // we just add 0x06 to register A and it will be converted
-    // the same is true for the 10s nibble, if it is over 9 then we add 0x60 to A and set carry.
-    // however we need to check if the value in register A actually means a negative which we check N flag and then subract 6 instead of adding it
-    
-    // temp store of offset we will use
-
-
-    //DAA is used after addition or subtraction to fix the BCD value. So if we take the decimal numbers 42 and add 9, we expect to get 51. But if we do this with BCD values, we'll get $4B instead. Executing DAA after this addition will adjust $4B to $51 as expected. The first if determines whether we need to ...
-    Byte adjust = 0x0;
-
-    bool flagZ = this->registers.get_flag(z);
-    bool flagN = this->registers.get_flag(n);
-    bool flagH = this->registers.get_flag(h);
-    bool flagC = this->registers.get_flag(c);
-
-    // temp store of value of the carry bit, set to reset
-    bool need_carry = false;
-
-    if (!flagN)
-    {
-        if (flagH || ((this->registers.a & 0xF) > 0x9))
-            adjust += 0x6;
-
-        if (flagC || ((this->registers.a) > 0x9F))
+        // iterate through all types, this allows us to check each interrupt and also service them in order of priority
+        for (const auto type : InterruptTypes_all)
         {
-            adjust += 0x60;
-            need_carry = true;
+            // if it has been requested and its corresponding flag is enabled
+            if (this->get_interrupt_flag(type, IF_REGISTER) && this->get_interrupt_flag(type, IE_REGISTER))
+            {
+                //disable interrupts in general and for this type
+                this->set_interrupt_flag(type, 0, IF_REGISTER);
+                this->interrupt_master_enable = 0;
+
+                //push the current pc to the stack
+                //this->ins_PUSH_nn(this->registers.pc);
+
+                // set jump vector
+                switch (type)
+                {
+                case InterruptTypes::vblank:  { this->interrupt_vector = 0x0040; } break;
+                case InterruptTypes::lcdstat: { this->interrupt_vector = 0x0048; } break;
+                case InterruptTypes::timer:   { this->interrupt_vector = 0x0050; } break;
+                case InterruptTypes::serial:  { this->interrupt_vector = 0x0058; } break;
+                case InterruptTypes::joypad:  { this->interrupt_vector = 0x0060; } break;
+                default: throw "Unreachable interrupt type"; break;
+                }
+                // to trigger the next instructions of the cpu to setup the interrupt and reset the mCyclestaken
+                this->mCyclesUsed = 0;
+                this->isExecutingInstruction = true;
+            }   
         }
     }
-    else
+}
+void CPU::setup_interrupt_handler() 
+{
+    switch (this->mCyclesUsed)
     {
-        if (flagH)
-            adjust -= 0x6;
-        if (flagC)
-            adjust -= 0x60;
-    }
+    case 0:
+        this->mCyclesUsed++;
+        // undocumented_internal_operation
+        break;
+    case 1:
+        this->mCyclesUsed++;
 
-    (need_carry) ? this->registers.set_flag(c, 1) : this->registers.set_flag(c, 0);
-
-    this->registers.set_flag(h, 0);
-
-    this->registers.a += adjust;
-
-    (this->registers.a == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-
-
-    return 4;
- 
-    // check if lower nibble is bigger than 9 or flag H is set
-    if (((this->registers.a) > 9) || flagH)
-    {
-        adjust += 0x6;
-    }
-
-    // check if higher nibble is bigger than 90, set carry to true
-    if (((this->registers.a & 0xF0) > 90) || flagC)
-    {
-        adjust += 0x60;
-        need_carry = true;
-    }
-
-    if (flagN && flagC)
-    {
-
-        need_carry = true;
-        adjust = 0xA0;
-    }
-    if (flagH && flagC)
-    {
-
-        need_carry = true;
-        adjust = 0x66;
-    }
-    if (flagH && flagN)
-        adjust = 0xFA;
-
-    if (flagH && flagN && flagC)
-    {
-        need_carry = true;
-        adjust = 0x9A;
-    }
-
-
-    //this->checkCarry(this->registers.a, adjust);
-   (need_carry) ? this->registers.set_flag(c, 1) : this->registers.set_flag(c, 0);
+        this->registers.sp--;
+        this->bus->set_memory(this->registers.sp, ((this->registers.pc & 0xff00) >> 8), MEMORY_ACCESS_TYPE::cpu);
         
-    this->registers.set_flag(h, 0);
+        break;
+    case 2:
+        this->mCyclesUsed++;
 
-    this->registers.a += adjust;
+        this->registers.sp--;
+        this->bus->set_memory(this->registers.sp, (this->registers.pc & 0x00ff), MEMORY_ACCESS_TYPE::cpu);
 
-    (this->registers.a == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+        break;
 
-   
+    case 3:
 
-    return 4;
-}
-
-int CPU::ins_CPL()
-{
-    this->registers.a = ~this->registers.a;
-
-    this->registers.set_flag(n, true);
-    this->registers.set_flag(h, true);
-    return 4;
-}
-
-int CPU::ins_CCF()
-{
-    this->registers.set_flag(n,0);
-    this->registers.set_flag(h,0);
-
-    (this->registers.get_flag(c) == true)? this->registers.set_flag(c,0) : this->registers.set_flag(c, 1);
-    return 4;
-}
-
-int CPU::ins_SCF()
-{
-    this->registers.set_flag(n,0);
-    this->registers.set_flag(h,0);
-    this->registers.set_flag(c,1);
-    return 4;
-}
-
-int CPU::ins_RLCA()
-{
-    //set c flag to whatever is the value of the leftest bit from register a
-    this->registers.set_flag(c, (this->registers.a & 0x80));
-    this->registers.set_flag(n, 0);
-    this->registers.set_flag(h, 0);
-
-    // move everything to the left by one, toggle bit 0 with bit 7 shifted right 7 places
-    this->registers.a = (this->registers.a << 1) | (this->registers.a >> (7));
-
-    // z is reset
-    this->registers.set_flag(z, 0);
-
-    return 4;
-}
-
-int CPU::ins_RLA()
-{
-    // swap leftest most bit with the carry flag, then rotate to the left
-    
-    Byte flagCarry = this->registers.get_flag(c);
-    bool registerCarry = ((this->registers.a & 0x80) >> 7);
-
-    this->registers.a = (this->registers.a << 1) | (flagCarry);
-
-    this->registers.set_flag(c, registerCarry);
-    this->registers.set_flag(n, 0);
-    this->registers.set_flag(h, 0);
-    this->registers.set_flag(z, 0);
-
-    
-    return 4;
-}
-
-int CPU::ins_RRCA()
-{
-    this->registers.set_flag(c, this->registers.a & 0x1);
-
-    this->registers.a = (this->registers.a >> 1) | (this->registers.a << (7));
-
-    this->registers.set_flag(n, 0);
-    this->registers.set_flag(h, 0);
-    this->registers.set_flag(z, 0);
-
-
-    return 4;
-}
-
-int CPU::ins_RRA()
-{
-    Byte flagCarry = this->registers.get_flag(c);
-    bool registerCarry = (this->registers.a & 0x1);
-
-    this->registers.a = (this->registers.a >> 1) | (flagCarry << (7));
-
-    this->registers.set_flag(c, registerCarry);
-    this->registers.set_flag(n, 0);
-    this->registers.set_flag(h, 0);
-    this->registers.set_flag(z, 0);
-
-
-    return 4;
-}
-
-int CPU::ins_RLC(Byte* registerOne, Word address)
-{
-    this->registers.set_flag(n, 0);
-    this->registers.set_flag(h, 0);
-
-    if (registerOne)
-    {
-        this->registers.set_flag(c, ((*registerOne & 0x80) >> 7));
-        *registerOne = ((*registerOne << 1) | (*registerOne >> 7));
-
-        (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-
-        return 8;
-    }
-
-    Byte temp = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
-    Byte result = ((temp << 1) | (temp >> 7));
-
-    this->registers.set_flag(c, ((temp & 0x80) >> 7));
-   
-    this->bus->set_memory(address,result, MEMORY_ACCESS_TYPE::cpu);
-
-
-    (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-
-
-    return 16;
-}
-
-int CPU::ins_RL(Byte* registerOne, Word address)
-{
-    Byte flagCarry = this->registers.get_flag(c);
-    bool newCarry = 0;
-
-    this->registers.set_flag(n, 0);
-    this->registers.set_flag(h, 0);
-
-    if (registerOne)
-    {
-        newCarry = ((*registerOne & 0x80) >> 7);
-        *registerOne = ((*registerOne << 1) | (flagCarry));
-
-        this->registers.set_flag(c, newCarry);
+        this->registers.pc = this->interrupt_vector;
         
-        (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-
-        return 8;
+        this->interrupt_vector = 0;
+        this->isExecutingInstruction = false;
+        break;
     }
-
-    Byte temp = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
-    Byte result = ((temp << 1) | (flagCarry));
-    newCarry = ((temp & 0x80) >> 7);
-    this->bus->set_memory(address, result, MEMORY_ACCESS_TYPE::cpu);
-
-    this->registers.set_flag(c, newCarry);
-
-    (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-
-    return 16;
 }
 
-int CPU::ins_RRC(Byte* registerOne, Word address)
+void CPU::instruction_handler()
 {
-
-    this->registers.set_flag(n, 0);
-    this->registers.set_flag(h, 0);
-
-    if (registerOne)
+    if (this->interrupt_vector != 0) 
     {
-        this->registers.set_flag(c, (*registerOne & 0x1));
-        *registerOne = ((*registerOne >> 1) | (*registerOne << 7));
-
-
-        (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-
-        return 8;
+        this->setup_interrupt_handler();
+        return;
     }
 
-    Byte temp = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
-    Byte result = ((temp >> 1) | (temp << 7));
-
-    this->registers.set_flag(c, (temp & 0x1));
-    this->bus->set_memory(address, result, MEMORY_ACCESS_TYPE::cpu);
-
-    (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-
-    return 16;
-}
-
-int CPU::ins_RR(Byte* registerOne, Word address)
-{
-    Byte flagCarry = this->registers.get_flag(c);
-    bool newCarry = 0;
-
-    this->registers.set_flag(n, 0);
-    this->registers.set_flag(h, 0);
-
-    if (registerOne)
+    switch (this->currentRunningOpcode)
     {
-        newCarry = (*registerOne & 0x1);
-        *registerOne = ((*registerOne >> 1) | (flagCarry << 7 ));
+    case 0x00: { } break; //NOP
+    case 0x01: { this->ins_LD_n_nn(nullptr, &this->registers.b, &this->registers.c, this->get_word_from_pc_lsbf()); } break;
+    case 0x02: { this->ins_LD_r1_r2(nullptr, this->registers.get_BC(), &this->registers.a); } break;
+    case 0x03: { this->ins_INC_nn(&this->registers.b, &this->registers.c); } break;
+    case 0x04: { this->ins_INC_n(&this->registers.b); } break;
+    case 0x05: { this->ins_DEC_n(&this->registers.b); } break;
+    case 0x06: { this->ins_LD_nn_n(&this->registers.b, this->get_byte_from_pc()); } break;
+    case 0x07: { this->ins_RLCA(); } break;
 
-        this->registers.set_flag(c, newCarry);
-        
-        (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+    case 0x08: { this->ins_LD_nn_SP(this->get_word_from_pc_lsbf(), this->registers.sp); } break;
+    case 0x09: { this->ins_ADD_HL_n(this->registers.get_BC()); } break;
+    case 0x0A: { this->ins_LD_r1_r2(&this->registers.a, this->registers.get_BC()); } break;
+    case 0x0B: { this->ins_DEC_nn(&this->registers.b, &this->registers.c); } break;
+    case 0x0C: { this->ins_INC_n(&this->registers.c); } break;
+    case 0x0D: { this->ins_DEC_n(&this->registers.c); } break;
+    case 0x0E: { this->ins_LD_nn_n(&this->registers.c, this->get_byte_from_pc()); } break;
+    case 0x0F: { this->ins_RRCA(); } break;
 
-        return 8;
+    case 0x10: { this->STOP_instruction_handler(); } break;
+    case 0x11: { this->ins_LD_n_nn(nullptr, &this->registers.d, &this->registers.e, this->get_word_from_pc_lsbf()); } break;
+    case 0x12: { this->ins_LD_r1_r2(nullptr, this->registers.get_DE(), &this->registers.a); } break;
+    case 0x13: { this->ins_INC_nn(&this->registers.d, &this->registers.e); } break;
+    case 0x14: { this->ins_INC_n(&this->registers.d); } break;
+    case 0x15: { this->ins_DEC_n(&this->registers.d); } break;
+    case 0x16: { this->ins_LD_nn_n(&this->registers.d, this->get_byte_from_pc()); } break;
+    case 0x17: { this->ins_RLA(); } break;
+
+    case 0x18: { this->ins_JR_n(this->get_byte_from_pc()); } break;
+    case 0x19: { this->ins_ADD_HL_n(this->registers.get_DE()); } break;
+    case 0x1A: { this->ins_LD_r1_r2(&this->registers.a, this->registers.get_DE()); } break;
+    case 0x1B: { this->ins_DEC_nn(&this->registers.d, &this->registers.e); } break;
+    case 0x1C: { this->ins_INC_n(&this->registers.e); } break;
+    case 0x1D: { this->ins_DEC_n(&this->registers.e); } break;
+    case 0x1E: { this->ins_LD_nn_n(&this->registers.e, this->get_byte_from_pc()); } break;
+    case 0x1F: { this->ins_RRA(); } break;
+
+    case 0x20: { this->ins_JR_cc_n(NZ, this->get_byte_from_pc()); } break;
+    case 0x21: { this->ins_LD_n_nn(nullptr, &this->registers.h, &this->registers.l, this->get_word_from_pc_lsbf()); } break;
+    case 0x22: { this->ins_LDDI_nn_r1(this->registers.get_HL(), &this->registers.a, &this->registers.h, &this->registers.l, +1); } break;
+    case 0x23: { this->ins_INC_nn(&this->registers.h, &this->registers.l); } break;
+    case 0x24: { this->ins_INC_n(&this->registers.h); } break;
+    case 0x25: { this->ins_DEC_n(&this->registers.h); } break;
+    case 0x26: { this->ins_LD_nn_n(&this->registers.h, this->get_byte_from_pc()); } break;
+    case 0x27: { this->ins_DAA(); } break;
+
+    case 0x28: { this->ins_JR_cc_n(Z, this->get_byte_from_pc()); } break;
+    case 0x29: { this->ins_ADD_HL_n(this->registers.get_HL()); } break;
+    case 0x2A: { this->ins_LDDI_r1_nn(&this->registers.a, this->registers.get_HL(), &this->registers.h, &this->registers.l, +1); } break;
+    case 0x2B: { this->ins_DEC_nn(&this->registers.h, &this->registers.l); } break;
+    case 0x2C: { this->ins_INC_n(&this->registers.l); } break;
+    case 0x2D: { this->ins_DEC_n(&this->registers.l); } break;
+    case 0x2E: { this->ins_LD_nn_n(&this->registers.l, this->get_byte_from_pc()); } break;
+    case 0x2F: { this->ins_CPL(); } break;
+
+    case 0x30: { this->ins_JR_cc_n(NC, this->get_byte_from_pc()); } break;
+    case 0x31: { this->ins_LD_n_nn(&this->registers.sp, nullptr, nullptr, this->get_word_from_pc_lsbf()); } break;
+    case 0x32: { this->ins_LDDI_nn_r1(this->registers.get_HL(), &this->registers.a, &this->registers.h, &this->registers.l, -1); } break;
+    case 0x33: { this->ins_INC_nn(nullptr, nullptr, &this->registers.sp); } break;
+    case 0x34: { this->ins_INC_n(nullptr, this->registers.get_HL()); } break;
+    case 0x35: { this->ins_DEC_n(nullptr, this->registers.get_HL()); } break;
+    case 0x36: { this->ins_LD_r1_r2(nullptr, this->registers.get_HL(), nullptr, this->get_byte_from_pc()); } break;
+    case 0x37: { this->ins_SCF(); } break;
+
+    case 0x38: { this->ins_JR_cc_n(C, this->get_byte_from_pc()); } break;
+    case 0x39: { this->ins_ADD_HL_n(this->registers.sp); } break;
+    case 0x3A: { this->ins_LDDI_r1_nn(&this->registers.a, this->registers.get_HL(), &this->registers.h, &this->registers.l, -1); } break;
+    case 0x3B: { this->ins_DEC_nn(nullptr, nullptr, &this->registers.sp); } break;
+    case 0x3C: { this->ins_INC_n(&this->registers.a); } break;
+    case 0x3D: { this->ins_DEC_n(&this->registers.a); } break;
+    case 0x3E: { this->ins_LD_nn_n(&this->registers.a, this->get_byte_from_pc()); } break;
+    case 0x3F: { this->ins_CCF(); } break;
+
+    case 0x40: { this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.b); } break;
+    case 0x41: { this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.c); } break;
+    case 0x42: { this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.d); } break;
+    case 0x43: { this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.e); } break;
+    case 0x44: { this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.h); } break;
+    case 0x45: { this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.l); } break;
+    case 0x46: { this->ins_LD_r1_r2(&this->registers.b, this->registers.get_HL()); } break;
+    case 0x47: { this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.a); } break;
+
+    case 0x48: { this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.b); } break;
+    case 0x49: { this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.c); } break;
+    case 0x4A: { this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.d); } break;
+    case 0x4B: { this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.e); } break;
+    case 0x4C: { this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.h); } break;
+    case 0x4D: { this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.l); } break;
+    case 0x4E: { this->ins_LD_r1_r2(&this->registers.c, this->registers.get_HL()); } break;
+    case 0x4F: { this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.a); } break;
+
+    case 0x50: { this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.b); } break;
+    case 0x51: { this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.c); } break;
+    case 0x52: { this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.d); } break;
+    case 0x53: { this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.e); } break;
+    case 0x54: { this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.h); } break;
+    case 0x55: { this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.l); } break;
+    case 0x56: { this->ins_LD_r1_r2(&this->registers.d, this->registers.get_HL()); } break;
+    case 0x57: { this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.a); } break;
+
+    case 0x58: { this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.b); } break;
+    case 0x59: { this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.c); } break;
+    case 0x5A: { this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.d); } break;
+    case 0x5B: { this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.e); } break;
+    case 0x5C: { this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.h); } break;
+    case 0x5D: { this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.l); } break;
+    case 0x5E: { this->ins_LD_r1_r2(&this->registers.e, this->registers.get_HL()); } break;
+    case 0x5F: { this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.a); } break;
+
+    case 0x60: { this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.b); } break;
+    case 0x61: { this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.c); } break;
+    case 0x62: { this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.d); } break;
+    case 0x63: { this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.e); } break;
+    case 0x64: { this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.h); } break;
+    case 0x65: { this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.l); } break;
+    case 0x66: { this->ins_LD_r1_r2(&this->registers.h, this->registers.get_HL()); } break;
+    case 0x67: { this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.a); } break;
+
+    case 0x68: { this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.b); } break;
+    case 0x69: { this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.c); } break;
+    case 0x6A: { this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.d); } break;
+    case 0x6B: { this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.e); } break;
+    case 0x6C: { this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.h); } break;
+    case 0x6D: { this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.l); } break;
+    case 0x6E: { this->ins_LD_r1_r2(&this->registers.l, this->registers.get_HL()); } break;
+    case 0x6F: { this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.a); } break;
+
+    case 0x70: { this->ins_LD_r1_r2(nullptr, this->registers.get_HL(), &this->registers.b); } break;
+    case 0x71: { this->ins_LD_r1_r2(nullptr, this->registers.get_HL(), &this->registers.c); } break;
+    case 0x72: { this->ins_LD_r1_r2(nullptr, this->registers.get_HL(), &this->registers.d); } break;
+    case 0x73: { this->ins_LD_r1_r2(nullptr, this->registers.get_HL(), &this->registers.e); } break;
+    case 0x74: { this->ins_LD_r1_r2(nullptr, this->registers.get_HL(), &this->registers.h); } break;
+    case 0x75: { this->ins_LD_r1_r2(nullptr, this->registers.get_HL(), &this->registers.l); } break;
+    case 0x76: { this->is_halted = true; } break; //HALT
+    case 0x77: { this->ins_LD_r1_r2(nullptr, this->registers.get_HL(), &this->registers.a); } break;
+
+    case 0x78: { this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.b); } break;
+    case 0x79: { this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.c); } break;
+    case 0x7A: { this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.d); } break;
+    case 0x7B: { this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.e); } break;
+    case 0x7C: { this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.h); } break;
+    case 0x7D: { this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.l); } break;
+    case 0x7E: { this->ins_LD_r1_r2(&this->registers.a, this->registers.get_HL()); } break;
+    case 0x7F: { this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.a); } break;
+
+    case 0x80: { this->ins_ADD_A_n(&this->registers.b); } break;
+    case 0x81: { this->ins_ADD_A_n(&this->registers.c); } break;
+    case 0x82: { this->ins_ADD_A_n(&this->registers.d); } break;
+    case 0x83: { this->ins_ADD_A_n(&this->registers.e); } break;
+    case 0x84: { this->ins_ADD_A_n(&this->registers.h); } break;
+    case 0x85: { this->ins_ADD_A_n(&this->registers.l); } break;
+    case 0x86: { this->ins_ADD_A_n(nullptr, this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu)); } break;
+    case 0x87: { this->ins_ADD_A_n(&this->registers.a); } break;
+
+    case 0x88: { this->ins_ADC_A_n(&this->registers.b); } break;
+    case 0x89: { this->ins_ADC_A_n(&this->registers.c); } break;
+    case 0x8A: { this->ins_ADC_A_n(&this->registers.d); } break;
+    case 0x8B: { this->ins_ADC_A_n(&this->registers.e); } break;
+    case 0x8C: { this->ins_ADC_A_n(&this->registers.h); } break;
+    case 0x8D: { this->ins_ADC_A_n(&this->registers.l); } break;
+    case 0x8E: { this->ins_ADC_A_n(nullptr, this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu)); } break;
+    case 0x8F: { this->ins_ADC_A_n(&this->registers.a); } break;
+
+    case 0x90: { this->ins_SUB_n(&this->registers.b); } break;
+    case 0x91: { this->ins_SUB_n(&this->registers.c); } break;
+    case 0x92: { this->ins_SUB_n(&this->registers.d); } break;
+    case 0x93: { this->ins_SUB_n(&this->registers.e); } break;
+    case 0x94: { this->ins_SUB_n(&this->registers.h); } break;
+    case 0x95: { this->ins_SUB_n(&this->registers.l); } break;
+    case 0x96: { this->ins_SUB_n(nullptr, this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu)); } break;
+    case 0x97: { this->ins_SUB_n(&this->registers.a); } break;
+
+    case 0x98: { this->ins_SBC_A_n(&this->registers.b); } break;
+    case 0x99: { this->ins_SBC_A_n(&this->registers.c); } break;
+    case 0x9A: { this->ins_SBC_A_n(&this->registers.d); } break;
+    case 0x9B: { this->ins_SBC_A_n(&this->registers.e); } break;
+    case 0x9C: { this->ins_SBC_A_n(&this->registers.h); } break;
+    case 0x9D: { this->ins_SBC_A_n(&this->registers.l); } break;
+    case 0x9E: { this->ins_SBC_A_n(nullptr, this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu)); } break;
+    case 0x9F: { this->ins_SBC_A_n(&this->registers.a); } break;
+
+    case 0xA0: { this->ins_AND_n(&this->registers.b); } break;
+    case 0xA1: { this->ins_AND_n(&this->registers.c); } break;
+    case 0xA2: { this->ins_AND_n(&this->registers.d); } break;
+    case 0xA3: { this->ins_AND_n(&this->registers.e); } break;
+    case 0xA4: { this->ins_AND_n(&this->registers.h); } break;
+    case 0xA5: { this->ins_AND_n(&this->registers.l); } break;
+    case 0xA6: { this->ins_AND_n(nullptr, this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu)); } break;
+    case 0xA7: { this->ins_AND_n(&this->registers.a); } break;
+
+    case 0xA8: { this->ins_XOR_n(&this->registers.b); } break;
+    case 0xA9: { this->ins_XOR_n(&this->registers.c); } break;
+    case 0xAA: { this->ins_XOR_n(&this->registers.d); } break;
+    case 0xAB: { this->ins_XOR_n(&this->registers.e); } break;
+    case 0xAC: { this->ins_XOR_n(&this->registers.h); } break;
+    case 0xAD: { this->ins_XOR_n(&this->registers.l); } break;
+    case 0xAE: { this->ins_XOR_n(nullptr, this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu)); } break;
+    case 0xAF: { this->ins_XOR_n(&this->registers.a); } break;
+
+    case 0xB0: { this->ins_OR_n(&this->registers.b); } break;
+    case 0xB1: { this->ins_OR_n(&this->registers.c); } break;
+    case 0xB2: { this->ins_OR_n(&this->registers.d); } break;
+    case 0xB3: { this->ins_OR_n(&this->registers.e); } break;
+    case 0xB4: { this->ins_OR_n(&this->registers.h); } break;
+    case 0xB5: { this->ins_OR_n(&this->registers.l); } break;
+    case 0xB6: { this->ins_OR_n(nullptr, this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu)); } break;
+    case 0xB7: { this->ins_OR_n(&this->registers.a); } break;
+
+    case 0xB8: { this->ins_CP_n(&this->registers.b); } break;
+    case 0xB9: { this->ins_CP_n(&this->registers.c); } break;
+    case 0xBA: { this->ins_CP_n(&this->registers.d); } break;
+    case 0xBB: { this->ins_CP_n(&this->registers.e); } break;
+    case 0xBC: { this->ins_CP_n(&this->registers.h); } break;
+    case 0xBD: { this->ins_CP_n(&this->registers.l); } break;
+    case 0xBE: { this->ins_CP_n(nullptr, this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu)); } break;
+    case 0xBF: { this->ins_CP_n(&this->registers.a); } break;
+
+    case 0xC0: { this->ins_RET_cc(NZ); } break;
+    case 0xC1: { this->ins_POP_nn(&this->registers.b, &this->registers.c); } break;
+    case 0xC2: { this->ins_JP_cc_nn(NZ, this->get_word_from_pc_lsbf()); } break;
+    case 0xC3: { this->ins_JP_nn(this->get_word_from_pc_lsbf()); } break;
+    case 0xC4: { this->ins_CALL_cc_nn(NZ, this->get_word_from_pc_lsbf()); } break;
+    case 0xC5: { this->ins_PUSH_nn(this->registers.get_BC()); } break;
+    case 0xC6: { this->ins_ADD_A_n(nullptr, this->get_byte_from_pc()); } break;
+    case 0xC7: { this->ins_RST_n(0x00); } break;
+
+    case 0xC8: { this->ins_RET_cc(Z); } break;
+    case 0xC9: { this->ins_RET(); } break;
+    case 0xCA: { this->ins_JP_cc_nn(Z, this->get_word_from_pc_lsbf()); } break;
+    case 0xCB: { this->CB_instruction_handler(); } break;
+    case 0xCC: { this->ins_CALL_cc_nn(Z, this->get_word_from_pc_lsbf()); } break;
+    case 0xCD: { this->ins_CALL_nn(this->get_word_from_pc_lsbf()); } break;
+    case 0xCE: { this->ins_ADC_A_n(nullptr, this->get_byte_from_pc()); } break;
+    case 0xCF: { this->ins_RST_n(0x08); } break;
+
+    case 0xD0: { this->ins_RET_cc(NC); } break;
+    case 0xD1: { this->ins_POP_nn(&this->registers.d, &this->registers.e); } break;
+    case 0xD2: { this->ins_JP_cc_nn(NC, this->get_word_from_pc_lsbf()); } break;
+        //case 0xD3: { this->ins_SBC_A_n(nullptr, this->get_byte_from_pc()); } break;
+    case 0xD4: { this->ins_CALL_cc_nn(NC, this->get_word_from_pc_lsbf()); } break;
+    case 0xD5: { this->ins_PUSH_nn(this->registers.get_DE()); } break;
+    case 0xD6: { this->ins_SUB_n(nullptr, this->get_byte_from_pc());  } break;
+    case 0xD7: { this->ins_RST_n(0x10); } break;
+
+    case 0xD8: { this->ins_RET_cc(C); } break; //35
+    case 0xD9: { this->ins_RETI(); } break;
+    case 0xDA: { this->ins_JP_cc_nn(C, this->get_word_from_pc_lsbf()); } break;
+        //case 0xDB: { } break;
+    case 0xDC: { this->ins_CALL_cc_nn(C, this->get_word_from_pc_lsbf()); } break;
+        //case 0xDD: { } break;
+    case 0xDE: { this->ins_SBC_A_n(nullptr, this->get_byte_from_pc()); } break;
+    case 0xDF: { this->ins_RST_n(0x18); } break;
+
+    case 0xE0: { this->ins_LD_r1_r2(nullptr, 0xFF00 + this->get_byte_from_pc(), nullptr, this->registers.a); } break;
+    case 0xE1: { this->ins_POP_nn(&this->registers.h, &this->registers.l); } break;
+    case 0xE2: { this->ins_LD_r1_r2(nullptr, 0xFF00 + this->registers.c, &this->registers.a); } break;
+        //case 0xE3: { } break;
+        //case 0xE4: { } break;
+    case 0xE5: { this->ins_PUSH_nn(this->registers.get_HL()); } break;
+    case 0xE6: { this->ins_AND_n(nullptr, this->get_byte_from_pc()); } break;
+    case 0xE7: { this->ins_RST_n(0x20); } break;
+
+    case 0xE8: { this->ins_ADD_SP_n((Byte_s)this->get_byte_from_pc()); } break;
+    case 0xE9: { this->ins_JP_HL(); } break;
+    case 0xEA: { this->ins_LD_nn_r1(this->get_word_from_pc_lsbf(), &this->registers.a); } break;
+        //case 0xEB: { } break;
+        //case 0xEC: { } break;
+        //case 0xED: { } break;
+    case 0xEE: { this->ins_XOR_n(nullptr, this->get_byte_from_pc()); } break;
+    case 0xEF: { this->ins_RST_n(0x28); } break;
+
+    case 0xF0: { this->ins_LD_r1_nn(&this->registers.a, 0xFF00 + this->get_byte_from_pc(), 12); } break;
+    case 0xF1: { this->ins_POP_nn(&this->registers.a, &this->registers.f); } break;
+    case 0xF2: { this->ins_LD_r1_r2(&this->registers.a, 0xFF00 + this->registers.c); } break;
+    case 0xF3: { this->interrupt_master_enable = 0; } break; //DIsable interrupts immediately
+    //case 0xF4: { } break;
+    case 0xF5: { this->ins_PUSH_nn(this->registers.get_AF()); } break;
+    case 0xF6: { this->ins_OR_n(nullptr, this->get_byte_from_pc()); } break;
+    case 0xF7: { this->ins_RST_n(0x30); } break;
+
+    case 0xF8: { this->ins_LDHL_SP_n(&this->registers.h, &this->registers.l, this->registers.sp, this->get_byte_from_pc()); } break;
+    case 0xF9: { this->ins_LD_nn_nn(&this->registers.sp, this->registers.get_HL()); } break;
+    case 0xFA: { this->ins_LD_r1_nn(&this->registers.a, this->get_word_from_pc_lsbf(), 16); } break;
+    case 0xFB: { this->EI_triggered = true; return; } break; // EI is set to trigger, only activates after next instruction finishes note the early return
+    //case 0xFC: { } break;
+    //case 0xFD: { } break;
+    case 0xFE: { this->ins_CP_n(nullptr, this->get_byte_from_pc()); } break;
+    case 0xFF: { this->ins_RST_n(0x38); } break;
+    default: { printf("ILLEGAL OPCODE CALL %0.2X \n", this->currentRunningOpcode); }
     }
 
-    Byte temp = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
-    Byte result = ((temp >> 1) | (flagCarry << 7));
-    newCarry = (temp & 0x01);
-    this->bus->set_memory(address, result, MEMORY_ACCESS_TYPE::cpu);
-
-    this->registers.set_flag(c, newCarry);
-    (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-    return 16;
-}
-
-int CPU::ins_SLA(Byte* registerOne, Word address)
-{
-    this->registers.set_flag(n, 0);
-    this->registers.set_flag(h, 0);
-
-    if (registerOne)
+    if (this->EI_triggered)
     {
-        this->registers.set_flag(c,(*registerOne & 0x80) >> 7);
-        *registerOne = *registerOne << 1;
-
-        (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-
-        return 8;
+        this->interrupt_master_enable = 1;
+        this->EI_triggered = false;
     }
-    Byte temp = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
-    Byte result = temp << 1;
-
-    this->registers.set_flag(c, (temp & 0x80) >> 7);
-    this->bus->set_memory(address, result, MEMORY_ACCESS_TYPE::cpu);
-
-    (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-
-    return 16;
 }
-
-int CPU::ins_SRA_n(Byte* registerOne, Word address)
+void CPU::CB_instruction_handler()
 {
-    this->registers.set_flag(n, 0);
-    this->registers.set_flag(h, 0);
-
-    Byte bit7 = 0;
-    // shift right into carry, msb does not change
-    if (registerOne)
+    switch (this->get_byte_from_pc())
     {
-        this->registers.set_flag(c, *registerOne & 0x1);
-        bit7 = *registerOne >> 7;
+    case 0x00: { this->ins_RLC(&this->registers.b); } break;
+    case 0x01: { this->ins_RLC(&this->registers.c); } break;
+    case 0x02: { this->ins_RLC(&this->registers.d); } break;
+    case 0x03: { this->ins_RLC(&this->registers.e); } break;
+    case 0x04: { this->ins_RLC(&this->registers.h); } break;
+    case 0x05: { this->ins_RLC(&this->registers.l); } break;
+    case 0x06: { this->ins_RLC(nullptr, this->registers.get_HL()); } break;
+    case 0x07: { this->ins_RLC(&this->registers.a); } break;
 
-        *registerOne = (*registerOne >> 1) | (bit7 << 7);
-        (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-        return 8;
+    case 0x08: { this->ins_RRC(&this->registers.b); } break;
+    case 0x09: { this->ins_RRC(&this->registers.c); } break;
+    case 0x0A: { this->ins_RRC(&this->registers.d); } break;
+    case 0x0B: { this->ins_RRC(&this->registers.e); } break;
+    case 0x0C: { this->ins_RRC(&this->registers.h); } break;
+    case 0x0D: { this->ins_RRC(&this->registers.l); } break;
+    case 0x0E: { this->ins_RRC(nullptr, this->registers.get_HL()); } break;
+    case 0x0F: { this->ins_RRC(&this->registers.a); } break;
+
+    case 0x10: { this->ins_RL(&this->registers.b); } break;
+    case 0x11: { this->ins_RL(&this->registers.c); } break;
+    case 0x12: { this->ins_RL(&this->registers.d); } break;
+    case 0x13: { this->ins_RL(&this->registers.e); } break;
+    case 0x14: { this->ins_RL(&this->registers.h); } break;
+    case 0x15: { this->ins_RL(&this->registers.l); } break;
+    case 0x16: { this->ins_RL(nullptr, this->registers.get_HL()); } break;
+    case 0x17: { this->ins_RL(&this->registers.a); } break;
+
+    case 0x18: { this->ins_RR(&this->registers.b); } break;
+    case 0x19: { this->ins_RR(&this->registers.c); } break;
+    case 0x1A: { this->ins_RR(&this->registers.d); } break;
+    case 0x1B: { this->ins_RR(&this->registers.e); } break;
+    case 0x1C: { this->ins_RR(&this->registers.h); } break;
+    case 0x1D: { this->ins_RR(&this->registers.l); } break;
+    case 0x1E: { this->ins_RR(nullptr, this->registers.get_HL()); } break;
+    case 0x1F: { this->ins_RR(&this->registers.a); } break;
+
+    case 0x20: { this->ins_SLA(&this->registers.b); } break;
+    case 0x21: { this->ins_SLA(&this->registers.c); } break;
+    case 0x22: { this->ins_SLA(&this->registers.d); } break;
+    case 0x23: { this->ins_SLA(&this->registers.e); } break;
+    case 0x24: { this->ins_SLA(&this->registers.h); } break;
+    case 0x25: { this->ins_SLA(&this->registers.l); } break;
+    case 0x26: { this->ins_SLA(nullptr, this->registers.get_HL()); } break;
+    case 0x27: { this->ins_SLA(&this->registers.a); } break;
+
+    case 0x28: { this->ins_SRA_n(&this->registers.b); } break;
+    case 0x29: { this->ins_SRA_n(&this->registers.c); } break;
+    case 0x2A: { this->ins_SRA_n(&this->registers.d); } break;
+    case 0x2B: { this->ins_SRA_n(&this->registers.e); } break;
+    case 0x2C: { this->ins_SRA_n(&this->registers.h); } break;
+    case 0x2D: { this->ins_SRA_n(&this->registers.l); } break;
+    case 0x2E: { this->ins_SRA_n(nullptr, this->registers.get_HL()); } break;
+    case 0x2F: { this->ins_SRA_n(&this->registers.a); } break;
+
+    case 0x30: { this->ins_SWAP_nn(&this->registers.b); } break;
+    case 0x31: { this->ins_SWAP_nn(&this->registers.c); } break;
+    case 0x32: { this->ins_SWAP_nn(&this->registers.d); } break;
+    case 0x33: { this->ins_SWAP_nn(&this->registers.e); } break;
+    case 0x34: { this->ins_SWAP_nn(&this->registers.h); } break;
+    case 0x35: { this->ins_SWAP_nn(&this->registers.l); } break;
+    case 0x36: { this->ins_SWAP_nn(nullptr, this->registers.get_HL()); } break;
+    case 0x37: { this->ins_SWAP_nn(&this->registers.a); } break;
+
+    case 0x38: { this->ins_SRL_n(&this->registers.b); } break;
+    case 0x39: { this->ins_SRL_n(&this->registers.c); } break;
+    case 0x3A: { this->ins_SRL_n(&this->registers.d); } break;
+    case 0x3B: { this->ins_SRL_n(&this->registers.e); } break;
+    case 0x3C: { this->ins_SRL_n(&this->registers.h); } break;
+    case 0x3D: { this->ins_SRL_n(&this->registers.l); } break;
+    case 0x3E: { this->ins_SRL_n(nullptr, this->registers.get_HL()); } break;
+    case 0x3F: { this->ins_SRL_n(&this->registers.a); } break;
+
+    case 0x40: { this->ins_BIT_b_r(0, &this->registers.b); } break;
+    case 0x41: { this->ins_BIT_b_r(0, &this->registers.c); } break;
+    case 0x42: { this->ins_BIT_b_r(0, &this->registers.d); } break;
+    case 0x43: { this->ins_BIT_b_r(0, &this->registers.e); } break;
+    case 0x44: { this->ins_BIT_b_r(0, &this->registers.h); } break;
+    case 0x45: { this->ins_BIT_b_r(0, &this->registers.l); } break;
+    case 0x46: { this->ins_BIT_b_r(0, nullptr, this->registers.get_HL()); } break;
+    case 0x47: { this->ins_BIT_b_r(0, &this->registers.a); } break;
+
+    case 0x48: { this->ins_BIT_b_r(1, &this->registers.b); } break;
+    case 0x49: { this->ins_BIT_b_r(1, &this->registers.c); } break;
+    case 0x4A: { this->ins_BIT_b_r(1, &this->registers.d); } break;
+    case 0x4B: { this->ins_BIT_b_r(1, &this->registers.e); } break;
+    case 0x4C: { this->ins_BIT_b_r(1, &this->registers.h); } break;
+    case 0x4D: { this->ins_BIT_b_r(1, &this->registers.l); } break;
+    case 0x4E: { this->ins_BIT_b_r(1, nullptr, this->registers.get_HL()); } break;
+    case 0x4F: { this->ins_BIT_b_r(1, &this->registers.a); } break;
+
+    case 0x50: { this->ins_BIT_b_r(2, &this->registers.b); } break;
+    case 0x51: { this->ins_BIT_b_r(2, &this->registers.c); } break;
+    case 0x52: { this->ins_BIT_b_r(2, &this->registers.d); } break;
+    case 0x53: { this->ins_BIT_b_r(2, &this->registers.e); } break;
+    case 0x54: { this->ins_BIT_b_r(2, &this->registers.h); } break;
+    case 0x55: { this->ins_BIT_b_r(2, &this->registers.l); } break;
+    case 0x56: { this->ins_BIT_b_r(2, nullptr, this->registers.get_HL()); } break;
+    case 0x57: { this->ins_BIT_b_r(2, &this->registers.a); } break;
+
+    case 0x58: { this->ins_BIT_b_r(3, &this->registers.b); } break;
+    case 0x59: { this->ins_BIT_b_r(3, &this->registers.c); } break;
+    case 0x5A: { this->ins_BIT_b_r(3, &this->registers.d); } break;
+    case 0x5B: { this->ins_BIT_b_r(3, &this->registers.e); } break;
+    case 0x5C: { this->ins_BIT_b_r(3, &this->registers.h); } break;
+    case 0x5D: { this->ins_BIT_b_r(3, &this->registers.l); } break;
+    case 0x5E: { this->ins_BIT_b_r(3, nullptr, this->registers.get_HL()); } break;
+    case 0x5F: { this->ins_BIT_b_r(3, &this->registers.a); } break;
+
+    case 0x60: { this->ins_BIT_b_r(4, &this->registers.b); } break;
+    case 0x61: { this->ins_BIT_b_r(4, &this->registers.c); } break;
+    case 0x62: { this->ins_BIT_b_r(4, &this->registers.d); } break;
+    case 0x63: { this->ins_BIT_b_r(4, &this->registers.e); } break;
+    case 0x64: { this->ins_BIT_b_r(4, &this->registers.h); } break;
+    case 0x65: { this->ins_BIT_b_r(4, &this->registers.l); } break;
+    case 0x66: { this->ins_BIT_b_r(4, nullptr, this->registers.get_HL()); } break;
+    case 0x67: { this->ins_BIT_b_r(4, &this->registers.a); } break;
+
+    case 0x68: { this->ins_BIT_b_r(5, &this->registers.b); } break;
+    case 0x69: { this->ins_BIT_b_r(5, &this->registers.c); } break;
+    case 0x6A: { this->ins_BIT_b_r(5, &this->registers.d); } break;
+    case 0x6B: { this->ins_BIT_b_r(5, &this->registers.e); } break;
+    case 0x6C: { this->ins_BIT_b_r(5, &this->registers.h); } break;
+    case 0x6D: { this->ins_BIT_b_r(5, &this->registers.l); } break;
+    case 0x6E: { this->ins_BIT_b_r(5, nullptr, this->registers.get_HL()); } break;
+    case 0x6F: { this->ins_BIT_b_r(5, &this->registers.a); } break;
+
+    case 0x70: { this->ins_BIT_b_r(6, &this->registers.b); } break;
+    case 0x71: { this->ins_BIT_b_r(6, &this->registers.c); } break;
+    case 0x72: { this->ins_BIT_b_r(6, &this->registers.d); } break;
+    case 0x73: { this->ins_BIT_b_r(6, &this->registers.e); } break;
+    case 0x74: { this->ins_BIT_b_r(6, &this->registers.h); } break;
+    case 0x75: { this->ins_BIT_b_r(6, &this->registers.l); } break;
+    case 0x76: { this->ins_BIT_b_r(6, nullptr, this->registers.get_HL()); } break;
+    case 0x77: { this->ins_BIT_b_r(6, &this->registers.a); } break;
+
+    case 0x78: { this->ins_BIT_b_r(7, &this->registers.b); } break;
+    case 0x79: { this->ins_BIT_b_r(7, &this->registers.c); } break;
+    case 0x7A: { this->ins_BIT_b_r(7, &this->registers.d); } break;
+    case 0x7B: { this->ins_BIT_b_r(7, &this->registers.e); } break;
+    case 0x7C: { this->ins_BIT_b_r(7, &this->registers.h); } break;
+    case 0x7D: { this->ins_BIT_b_r(7, &this->registers.l); } break;
+    case 0x7E: { this->ins_BIT_b_r(7, nullptr, this->registers.get_HL()); } break;
+    case 0x7F: { this->ins_BIT_b_r(7, &this->registers.a); } break;
+
+    case 0x80: { this->ins_RES_b_r(0, &this->registers.b); } break;
+    case 0x81: { this->ins_RES_b_r(0, &this->registers.c); } break;
+    case 0x82: { this->ins_RES_b_r(0, &this->registers.d); } break;
+    case 0x83: { this->ins_RES_b_r(0, &this->registers.e); } break;
+    case 0x84: { this->ins_RES_b_r(0, &this->registers.h); } break;
+    case 0x85: { this->ins_RES_b_r(0, &this->registers.l); } break;
+    case 0x86: { this->ins_RES_b_r(0, nullptr, this->registers.get_HL()); } break;
+    case 0x87: { this->ins_RES_b_r(0, &this->registers.a); } break;
+
+    case 0x88: { this->ins_RES_b_r(1, &this->registers.b); } break;
+    case 0x89: { this->ins_RES_b_r(1, &this->registers.c); } break;
+    case 0x8A: { this->ins_RES_b_r(1, &this->registers.d); } break;
+    case 0x8B: { this->ins_RES_b_r(1, &this->registers.e); } break;
+    case 0x8C: { this->ins_RES_b_r(1, &this->registers.h); } break;
+    case 0x8D: { this->ins_RES_b_r(1, &this->registers.l); } break;
+    case 0x8E: { this->ins_RES_b_r(1, nullptr, this->registers.get_HL()); } break;
+    case 0x8F: { this->ins_RES_b_r(1, &this->registers.a); } break;
+
+    case 0x90: { this->ins_RES_b_r(2, &this->registers.b); } break;
+    case 0x91: { this->ins_RES_b_r(2, &this->registers.c); } break;
+    case 0x92: { this->ins_RES_b_r(2, &this->registers.d); } break;
+    case 0x93: { this->ins_RES_b_r(2, &this->registers.e); } break;
+    case 0x94: { this->ins_RES_b_r(2, &this->registers.h); } break;
+    case 0x95: { this->ins_RES_b_r(2, &this->registers.l); } break;
+    case 0x96: { this->ins_RES_b_r(2, nullptr, this->registers.get_HL()); } break;
+    case 0x97: { this->ins_RES_b_r(2, &this->registers.a); } break;
+
+    case 0x98: { this->ins_RES_b_r(3, &this->registers.b); } break;
+    case 0x99: { this->ins_RES_b_r(3, &this->registers.c); } break;
+    case 0x9A: { this->ins_RES_b_r(3, &this->registers.d); } break;
+    case 0x9B: { this->ins_RES_b_r(3, &this->registers.e); } break;
+    case 0x9C: { this->ins_RES_b_r(3, &this->registers.h); } break;
+    case 0x9D: { this->ins_RES_b_r(3, &this->registers.l); } break;
+    case 0x9E: { this->ins_RES_b_r(3, nullptr, this->registers.get_HL()); } break;
+    case 0x9F: { this->ins_RES_b_r(3, &this->registers.a); } break;
+
+    case 0xA0: { this->ins_RES_b_r(4, &this->registers.b); } break;
+    case 0xA1: { this->ins_RES_b_r(4, &this->registers.c); } break;
+    case 0xA2: { this->ins_RES_b_r(4, &this->registers.d); } break;
+    case 0xA3: { this->ins_RES_b_r(4, &this->registers.e); } break;
+    case 0xA4: { this->ins_RES_b_r(4, &this->registers.h); } break;
+    case 0xA5: { this->ins_RES_b_r(4, &this->registers.l); } break;
+    case 0xA6: { this->ins_RES_b_r(4, nullptr, this->registers.get_HL()); } break;
+    case 0xA7: { this->ins_RES_b_r(4, &this->registers.a); } break;
+
+    case 0xA8: { this->ins_RES_b_r(5, &this->registers.b); } break;
+    case 0xA9: { this->ins_RES_b_r(5, &this->registers.c); } break;
+    case 0xAA: { this->ins_RES_b_r(5, &this->registers.d); } break;
+    case 0xAB: { this->ins_RES_b_r(5, &this->registers.e); } break;
+    case 0xAC: { this->ins_RES_b_r(5, &this->registers.h); } break;
+    case 0xAD: { this->ins_RES_b_r(5, &this->registers.l); } break;
+    case 0xAE: { this->ins_RES_b_r(5, nullptr, this->registers.get_HL()); } break;
+    case 0xAF: { this->ins_RES_b_r(5, &this->registers.a); } break;
+
+    case 0xB0: { this->ins_RES_b_r(6, &this->registers.b); } break;
+    case 0xB1: { this->ins_RES_b_r(6, &this->registers.c); } break;
+    case 0xB2: { this->ins_RES_b_r(6, &this->registers.d); } break;
+    case 0xB3: { this->ins_RES_b_r(6, &this->registers.e); } break;
+    case 0xB4: { this->ins_RES_b_r(6, &this->registers.h); } break;
+    case 0xB5: { this->ins_RES_b_r(6, &this->registers.l); } break;
+    case 0xB6: { this->ins_RES_b_r(6, nullptr, this->registers.get_HL()); } break;
+    case 0xB7: { this->ins_RES_b_r(6, &this->registers.a); } break;
+
+    case 0xB8: { this->ins_RES_b_r(7, &this->registers.b); } break;
+    case 0xB9: { this->ins_RES_b_r(7, &this->registers.c); } break;
+    case 0xBA: { this->ins_RES_b_r(7, &this->registers.d); } break;
+    case 0xBB: { this->ins_RES_b_r(7, &this->registers.e); } break;
+    case 0xBC: { this->ins_RES_b_r(7, &this->registers.h); } break;
+    case 0xBD: { this->ins_RES_b_r(7, &this->registers.l); } break;
+    case 0xBE: { this->ins_RES_b_r(7, nullptr, this->registers.get_HL()); } break;
+    case 0xBF: { this->ins_RES_b_r(7, &this->registers.a); } break;
+
+    case 0xC0: { this->ins_SET_b_r(0, &this->registers.b); } break;
+    case 0xC1: { this->ins_SET_b_r(0, &this->registers.c); } break;
+    case 0xC2: { this->ins_SET_b_r(0, &this->registers.d); } break;
+    case 0xC3: { this->ins_SET_b_r(0, &this->registers.e); } break;
+    case 0xC4: { this->ins_SET_b_r(0, &this->registers.h); } break;
+    case 0xC5: { this->ins_SET_b_r(0, &this->registers.l); } break;
+    case 0xC6: { this->ins_SET_b_r(0, nullptr, this->registers.get_HL()); } break;
+    case 0xC7: { this->ins_SET_b_r(0, &this->registers.a); } break;
+
+    case 0xC8: { this->ins_SET_b_r(1, &this->registers.b); } break;
+    case 0xC9: { this->ins_SET_b_r(1, &this->registers.c); } break;
+    case 0xCA: { this->ins_SET_b_r(1, &this->registers.d); } break;
+    case 0xCB: { this->ins_SET_b_r(1, &this->registers.e); } break;
+    case 0xCC: { this->ins_SET_b_r(1, &this->registers.h); } break;
+    case 0xCD: { this->ins_SET_b_r(1, &this->registers.l); } break;
+    case 0xCE: { this->ins_SET_b_r(1, nullptr, this->registers.get_HL()); } break;
+    case 0xCF: { this->ins_SET_b_r(1, &this->registers.a); } break;
+
+    case 0xD0: { this->ins_SET_b_r(2, &this->registers.b); } break;
+    case 0xD1: { this->ins_SET_b_r(2, &this->registers.c); } break;
+    case 0xD2: { this->ins_SET_b_r(2, &this->registers.d); } break;
+    case 0xD3: { this->ins_SET_b_r(2, &this->registers.e); } break;
+    case 0xD4: { this->ins_SET_b_r(2, &this->registers.h); } break;
+    case 0xD5: { this->ins_SET_b_r(2, &this->registers.l); } break;
+    case 0xD6: { this->ins_SET_b_r(2, nullptr, this->registers.get_HL()); } break;
+    case 0xD7: { this->ins_SET_b_r(2, &this->registers.a); } break;
+
+    case 0xD8: { this->ins_SET_b_r(3, &this->registers.b); } break;
+    case 0xD9: { this->ins_SET_b_r(3, &this->registers.c); } break;
+    case 0xDA: { this->ins_SET_b_r(3, &this->registers.d); } break;
+    case 0xDB: { this->ins_SET_b_r(3, &this->registers.e); } break;
+    case 0xDC: { this->ins_SET_b_r(3, &this->registers.h); } break;
+    case 0xDD: { this->ins_SET_b_r(3, &this->registers.l); } break;
+    case 0xDE: { this->ins_SET_b_r(3, nullptr, this->registers.get_HL()); } break;
+    case 0xDF: { this->ins_SET_b_r(3, &this->registers.a); } break;
+
+    case 0xE0: { this->ins_SET_b_r(4, &this->registers.b); } break;
+    case 0xE1: { this->ins_SET_b_r(4, &this->registers.c); } break;
+    case 0xE2: { this->ins_SET_b_r(4, &this->registers.d); } break;
+    case 0xE3: { this->ins_SET_b_r(4, &this->registers.e); } break;
+    case 0xE4: { this->ins_SET_b_r(4, &this->registers.h); } break;
+    case 0xE5: { this->ins_SET_b_r(4, &this->registers.l); } break;
+    case 0xE6: { this->ins_SET_b_r(4, nullptr, this->registers.get_HL()); } break;
+    case 0xE7: { this->ins_SET_b_r(4, &this->registers.a); } break;
+
+    case 0xE8: { this->ins_SET_b_r(5, &this->registers.b); } break;
+    case 0xE9: { this->ins_SET_b_r(5, &this->registers.c); } break;
+    case 0xEA: { this->ins_SET_b_r(5, &this->registers.d); } break;
+    case 0xEB: { this->ins_SET_b_r(5, &this->registers.e); } break;
+    case 0xEC: { this->ins_SET_b_r(5, &this->registers.h); } break;
+    case 0xED: { this->ins_SET_b_r(5, &this->registers.l); } break;
+    case 0xEE: { this->ins_SET_b_r(5, nullptr, this->registers.get_HL()); } break;
+    case 0xEF: { this->ins_SET_b_r(5, &this->registers.a); } break;
+
+    case 0xF0: { this->ins_SET_b_r(6, &this->registers.b); } break;
+    case 0xF1: { this->ins_SET_b_r(6, &this->registers.c); } break;
+    case 0xF2: { this->ins_SET_b_r(6, &this->registers.d); } break;
+    case 0xF3: { this->ins_SET_b_r(6, &this->registers.e); } break;
+    case 0xF4: { this->ins_SET_b_r(6, &this->registers.h); } break;
+    case 0xF5: { this->ins_SET_b_r(6, &this->registers.l); } break;
+    case 0xF6: { this->ins_SET_b_r(6, nullptr, this->registers.get_HL()); } break;
+    case 0xF7: { this->ins_SET_b_r(6, &this->registers.a); } break;
+
+    case 0xF8: { this->ins_SET_b_r(7, &this->registers.b); } break;
+    case 0xF9: { this->ins_SET_b_r(7, &this->registers.c); } break;
+    case 0xFA: { this->ins_SET_b_r(7, &this->registers.d); } break;
+    case 0xFB: { this->ins_SET_b_r(7, &this->registers.e); } break;
+    case 0xFC: { this->ins_SET_b_r(7, &this->registers.h); } break;
+    case 0xFD: { this->ins_SET_b_r(7, &this->registers.l); } break;
+    case 0xFE: { this->ins_SET_b_r(7, nullptr, this->registers.get_HL()); } break;
+    case 0xFF: { this->ins_SET_b_r(7, &this->registers.a); } break;
     }
-
-    Byte temp = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
-    
-    this->registers.set_flag(c, temp & 0x1);
-    bit7 = temp >> 7;
-
-    Byte result = (temp >> 1) | (bit7 << 7);
-    this->bus->set_memory(address, result, MEMORY_ACCESS_TYPE::cpu);
-
-    (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-
-    return 16;
 }
-
-int CPU::ins_SRL_n(Byte* registerOne, Word address)
+void CPU::STOP_instruction_handler()
 {
-    this->registers.set_flag(n, 0);
-    this->registers.set_flag(h, 0);
 
-    // shift right into carry, msb does not change
-    if (registerOne)
+    switch (this->get_byte_from_pc())
     {
-        this->registers.set_flag(c, *registerOne & 0x1);
-        *registerOne = *registerOne >> 1;
-        (*registerOne == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-        return 8;
+    case 0x00: {  4; } // STOP ins but there might be something more important needed to be done here
     }
-    Byte temp = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
-    Byte result = temp >> 1;
-
-    this->registers.set_flag(c, temp & 0x1);
-
-    this->bus->set_memory(address, result, MEMORY_ACCESS_TYPE::cpu);
-    (result == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-    return 16;
-}
-
-int CPU::ins_BIT_b_r(Byte bit, Byte* registerOne, Word address)
-{
-    this->registers.set_flag(n, 0);
-    this->registers.set_flag(h, 1);
-
-    if (registerOne)
-    {
-        ((*registerOne & (1 << bit)) == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-        return 8;
-    }
-    
-    ((this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) & (1 << bit)) == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-    return 16;
-}
-
-int CPU::ins_SET_b_r(Byte bit, Byte* registerOne, Word address)
-{
-    if (registerOne)
-    {
-        *registerOne |=  (1 << bit);
-        return 8;
-    }
-
-    this->bus->set_memory(address, this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) | (1 << bit), MEMORY_ACCESS_TYPE::cpu);
-    return 16;
-}
-
-int CPU::ins_RES_b_r(Byte bit, Byte* registerOne, Word address)
-{
-    if (registerOne)
-    {
-        *registerOne &= ~(1 << bit);
-        return 8;
-    }
-
-    this->bus->set_memory(address, this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu) & ~(1 << bit), MEMORY_ACCESS_TYPE::cpu);
-    return 16;
-}
-
-int CPU::ins_JP_nn(Word address)
-{
-    this->registers.pc = address;
-    return 12;
-}
-
-int CPU::ins_JP_cc_nn(const enum JumpCondition condition, Word address)
-{
-    switch (condition)
-    {
-        case NZ:
-        {
-            if (this->registers.get_flag(z) == 0)
-            {
-                this->ins_JP_nn(address);
-                return 16;
-            }
-        } break;
-    
-        case Z:
-        {
-            if (this->registers.get_flag(z) == 1)
-            {
-                this->ins_JP_nn(address);
-                return 16;
-            }
-        } break;
-    
-        case NC:
-        {
-            if (this->registers.get_flag(c) == 0)
-            {
-                this->ins_JP_nn(address);
-                return 16;
-            }
-        } break;
-    
-        case C:
-        {
-            if (this->registers.get_flag(c) == 1)
-            {
-                this->ins_JP_nn(address);
-                return 16;
-            }
-        } break;
-
-        default: throw "Unreachable Jump condition"; break;
-    }
-    return 12;
-}
-
-int CPU::ins_JP_HL()
-{
-    this->registers.pc = this->registers.get_HL();
-    return 4;
-}
-
-int CPU::ins_JR_n(Byte_s jumpOffset)
-{
-    this->registers.pc += jumpOffset;
-
-    return 12;
-}
-
-int CPU::ins_JR_cc_n(const enum JumpCondition condition, Byte_s jumpOffset)
-{
-    switch (condition)
-    {
-        case NZ:
-        {
-            if (!this->registers.get_flag(z))
-            {
-                this->ins_JR_n(jumpOffset);
-                return 12;
-            }
-        } break;
-
-        case Z:
-        {
-            if (this->registers.get_flag(z))
-            {
-                this->ins_JR_n(jumpOffset);
-                return 12;
-            }
-        } break;
-
-        case NC:
-        {
-            if (!this->registers.get_flag(c))
-            {
-                this->ins_JR_n(jumpOffset);
-                return 12;
-            }
-        } break;
-
-        case C:
-        {
-            if (this->registers.get_flag(c))
-            {
-                this->ins_JR_n(jumpOffset);
-                return 12;
-            }
-        } break;
-        default: throw "Unreachable Jump condition"; break;
-    }
-    return 8;
-}
-
-int CPU::ins_CALL_nn(Word address)
-{
-    this->ins_PUSH_nn(this->registers.pc);
-    this->ins_JP_nn(address);
-    return 12;
-}
-
-int CPU::ins_CALL_cc_nn(enum JumpCondition condition, Word address)
-{
-
-    switch (condition)
-    {
-        case NZ:
-        {
-            if (!this->registers.get_flag(z))
-            {
-                this->ins_CALL_nn(address);
-                return 24;
-            }
-        } break;
-
-        case Z:
-        {
-            if (this->registers.get_flag(z))
-            {
-                this->ins_CALL_nn(address);
-                return 24;
-            }
-        } break;
-
-        case NC:
-        {
-            if (!this->registers.get_flag(c))
-            {
-                this->ins_CALL_nn(address);
-                return 24;
-            }
-        } break;
-
-        case C:
-        {
-            if (this->registers.get_flag(c))
-            {
-                this->ins_CALL_nn(address);
-                return 24;
-            }
-        } break;
-        default: throw "Unreachable Jump condition"; break;
-    }
-    return 12;
-}
-
-int CPU::ins_RST_n(const Byte addrOffset)
-{
-    this->ins_CALL_nn(0x0000 + addrOffset);
-    return 16;
 }
 
 
-int CPU::ins_RET()
-{
-    Word SP = this->registers.sp;
-    this->registers.pc = this->bus->get_memory_word_lsbf(SP, MEMORY_ACCESS_TYPE::cpu);
-    this->registers.sp += 2;
-    return 16;
-}
 
-int CPU::ins_RETI()
-{
-    this->interrupt_master_enable = 1;
-    this->ins_RET();
-    return 16;
-}
 
-int CPU::ins_RET_cc(const enum JumpCondition condition)
-{
-    switch (condition)
-    {
-        case NZ:
-        {
-            if (!this->registers.get_flag(z))
-            {
-                this->ins_RET();
-                return 20;
-            }   
-        } break;
-
-        case Z:
-        {
-            if (this->registers.get_flag(z))
-            {
-                this->ins_RET();
-                return 20;
-            }
-        } break;
-
-        case NC:
-        {
-            if (!this->registers.get_flag(c))
-            {
-                this->ins_RET();
-                return 20;
-            }
-        } break;
-
-        case C:
-        {
-            if (this->registers.get_flag(c))
-            {
-                this->ins_RET();
-                return 20;
-            }
-        } break;
-        default: throw "Unreachable Jump condition"; break;
-    }
-    // If we don't require jumping
-    return 8;
-}
 
 
 

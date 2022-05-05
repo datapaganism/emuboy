@@ -373,6 +373,7 @@ int CPU::fetch_decode_execute()
     return cyclesUsed;
 }
 
+
 int CPU::CB_instruction_handler()
 {
     Byte opcode = this->get_byte_from_pc();

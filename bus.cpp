@@ -31,6 +31,33 @@ void BUS::cycle_system_one_frame()
     }
 }
 
+void BUS::cycle_system_one_frame_V2()
+{
+    int currentCycles = 0;
+
+    while (currentCycles <= CYCLES_PER_FRAME)
+    {
+
+        this->cpu.mStepCPU();
+        this->cpu.update_timers(4);
+        
+        this->dma_controller.update_dma(4);
+
+        this->ppu.update_graphics(4);
+
+        currentCycles += 4;
+
+        // Serial monitoring
+        if ((this->io[0xFF02 - IOOFFSET] & ~0x7E) == 0x81)
+        {
+            char c = this->io[0xFF01 - IOOFFSET];
+            printf("%c", c);
+            this->io[0xFF02 - IOOFFSET] = 0x0;
+        }
+    }
+    
+}
+
 void BUS::handleEvent(SDL_Event& e)
 {
     if (e.type == SDL_WINDOWEVENT && e.window.windowID == this->mWindowID)

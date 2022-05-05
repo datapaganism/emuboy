@@ -75,6 +75,7 @@ public:
     /// Cycles the emulated system state by one frame (~70,221 cycles)
     /// </summary>
     void cycle_system_one_frame();
+    void cycle_system_one_frame_V2();
     
     bool biosLoaded = false;
 

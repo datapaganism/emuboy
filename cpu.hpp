@@ -146,6 +146,11 @@ class CPU
         /// <returns>The number of CPU cycles used</returns>
         int fetch_decode_execute();
 
+        /// <summary>
+        /// Steps the CPU by a single M-Cycle (4 T-Cycles)
+        /// </summary>
+        void mStepCPU();
+
         int do_interrupts();
         void update_timers(const int cycles);
 
@@ -163,14 +168,26 @@ private:
         int divTimerCounter = DIVinit;
 
         Byte get_TMC_frequency();
+
+        Byte currentRunningOpcode = 0;
+        Byte  mCyclesUsed = 0;
+        bool isExecutingInstruction = false;
+
         
+        Word interrupt_vector = 0;
         bool DI_triggered = false;
         bool EI_triggered = false;
 
+        void instruction_handler();
+        void CB_instruction_handler();
         void interrupt_DI_EI_handler();
-        int CB_instruction_handler();
+        void STOP_instruction_handler();
+        void check_for_interrupts();
+        void setup_interrupt_handler();
 
-        int STOP_instruction_handler();
+        //int CB_instruction_handler();
+
+        //int STOP_instruction_handler();
        
         Byte get_nibble(const Byte input, const bool getHi);
         void set_nibble(Byte* registerOne, const Byte value, const bool setHi);
@@ -178,6 +195,23 @@ private:
         bool checkCarry(const int a, const int b, const int shift,  const int c = NULL);
         bool checkBorrow(const int a, const int b, const int shift, const int c = NULL);
        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         // Instructions
         int ins_LD_nn_n(Byte* registerOne, const Byte value);
         int ins_LD_r1_r2(Byte* registerOne = nullptr, const Word address = NULL, Byte* registerTwo = nullptr, const Byte value = NULL);
