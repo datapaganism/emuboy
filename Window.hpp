@@ -11,9 +11,9 @@ public:
 
 	void handleWindowEvent(SDL_Event& e);
 
-	virtual void handleEvent(SDL_Event& e);
-	virtual void updateState();
-	virtual void updateRender();
+	virtual void handleEvent(SDL_Event& e) = 0;
+	virtual void updateState() = 0;
+	virtual void updateRender() = 0;
 
 
 	void focus();
@@ -34,7 +34,7 @@ public:
 	SDL_Renderer* mRenderer = nullptr;
 	SDL_Texture* mTexture = nullptr;
 
-private:
+protected:
 	SDL_Window* mWindow = nullptr;
 	
 	const char* title = NULL;

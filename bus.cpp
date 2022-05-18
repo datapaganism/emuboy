@@ -2,36 +2,8 @@
 
 #include "bus.hpp"
 
+
 void BUS::cycle_system_one_frame()
-{
-    int currentCycles = 0;
-
-    while (currentCycles <= CYCLES_PER_FRAME)
-    {
-
-            int cyclesUsed = this->cpu.fetch_decode_execute();
-
-            this->cpu.update_timers(cyclesUsed);
-
-            cyclesUsed += this->cpu.do_interrupts();
-
-            this->dma_controller.update_dma(cyclesUsed);
-
-            this->ppu.update_graphics(cyclesUsed);
-
-            currentCycles += cyclesUsed;
-
-            // Serial monitoring
-            if ((this->io[0xFF02 - IOOFFSET] & ~0x7E) == 0x81)
-            {
-                char c = this->io[0xFF01 - IOOFFSET];
-                printf("%c", c);
-                this->io[0xFF02 - IOOFFSET] = 0x0;
-            }
-    }
-}
-
-void BUS::cycle_system_one_frame_V2()
 {
     int currentCycles = 0;
 
@@ -58,46 +30,7 @@ void BUS::cycle_system_one_frame_V2()
     
 }
 
-void BUS::handleEvent(SDL_Event& e)
-{
-    if (e.type == SDL_WINDOWEVENT && e.window.windowID == this->mWindowID)
-    {
-        while (SDL_PollEvent(&e))
-        {
-            switch (e.type)
-            {
-            case SDL_KEYDOWN:
-            {
-                int keyPressed = e.key.keysym.sym;
-                enum JoypadButtons pressed = keyToEnum(keyPressed);
-                if (pressed != UNKNOWN)
-                    this->pressButton(pressed);
-            } break;
-            case SDL_KEYUP:
-            {
-                int keyPressed = e.key.keysym.sym;
-                enum JoypadButtons pressed = keyToEnum(keyPressed);
-                if (pressed != UNKNOWN)
-                    this->depressButton(pressed);
-            } break;
-            };
-        }
-    }
-}
 
-void BUS::updateState()
-{
-    this->cycle_system_one_frame();
-}
-
-void BUS::updateRender()
-{
-    if (this->ppu.lcd_enabled())
-    {
-        SDL_UpdateTexture(this->mTexture, NULL, this->framebuffer.get(), XRES * sizeof(FRAMEBUFFER_PIXEL));
-        SDL_RenderCopy(this->mRenderer, this->mTexture, NULL, NULL);
-    }
-}
 
 Byte BUS::DEBUG_ascii_to_hex(char character)
 {
@@ -163,7 +96,7 @@ int BUS::DEBUG_opcode_program(Word address, std::string byteString, int cycles)
     int cyclesUsed = 0;
     for (int i = 0; i < cycles; i++)
     {
-        cyclesUsed = this->cpu.fetch_decode_execute();
+        //cyclesUsed = this->cpu.fetch_decode_execute();
     }
     return cyclesUsed;
 }
@@ -281,7 +214,7 @@ void BUS::DEBUG_nintendo_logo()
 
 }
 
-BUS::BUS(const std::string rom_path, const std::string bios_path, int width, int height, int scaling, const char* title, bool shownOnStart) : Window(width, height, scaling,  title, shownOnStart)
+BUS::BUS(const std::string rom_path, const std::string bios_path)
 {
     this->cpu.connect_to_bus(this);
     this->ppu.connect_to_bus(this);
@@ -297,6 +230,7 @@ BUS::BUS(const std::string rom_path, const std::string bios_path, int width, int
         this->framebuffer[i] = FRAMEBUFFER_PIXEL(GB_PALLETE_00_r, GB_PALLETE_00_g, GB_PALLETE_00_b);
     }
 }
+
 
 
 void BUS::depressButton(const enum JoypadButtons button)

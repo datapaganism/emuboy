@@ -2,7 +2,6 @@
 #include <array>
 #include <memory>
 
-#include "Window.hpp"
 #include "cpu.hpp"
 #include "gamepak.hpp"
 #include "ppu.hpp"
@@ -21,15 +20,12 @@ enum MEMORY_ACCESS_TYPE
     debug,
 };
 
-
-class BUS : public Window
+class BUS
 {
 public:
+    BUS(const std::string rom_path, const std::string bios_path);
 
-    void handleEvent(SDL_Event& e);
-    void updateState();
-    void updateRender();
-
+    
     PPU ppu;
     CPU cpu;
     GAMEPAK gamepak;
@@ -47,16 +43,11 @@ public:
     
 
     Byte DEBUG_ascii_to_hex(char character);
-    /// <summary>
-    /// replaces area of memory with opcode string, useful for writing quick debugging programs
-    /// </summary>
-    /// <param name="address"></param>
-    /// <param name="byteString"></param>
+    // replaces area of memory with opcode string, useful for writing quick debugging programs
     int DEBUG_opcode_program(Word address, std::string byteString, int cycles);
     bool DEBUG_PC_breakpoint_hit = false;
     
-    BUS(const std::string rom_path, const std::string bios_path, int width, int height, int scaling, const char* title, bool shownOnStart);
-    
+   
     void init();
     void bios_init();
     Byte get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type);
@@ -75,7 +66,6 @@ public:
     /// Cycles the emulated system state by one frame (~70,221 cycles)
     /// </summary>
     void cycle_system_one_frame();
-    void cycle_system_one_frame_V2();
     
     bool biosLoaded = false;
 
@@ -85,7 +75,6 @@ public:
     void DEBUG_fill_ram(Word address, std::string byteString);
     void DEBUG_nintendo_logo();
 
-private:
     void load_bios(const std::string bios_name);
     
 

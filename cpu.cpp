@@ -288,21 +288,30 @@ void CPU::set_interrupt_flag(const enum InterruptTypes type, const bool value, W
     this->bus->set_memory(address, new_value, mem_type);
 }
 
+// some instructions only take a single cycle, peforming the fetch decode and execute in one mCycle
+
+// need to implement the prefetcher:
+// on the last mCycle of the execution of an instruction, the next opcode is prefetched and ready to run
+// therefore next cycle we just execute it, this is why it may looks like f d e is performed in one go
 
 void CPU::mStepCPU()
 {
     if (this->isExecutingInstruction)
     {
+        //decode and execute instruction // takes a cycle
         this->instruction_handler();
         if (!this->isExecutingInstruction)
+        {
+            this->prefetch_instruction();
             this->check_for_interrupts();
+            
+        }
         return;
     }
 
-    // if not, fetch instruction
-    this->mCyclesUsed = 0;
+    // if we havent prefetched anything, fetch instruction // takes a cycle
     this->currentRunningOpcode = this->get_byte_from_pc(); // read opcode
-    this->isExecutingInstruction = true;
+    this->setup_for_next_instruction();
 };
 
 void CPU::check_for_interrupts() 
@@ -333,9 +342,6 @@ void CPU::check_for_interrupts()
                 case InterruptTypes::joypad:  { this->interrupt_vector = 0x0060; } break;
                 default: throw "Unreachable interrupt type"; break;
                 }
-                // to trigger the next instructions of the cpu to setup the interrupt and reset the mCyclestaken
-                this->mCyclesUsed = 0;
-                this->isExecutingInstruction = true;
             }   
         }
     }
@@ -373,6 +379,18 @@ void CPU::setup_interrupt_handler()
     }
 }
 
+void CPU::setup_for_next_instruction()
+{
+    this->mCyclesUsed = 0;
+    this->isExecutingInstruction = true;
+}
+
+void CPU::prefetch_instruction()
+{
+    this->setup_for_next_instruction();
+    this->currentRunningOpcode = this->get_byte_from_pc();
+}
+
 void CPU::instruction_handler()
 {
     if (this->interrupt_vector != 0) 
@@ -383,140 +401,140 @@ void CPU::instruction_handler()
 
     switch (this->currentRunningOpcode)
     {
-    case 0x00: { } break; //NOP
-    case 0x01: { this->ins_LD_n_nn(nullptr, &this->registers.b, &this->registers.c, this->get_word_from_pc_lsbf()); } break;
-    case 0x02: { this->ins_LD_r1_r2(nullptr, this->registers.get_BC(), &this->registers.a); } break;
-    case 0x03: { this->ins_INC_nn(&this->registers.b, &this->registers.c); } break;
-    case 0x04: { this->ins_INC_n(&this->registers.b); } break;
-    case 0x05: { this->ins_DEC_n(&this->registers.b); } break;
-    case 0x06: { this->ins_LD_nn_n(&this->registers.b, this->get_byte_from_pc()); } break;
+    case 0x00: { this->isExecutingInstruction = false; } break; //NOP
+    case 0x01: { this->ins_LD_XX_u16(&this->registers.b, &this->registers.c); } break;
+    case 0x02: { this->ins_LD_bXXb_Y(this->registers.get_BC(), &this->registers.a); } break;
+    case 0x03: { this->ins_INC_XX(&this->registers.b, &this->registers.c); } break;
+    case 0x04: { this->ins_INC_X(&this->registers.b); } break;
+    case 0x05: { this->ins_DEC_X(&this->registers.b); } break;
+    case 0x06: { this->ins_LD_X_u8(&this->registers.b); } break;
     case 0x07: { this->ins_RLCA(); } break;
 
-    case 0x08: { this->ins_LD_nn_SP(this->get_word_from_pc_lsbf(), this->registers.sp); } break;
-    case 0x09: { this->ins_ADD_HL_n(this->registers.get_BC()); } break;
-    case 0x0A: { this->ins_LD_r1_r2(&this->registers.a, this->registers.get_BC()); } break;
-    case 0x0B: { this->ins_DEC_nn(&this->registers.b, &this->registers.c); } break;
-    case 0x0C: { this->ins_INC_n(&this->registers.c); } break;
-    case 0x0D: { this->ins_DEC_n(&this->registers.c); } break;
-    case 0x0E: { this->ins_LD_nn_n(&this->registers.c, this->get_byte_from_pc()); } break;
+    case 0x08: { this->ins_bu16b_SP(); } break;
+    case 0x09: { this->ins_ADD_HL_XX(&this->registers.b,&this->registers.c); } break;
+    case 0x0A: { this->ins_LD_X_bYYb(&this->registers.a, &this->registers.b, &this->registers.c);  } break;
+    case 0x0B: { this->ins_DEC_XX(&this->registers.b, &this->registers.c); } break;
+    case 0x0C: { this->ins_INC_X(&this->registers.c); } break;
+    case 0x0D: { this->ins_DEC_X(&this->registers.c); } break;
+    case 0x0E: { this->ins_LD_X_u8(&this->registers.c); } break;
     case 0x0F: { this->ins_RRCA(); } break;
 
     case 0x10: { this->STOP_instruction_handler(); } break;
-    case 0x11: { this->ins_LD_n_nn(nullptr, &this->registers.d, &this->registers.e, this->get_word_from_pc_lsbf()); } break;
-    case 0x12: { this->ins_LD_r1_r2(nullptr, this->registers.get_DE(), &this->registers.a); } break;
-    case 0x13: { this->ins_INC_nn(&this->registers.d, &this->registers.e); } break;
-    case 0x14: { this->ins_INC_n(&this->registers.d); } break;
-    case 0x15: { this->ins_DEC_n(&this->registers.d); } break;
-    case 0x16: { this->ins_LD_nn_n(&this->registers.d, this->get_byte_from_pc()); } break;
+    case 0x11: { this->ins_LD_XX_u16(&this->registers.d, &this->registers.e); } break;
+    case 0x12: { this->ins_LD_bXXb_Y(this->registers.get_DE(), &this->registers.a); } break;
+    case 0x13: { this->ins_INC_XX(&this->registers.d, &this->registers.e); } break;
+    case 0x14: { this->ins_INC_X(&this->registers.d); } break;
+    case 0x15: { this->ins_DEC_X(&this->registers.d); } break;
+    case 0x16: { this->ins_LD_X_u8(&this->registers.d); } break;
     case 0x17: { this->ins_RLA(); } break;
 
-    case 0x18: { this->ins_JR_n(this->get_byte_from_pc()); } break;
-    case 0x19: { this->ins_ADD_HL_n(this->registers.get_DE()); } break;
-    case 0x1A: { this->ins_LD_r1_r2(&this->registers.a, this->registers.get_DE()); } break;
-    case 0x1B: { this->ins_DEC_nn(&this->registers.d, &this->registers.e); } break;
-    case 0x1C: { this->ins_INC_n(&this->registers.e); } break;
-    case 0x1D: { this->ins_DEC_n(&this->registers.e); } break;
-    case 0x1E: { this->ins_LD_nn_n(&this->registers.e, this->get_byte_from_pc()); } break;
+    case 0x18: { this->ins_JR_i8(); } break;
+    case 0x19: { this->ins_ADD_HL_XX(&this->registers.d, &this->registers.e); } break;
+    case 0x1A: { this->ins_LD_X_bYYb(&this->registers.a, &this->registers.d, &this->registers.e);  } break;
+    case 0x1B: { this->ins_DEC_XX(&this->registers.d, &this->registers.e); } break;
+    case 0x1C: { this->ins_INC_X(&this->registers.e); } break;
+    case 0x1D: { this->ins_DEC_X(&this->registers.e); } break;
+    case 0x1E: { this->ins_LD_X_u8(&this->registers.e); } break;
     case 0x1F: { this->ins_RRA(); } break;
 
-    case 0x20: { this->ins_JR_cc_n(NZ, this->get_byte_from_pc()); } break;
-    case 0x21: { this->ins_LD_n_nn(nullptr, &this->registers.h, &this->registers.l, this->get_word_from_pc_lsbf()); } break;
-    case 0x22: { this->ins_LDDI_nn_r1(this->registers.get_HL(), &this->registers.a, &this->registers.h, &this->registers.l, +1); } break;
-    case 0x23: { this->ins_INC_nn(&this->registers.h, &this->registers.l); } break;
-    case 0x24: { this->ins_INC_n(&this->registers.h); } break;
-    case 0x25: { this->ins_DEC_n(&this->registers.h); } break;
-    case 0x26: { this->ins_LD_nn_n(&this->registers.h, this->get_byte_from_pc()); } break;
+    case 0x20: { this->ins_JR_NZ_i8(); } break;
+    case 0x21: { this->ins_LD_XX_u16(&this->registers.h, &this->registers.l); } break;
+    case 0x22: { this->ins_LD_bHLb_Apm(true); } break;
+    case 0x23: { this->ins_INC_XX(&this->registers.h, &this->registers.l); } break;
+    case 0x24: { this->ins_INC_X(&this->registers.h); } break;
+    case 0x25: { this->ins_DEC_X(&this->registers.h); } break;
+    case 0x26: { this->ins_LD_X_u8(&this->registers.h); } break;
     case 0x27: { this->ins_DAA(); } break;
 
-    case 0x28: { this->ins_JR_cc_n(Z, this->get_byte_from_pc()); } break;
-    case 0x29: { this->ins_ADD_HL_n(this->registers.get_HL()); } break;
-    case 0x2A: { this->ins_LDDI_r1_nn(&this->registers.a, this->registers.get_HL(), &this->registers.h, &this->registers.l, +1); } break;
-    case 0x2B: { this->ins_DEC_nn(&this->registers.h, &this->registers.l); } break;
-    case 0x2C: { this->ins_INC_n(&this->registers.l); } break;
-    case 0x2D: { this->ins_DEC_n(&this->registers.l); } break;
-    case 0x2E: { this->ins_LD_nn_n(&this->registers.l, this->get_byte_from_pc()); } break;
+    case 0x28: { this->ins_JR_Z_i8(); } break;
+    case 0x29: { this->ins_ADD_HL_XX(&this->registers.h, &this->registers.l); } break;
+    case 0x2A: { this->ins_LD_X_bYYb(&this->registers.a, &this->registers.h, &this->registers.l, +1);  } break;
+    case 0x2B: { this->ins_DEC_XX(&this->registers.h, &this->registers.l); } break;
+    case 0x2C: { this->ins_INC_X(&this->registers.l); } break;
+    case 0x2D: { this->ins_DEC_X(&this->registers.l); } break;
+    case 0x2E: { this->ins_LD_X_u8(&this->registers.l); } break;
     case 0x2F: { this->ins_CPL(); } break;
 
-    case 0x30: { this->ins_JR_cc_n(NC, this->get_byte_from_pc()); } break;
-    case 0x31: { this->ins_LD_n_nn(&this->registers.sp, nullptr, nullptr, this->get_word_from_pc_lsbf()); } break;
-    case 0x32: { this->ins_LDDI_nn_r1(this->registers.get_HL(), &this->registers.a, &this->registers.h, &this->registers.l, -1); } break;
-    case 0x33: { this->ins_INC_nn(nullptr, nullptr, &this->registers.sp); } break;
-    case 0x34: { this->ins_INC_n(nullptr, this->registers.get_HL()); } break;
+    case 0x30: { this->ins_JR_NC_i8(); } break;
+    case 0x31: { this->ins_LD_SP_u16(&this->registers.sp); } break; //sp is a word
+    case 0x32: { this->ins_LD_bHLb_Apm(false); } break;
+    case 0x33: { this->ins_INC_SP(); } break;
+    case 0x34: { this->ins_INC_bHLb(); } break;
     case 0x35: { this->ins_DEC_n(nullptr, this->registers.get_HL()); } break;
-    case 0x36: { this->ins_LD_r1_r2(nullptr, this->registers.get_HL(), nullptr, this->get_byte_from_pc()); } break;
+    case 0x36: { this->ins_LD_bHLb_u8(); } break;
     case 0x37: { this->ins_SCF(); } break;
 
-    case 0x38: { this->ins_JR_cc_n(C, this->get_byte_from_pc()); } break;
-    case 0x39: { this->ins_ADD_HL_n(this->registers.sp); } break;
-    case 0x3A: { this->ins_LDDI_r1_nn(&this->registers.a, this->registers.get_HL(), &this->registers.h, &this->registers.l, -1); } break;
-    case 0x3B: { this->ins_DEC_nn(nullptr, nullptr, &this->registers.sp); } break;
-    case 0x3C: { this->ins_INC_n(&this->registers.a); } break;
-    case 0x3D: { this->ins_DEC_n(&this->registers.a); } break;
-    case 0x3E: { this->ins_LD_nn_n(&this->registers.a, this->get_byte_from_pc()); } break;
+    case 0x38: { this->ins_JR_C_i8(); } break;
+    case 0x39: { this->ins_ADD_HL_SP(); } break;
+    case 0x3A: { this->ins_LD_X_bYYb(&this->registers.l, &this->registers.h, &this->registers.l, -1);  } break;
+    case 0x3B: { this->ins_DEC_SP(); } break;
+    case 0x3C: { this->ins_INC_X(&this->registers.a); } break;
+    case 0x3D: { this->ins_DEC_X(&this->registers.a); } break;
+    case 0x3E: { this->ins_LD_X_u8(&this->registers.a); } break;
     case 0x3F: { this->ins_CCF(); } break;
 
-    case 0x40: { this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.b); } break;
-    case 0x41: { this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.c); } break;
-    case 0x42: { this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.d); } break;
-    case 0x43: { this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.e); } break;
-    case 0x44: { this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.h); } break;
-    case 0x45: { this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.l); } break;
-    case 0x46: { this->ins_LD_r1_r2(&this->registers.b, this->registers.get_HL()); } break;
-    case 0x47: { this->ins_LD_r1_r2(&this->registers.b, NULL, &this->registers.a); } break;
+    case 0x40: { this->ins_LD_X_Y(&this->registers.b, &this->registers.b); } break;
+    case 0x41: { this->ins_LD_X_Y(&this->registers.b, &this->registers.c); } break;
+    case 0x42: { this->ins_LD_X_Y(&this->registers.b, &this->registers.d); } break;
+    case 0x43: { this->ins_LD_X_Y(&this->registers.b, &this->registers.e); } break;
+    case 0x44: { this->ins_LD_X_Y(&this->registers.b, &this->registers.h); } break;
+    case 0x45: { this->ins_LD_X_Y(&this->registers.b, &this->registers.l); } break;
+    case 0x46: { this->ins_LD_X_bYYb(&this->registers.b, &this->registers.h, &this->registers.l); } break;
+    case 0x47: { this->ins_LD_X_Y(&this->registers.b, &this->registers.a); } break;
 
-    case 0x48: { this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.b); } break;
-    case 0x49: { this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.c); } break;
-    case 0x4A: { this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.d); } break;
-    case 0x4B: { this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.e); } break;
-    case 0x4C: { this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.h); } break;
-    case 0x4D: { this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.l); } break;
-    case 0x4E: { this->ins_LD_r1_r2(&this->registers.c, this->registers.get_HL()); } break;
-    case 0x4F: { this->ins_LD_r1_r2(&this->registers.c, NULL, &this->registers.a); } break;
+    case 0x48: { this->ins_LD_X_Y(&this->registers.c, &this->registers.b); } break;
+    case 0x49: { this->ins_LD_X_Y(&this->registers.c, &this->registers.c); } break;
+    case 0x4A: { this->ins_LD_X_Y(&this->registers.c, &this->registers.d); } break;
+    case 0x4B: { this->ins_LD_X_Y(&this->registers.c, &this->registers.e); } break;
+    case 0x4C: { this->ins_LD_X_Y(&this->registers.c, &this->registers.h); } break;
+    case 0x4D: { this->ins_LD_X_Y(&this->registers.c, &this->registers.l); } break;
+    case 0x4E: { this->ins_LD_X_bYYb(&this->registers.c, &this->registers.h, &this->registers.l); } break;
+    case 0x4F: { this->ins_LD_X_Y(&this->registers.c, &this->registers.a); } break;
 
-    case 0x50: { this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.b); } break;
-    case 0x51: { this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.c); } break;
-    case 0x52: { this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.d); } break;
-    case 0x53: { this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.e); } break;
-    case 0x54: { this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.h); } break;
-    case 0x55: { this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.l); } break;
-    case 0x56: { this->ins_LD_r1_r2(&this->registers.d, this->registers.get_HL()); } break;
-    case 0x57: { this->ins_LD_r1_r2(&this->registers.d, NULL, &this->registers.a); } break;
+    case 0x50: { this->ins_LD_X_Y(&this->registers.d, &this->registers.b); } break;
+    case 0x51: { this->ins_LD_X_Y(&this->registers.d, &this->registers.c); } break;
+    case 0x52: { this->ins_LD_X_Y(&this->registers.d, &this->registers.d); } break;
+    case 0x53: { this->ins_LD_X_Y(&this->registers.d, &this->registers.e); } break;
+    case 0x54: { this->ins_LD_X_Y(&this->registers.d, &this->registers.h); } break;
+    case 0x55: { this->ins_LD_X_Y(&this->registers.d, &this->registers.l); } break;
+    case 0x56: { this->ins_LD_X_bYYb(&this->registers.d, &this->registers.h, &this->registers.l); } break;
+    case 0x57: { this->ins_LD_X_Y(&this->registers.d, &this->registers.a); } break;
 
-    case 0x58: { this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.b); } break;
-    case 0x59: { this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.c); } break;
-    case 0x5A: { this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.d); } break;
-    case 0x5B: { this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.e); } break;
-    case 0x5C: { this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.h); } break;
-    case 0x5D: { this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.l); } break;
-    case 0x5E: { this->ins_LD_r1_r2(&this->registers.e, this->registers.get_HL()); } break;
-    case 0x5F: { this->ins_LD_r1_r2(&this->registers.e, NULL, &this->registers.a); } break;
+    case 0x58: { this->ins_LD_X_Y(&this->registers.e, &this->registers.b); } break;
+    case 0x59: { this->ins_LD_X_Y(&this->registers.e, &this->registers.c); } break;
+    case 0x5A: { this->ins_LD_X_Y(&this->registers.e, &this->registers.d); } break;
+    case 0x5B: { this->ins_LD_X_Y(&this->registers.e, &this->registers.e); } break;
+    case 0x5C: { this->ins_LD_X_Y(&this->registers.e, &this->registers.h); } break;
+    case 0x5D: { this->ins_LD_X_Y(&this->registers.e, &this->registers.l); } break;
+    case 0x5E: { this->ins_LD_X_bYYb(&this->registers.e, &this->registers.h, &this->registers.l); } break;
+    case 0x5F: { this->ins_LD_X_Y(&this->registers.e, &this->registers.a); } break;
 
-    case 0x60: { this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.b); } break;
-    case 0x61: { this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.c); } break;
-    case 0x62: { this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.d); } break;
-    case 0x63: { this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.e); } break;
-    case 0x64: { this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.h); } break;
-    case 0x65: { this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.l); } break;
-    case 0x66: { this->ins_LD_r1_r2(&this->registers.h, this->registers.get_HL()); } break;
-    case 0x67: { this->ins_LD_r1_r2(&this->registers.h, NULL, &this->registers.a); } break;
+    case 0x60: { this->ins_LD_X_Y(&this->registers.h, &this->registers.b); } break;
+    case 0x61: { this->ins_LD_X_Y(&this->registers.h, &this->registers.c); } break;
+    case 0x62: { this->ins_LD_X_Y(&this->registers.h, &this->registers.d); } break;
+    case 0x63: { this->ins_LD_X_Y(&this->registers.h, &this->registers.e); } break;
+    case 0x64: { this->ins_LD_X_Y(&this->registers.h, &this->registers.h); } break;
+    case 0x65: { this->ins_LD_X_Y(&this->registers.h, &this->registers.l); } break;
+    case 0x66: { this->ins_LD_X_bYYb(&this->registers.h, &this->registers.h, &this->registers.l); } break;
+    case 0x67: { this->ins_LD_X_Y(&this->registers.h, &this->registers.a); } break;
 
-    case 0x68: { this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.b); } break;
-    case 0x69: { this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.c); } break;
-    case 0x6A: { this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.d); } break;
-    case 0x6B: { this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.e); } break;
-    case 0x6C: { this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.h); } break;
-    case 0x6D: { this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.l); } break;
-    case 0x6E: { this->ins_LD_r1_r2(&this->registers.l, this->registers.get_HL()); } break;
-    case 0x6F: { this->ins_LD_r1_r2(&this->registers.l, NULL, &this->registers.a); } break;
+    case 0x68: { this->ins_LD_X_Y(&this->registers.l, &this->registers.b); } break;
+    case 0x69: { this->ins_LD_X_Y(&this->registers.l, &this->registers.c); } break;
+    case 0x6A: { this->ins_LD_X_Y(&this->registers.l, &this->registers.d); } break;
+    case 0x6B: { this->ins_LD_X_Y(&this->registers.l, &this->registers.e); } break;
+    case 0x6C: { this->ins_LD_X_Y(&this->registers.l, &this->registers.h); } break;
+    case 0x6D: { this->ins_LD_X_Y(&this->registers.l, &this->registers.l); } break;
+    case 0x6E: { this->ins_LD_X_bYYb(&this->registers.l, &this->registers.h, &this->registers.l); } break;
+    case 0x6F: { this->ins_LD_X_Y(&this->registers.l, &this->registers.a); } break;
 
-    case 0x70: { this->ins_LD_r1_r2(nullptr, this->registers.get_HL(), &this->registers.b); } break;
-    case 0x71: { this->ins_LD_r1_r2(nullptr, this->registers.get_HL(), &this->registers.c); } break;
-    case 0x72: { this->ins_LD_r1_r2(nullptr, this->registers.get_HL(), &this->registers.d); } break;
-    case 0x73: { this->ins_LD_r1_r2(nullptr, this->registers.get_HL(), &this->registers.e); } break;
-    case 0x74: { this->ins_LD_r1_r2(nullptr, this->registers.get_HL(), &this->registers.h); } break;
-    case 0x75: { this->ins_LD_r1_r2(nullptr, this->registers.get_HL(), &this->registers.l); } break;
+    case 0x70: { this->ins_LD_bXXb_Y(this->registers.get_HL(), &this->registers.b); } break;
+    case 0x71: { this->ins_LD_bXXb_Y(this->registers.get_HL(), &this->registers.c); } break;
+    case 0x72: { this->ins_LD_bXXb_Y(this->registers.get_HL(), &this->registers.d); } break;
+    case 0x73: { this->ins_LD_bXXb_Y(this->registers.get_HL(), &this->registers.e); } break;
+    case 0x74: { this->ins_LD_bXXb_Y(this->registers.get_HL(), &this->registers.h); } break;
+    case 0x75: { this->ins_LD_bXXb_Y(this->registers.get_HL(), &this->registers.l); } break;
     case 0x76: { this->is_halted = true; } break; //HALT
-    case 0x77: { this->ins_LD_r1_r2(nullptr, this->registers.get_HL(), &this->registers.a); } break;
+    case 0x77: { this->ins_LD_bXXb_Y(this->registers.get_HL(), &this->registers.a); } break;
 
     case 0x78: { this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.b); } break;
     case 0x79: { this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.c); } break;
@@ -527,41 +545,41 @@ void CPU::instruction_handler()
     case 0x7E: { this->ins_LD_r1_r2(&this->registers.a, this->registers.get_HL()); } break;
     case 0x7F: { this->ins_LD_r1_r2(&this->registers.a, NULL, &this->registers.a); } break;
 
-    case 0x80: { this->ins_ADD_A_n(&this->registers.b); } break;
-    case 0x81: { this->ins_ADD_A_n(&this->registers.c); } break;
-    case 0x82: { this->ins_ADD_A_n(&this->registers.d); } break;
-    case 0x83: { this->ins_ADD_A_n(&this->registers.e); } break;
-    case 0x84: { this->ins_ADD_A_n(&this->registers.h); } break;
-    case 0x85: { this->ins_ADD_A_n(&this->registers.l); } break;
-    case 0x86: { this->ins_ADD_A_n(nullptr, this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu)); } break;
-    case 0x87: { this->ins_ADD_A_n(&this->registers.a); } break;
+    case 0x80: { this->ins_ADD_A_X(&this->registers.b); } break;
+    case 0x81: { this->ins_ADD_A_X(&this->registers.c); } break;
+    case 0x82: { this->ins_ADD_A_X(&this->registers.d); } break;
+    case 0x83: { this->ins_ADD_A_X(&this->registers.e); } break;
+    case 0x84: { this->ins_ADD_A_X(&this->registers.h); } break;
+    case 0x85: { this->ins_ADD_A_X(&this->registers.l); } break;
+    case 0x86: { this->ins_ADD_A_bHLb(); } break;
+    case 0x87: { this->ins_ADD_A_X(&this->registers.a); } break;
 
-    case 0x88: { this->ins_ADC_A_n(&this->registers.b); } break;
-    case 0x89: { this->ins_ADC_A_n(&this->registers.c); } break;
-    case 0x8A: { this->ins_ADC_A_n(&this->registers.d); } break;
-    case 0x8B: { this->ins_ADC_A_n(&this->registers.e); } break;
-    case 0x8C: { this->ins_ADC_A_n(&this->registers.h); } break;
-    case 0x8D: { this->ins_ADC_A_n(&this->registers.l); } break;
-    case 0x8E: { this->ins_ADC_A_n(nullptr, this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu)); } break;
-    case 0x8F: { this->ins_ADC_A_n(&this->registers.a); } break;
+    case 0x88: { this->ins_ADC_A_X(&this->registers.b); } break;
+    case 0x89: { this->ins_ADC_A_X(&this->registers.c); } break;
+    case 0x8A: { this->ins_ADC_A_X(&this->registers.d); } break;
+    case 0x8B: { this->ins_ADC_A_X(&this->registers.e); } break;
+    case 0x8C: { this->ins_ADC_A_X(&this->registers.h); } break;
+    case 0x8D: { this->ins_ADC_A_X(&this->registers.l); } break;
+    case 0x8E: { this->ins_ADC_A_bHLb(); } break;
+    case 0x8F: { this->ins_ADC_A_X(&this->registers.a); } break;
 
-    case 0x90: { this->ins_SUB_n(&this->registers.b); } break;
-    case 0x91: { this->ins_SUB_n(&this->registers.c); } break;
-    case 0x92: { this->ins_SUB_n(&this->registers.d); } break;
-    case 0x93: { this->ins_SUB_n(&this->registers.e); } break;
-    case 0x94: { this->ins_SUB_n(&this->registers.h); } break;
-    case 0x95: { this->ins_SUB_n(&this->registers.l); } break;
-    case 0x96: { this->ins_SUB_n(nullptr, this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu)); } break;
-    case 0x97: { this->ins_SUB_n(&this->registers.a); } break;
+    case 0x90: { this->ins_SUB_A_X(&this->registers.b); } break;
+    case 0x91: { this->ins_SUB_A_X(&this->registers.c); } break;
+    case 0x92: { this->ins_SUB_A_X(&this->registers.d); } break;
+    case 0x93: { this->ins_SUB_A_X(&this->registers.e); } break;
+    case 0x94: { this->ins_SUB_A_X(&this->registers.h); } break;
+    case 0x95: { this->ins_SUB_A_X(&this->registers.l); } break;
+    case 0x96: { this->ins_SUB_A_bHLb(); } break;
+    case 0x97: { this->ins_SUB_A_X(&this->registers.a); } break;
 
-    case 0x98: { this->ins_SBC_A_n(&this->registers.b); } break;
-    case 0x99: { this->ins_SBC_A_n(&this->registers.c); } break;
-    case 0x9A: { this->ins_SBC_A_n(&this->registers.d); } break;
-    case 0x9B: { this->ins_SBC_A_n(&this->registers.e); } break;
-    case 0x9C: { this->ins_SBC_A_n(&this->registers.h); } break;
-    case 0x9D: { this->ins_SBC_A_n(&this->registers.l); } break;
-    case 0x9E: { this->ins_SBC_A_n(nullptr, this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu)); } break;
-    case 0x9F: { this->ins_SBC_A_n(&this->registers.a); } break;
+    case 0x98: { this->ins_SBC_A_X(&this->registers.b); } break;
+    case 0x99: { this->ins_SBC_A_X(&this->registers.c); } break;
+    case 0x9A: { this->ins_SBC_A_X(&this->registers.d); } break;
+    case 0x9B: { this->ins_SBC_A_X(&this->registers.e); } break;
+    case 0x9C: { this->ins_SBC_A_X(&this->registers.h); } break;
+    case 0x9D: { this->ins_SBC_A_X(&this->registers.l); } break;
+    case 0x9E: { this->ins_SBC_A_bHLb(); } break;
+    case 0x9F: { this->ins_SBC_A_X(&this->registers.a); } break;
 
     case 0xA0: { this->ins_AND_n(&this->registers.b); } break;
     case 0xA1: { this->ins_AND_n(&this->registers.c); } break;
@@ -614,7 +632,7 @@ void CPU::instruction_handler()
     case 0xCB: { this->CB_instruction_handler(); } break;
     case 0xCC: { this->ins_CALL_cc_nn(Z, this->get_word_from_pc_lsbf()); } break;
     case 0xCD: { this->ins_CALL_nn(this->get_word_from_pc_lsbf()); } break;
-    case 0xCE: { this->ins_ADC_A_n(nullptr, this->get_byte_from_pc()); } break;
+    case 0xCE: { this->ins_ADC_A_u8(); } break;
     case 0xCF: { this->ins_RST_n(0x08); } break;
 
     case 0xD0: { this->ins_RET_cc(NC); } break;
@@ -623,7 +641,7 @@ void CPU::instruction_handler()
         //case 0xD3: { this->ins_SBC_A_n(nullptr, this->get_byte_from_pc()); } break;
     case 0xD4: { this->ins_CALL_cc_nn(NC, this->get_word_from_pc_lsbf()); } break;
     case 0xD5: { this->ins_PUSH_nn(this->registers.get_DE()); } break;
-    case 0xD6: { this->ins_SUB_n(nullptr, this->get_byte_from_pc());  } break;
+    case 0xD6: { this->ins_SUB_A_u8();  } break;
     case 0xD7: { this->ins_RST_n(0x10); } break;
 
     case 0xD8: { this->ins_RET_cc(C); } break; //35
@@ -632,12 +650,12 @@ void CPU::instruction_handler()
         //case 0xDB: { } break;
     case 0xDC: { this->ins_CALL_cc_nn(C, this->get_word_from_pc_lsbf()); } break;
         //case 0xDD: { } break;
-    case 0xDE: { this->ins_SBC_A_n(nullptr, this->get_byte_from_pc()); } break;
+    case 0xDE: { this->ins_SBC_A_u8(); } break;
     case 0xDF: { this->ins_RST_n(0x18); } break;
 
     case 0xE0: { this->ins_LD_r1_r2(nullptr, 0xFF00 + this->get_byte_from_pc(), nullptr, this->registers.a); } break;
     case 0xE1: { this->ins_POP_nn(&this->registers.h, &this->registers.l); } break;
-    case 0xE2: { this->ins_LD_r1_r2(nullptr, 0xFF00 + this->registers.c, &this->registers.a); } break;
+    case 0xE2: { this->ins_LD_bXXb_Y(0xFF00 + this->registers.c, &this->registers.a); } break;
         //case 0xE3: { } break;
         //case 0xE4: { } break;
     case 0xE5: { this->ins_PUSH_nn(this->registers.get_HL()); } break;
@@ -656,7 +674,7 @@ void CPU::instruction_handler()
     case 0xF0: { this->ins_LD_r1_nn(&this->registers.a, 0xFF00 + this->get_byte_from_pc(), 12); } break;
     case 0xF1: { this->ins_POP_nn(&this->registers.a, &this->registers.f); } break;
     case 0xF2: { this->ins_LD_r1_r2(&this->registers.a, 0xFF00 + this->registers.c); } break;
-    case 0xF3: { this->interrupt_master_enable = 0; } break; //DIsable interrupts immediately
+    case 0xF3: { this->interrupt_master_enable = 0; this->EI_triggered = false; this->isExecutingInstruction = false; } break; //DIsable interrupts immediately, if EI is set to trigger, we can disable it so we can keep the behaviour of EI then DI never enabling interrupts
     //case 0xF4: { } break;
     case 0xF5: { this->ins_PUSH_nn(this->registers.get_AF()); } break;
     case 0xF6: { this->ins_OR_n(nullptr, this->get_byte_from_pc()); } break;
@@ -665,7 +683,7 @@ void CPU::instruction_handler()
     case 0xF8: { this->ins_LDHL_SP_n(&this->registers.h, &this->registers.l, this->registers.sp, this->get_byte_from_pc()); } break;
     case 0xF9: { this->ins_LD_nn_nn(&this->registers.sp, this->registers.get_HL()); } break;
     case 0xFA: { this->ins_LD_r1_nn(&this->registers.a, this->get_word_from_pc_lsbf(), 16); } break;
-    case 0xFB: { this->EI_triggered = true; return; } break; // EI is set to trigger, only activates after next instruction finishes note the early return
+    case 0xFB: { this->EI_triggered = true; this->isExecutingInstruction = false; return; } break; // EI is set to trigger, only activates after next instruction finishes note the early return
     //case 0xFC: { } break;
     //case 0xFD: { } break;
     case 0xFE: { this->ins_CP_n(nullptr, this->get_byte_from_pc()); } break;

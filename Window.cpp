@@ -193,19 +193,3 @@ bool Window::initSuccess()
 {
 	return this->mWindow != nullptr && this->mRenderer != nullptr;;
 }
-
-//
-// Virtual Section
-//
-
-void Window::handleEvent(SDL_Event& e)
-{
-}
-
-void Window::updateState()
-{
-}
-
-void Window::updateRender()
-{
-}
