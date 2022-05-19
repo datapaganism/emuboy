@@ -10,21 +10,13 @@ int main(int argc, char* argv[])
 
     BUS bus(rom_path, bios_path);
     bus.cpu.registers.pc = 0xC000;
-    bus.set_memory(bus.cpu.registers.pc, 0xf3, MEMORY_ACCESS_TYPE::debug);
-    bus.set_memory(bus.cpu.registers.pc+1, 0xfb, MEMORY_ACCESS_TYPE::debug);
-    bus.set_memory(bus.cpu.registers.pc+2, 0x00, MEMORY_ACCESS_TYPE::debug);
+    bus.DEBUG_opcode_program(0xC000, "31 12 43 08 00 C0");
 
-    bus.set_memory(bus.cpu.registers.pc +3, 0xf3, MEMORY_ACCESS_TYPE::debug);
-    bus.set_memory(bus.cpu.registers.pc +4, 0x00, MEMORY_ACCESS_TYPE::debug);
-
-    bus.cpu.mStepCPU();
-    bus.cpu.mStepCPU();
-    bus.cpu.mStepCPU();
-    bus.cpu.mStepCPU();
-    bus.cpu.mStepCPU();
-    bus.cpu.mStepCPU();
-    bus.cpu.mStepCPU();
-    bus.cpu.mStepCPU();
-
+    Byte temp = 0;
+    while(1)
+    {
+        bus.cpu.mStepCPU();
+        temp = bus.get_memory(0xC000, MEMORY_ACCESS_TYPE::debug);
+    }
     return 0;
 }

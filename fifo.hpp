@@ -35,8 +35,5 @@ public:
 
 	void reset();
 private:
-	
-
-	
 
 };

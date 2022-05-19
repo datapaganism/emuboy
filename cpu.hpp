@@ -21,7 +21,8 @@ enum JumpCondition
 	NZ,
 	Z,
 	NC,
-	C
+	C,
+	BYPASS
 };
 
 enum InterruptTypes
@@ -62,6 +63,11 @@ public:
 	void set_BC(const Word value) { this->set_word(&this->b, &this->c, value); };
 	void set_DE(const Word value) { this->set_word(&this->d, &this->e, value); };
 	void set_HL(const Word value) { this->set_word(&this->h, &this->l, value); };
+
+	void set_lowByte(Word* wordRegister, const Byte value) { *wordRegister = (* wordRegister & 0xFF00) | value; };
+	void set_highByte(Word* wordRegister, const Byte value) { *wordRegister = (* wordRegister & 0x00FF) | value << 8; };
+	Byte get_lowByte(Word* wordRegister) { return (*wordRegister & 0xFF00) >> 8; };
+	Byte get_highByte(Word* wordRegister) { return (*wordRegister & 0x00FF); };
 
 
 
@@ -111,7 +117,7 @@ private:
 	// the address bus has a cpu attached to it but the cpu itself needs to be connected to the bus to access other devices.
 
 public:
-
+	bool debug_toggle = false;
 
 	void bios_init();
 
@@ -154,7 +160,9 @@ public:
 	/// </summary>
 	void mStepCPU();
 
-	int do_interrupts();
+	void DEBUG_printCurrentState(Word pc);
+
+	//int do_interrupts();
 	void update_timers(const int cycles);
 
 	void update_timerCounter();
@@ -173,8 +181,10 @@ private:
 	Byte get_TMC_frequency();
 
 	Byte currentRunningOpcode = 0;
+	Byte currentRunningCB = 0;
 	Byte  mCyclesUsed = 0;
 	bool isExecutingInstruction = false;
+	bool isExecutingCB = false;
 	Byte instructionCache[5] = { 0 };
 
 
@@ -201,6 +211,8 @@ private:
 	bool checkCarry(const int a, const int b, const int shift, const int c = NULL);
 	bool checkBorrow(const int a, const int b, const int shift, const int c = NULL);
 
+	bool checkJumpCondition(enum JumpCondition condition);
+
 	// instruction declarations
 
 	void ins_LD_XX_u16(Byte* const registerOne, Byte* const registerTwo);
@@ -223,12 +235,8 @@ private:
 	void ins_RLA();
 	void ins_RRCA();
 	void ins_RRA();
-	void ins_bu16b_SP();
-	void ins_JR_i8();
-	void ins_JR_Z_i8();
-	void ins_JR_C_i8();
-	void ins_JR_NZ_i8();
-	void ins_JR_NC_i8();
+	void ins_LD_bu16b_SP();
+	void ins_JR_i8(const enum JumpCondition condition = BYPASS);
 	void ins_ADD_HL_XX(Byte* const registerOne, Byte* const registerTwo);
 	void ins_ADD_HL_SP();
 	void ins_ADD_A_X(Byte* const registerByte);
@@ -254,9 +262,100 @@ private:
 	void ins_SBC_A_u8();
 
 	void ins_SBC_A_bHLb();
-	
 
+	void ins_AND_A_X(Byte* const registerByte);
 
+	void ins_AND_A_u8();
+
+	void ins_AND_A_bHLb();
+
+	void ins_XOR_A_X(Byte* const registerByte);
+
+	void ins_XOR_A_u8();
+
+	void ins_XOR_A_bHLb();
+
+	void ins_OR_A_X(Byte* const registerByte);
+
+	void ins_OR_A_u8();
+
+	void ins_OR_A_bHLb();
+
+	void ins_CP_A_X(Byte* const registerByte);
+
+	void ins_CP_A_u8();
+
+	void ins_CP_A_bHLb();
+
+	void ins_POP_XX(Byte* registerOne, Byte* registerTwo);
+
+	void ins_PUSH_XX(const Word wordRegisterValue);
+
+	void ins_JP_HL();
+
+	void ins_CALL_u16(const enum JumpCondition condition = BYPASS);
+	void ins_JP_u16(const enum JumpCondition condition = BYPASS);
+	void ins_RET_CC(const enum JumpCondition condition);
+	void ins_RET();
+	void ins_RETI();
+	void ins_RST(Byte jumpVector);
+
+	void ins_LD_bFF00_u8b_A();
+	void ins_LD_A_bFF00_u8b();
+
+	void ins_ADD_SP_i8();
+
+	void ins_LD_HL_SP_i8();
+	void ins_LD_SP_HL();
+
+	void ins_LD_bu16u_A();
+
+	void ins_LD_A_bu16u();
+
+	void CPU::ins_RLC(Byte* registerOne);
+	void CPU::ins_RLC_bHLb();
+
+	void ins_RL(Byte* registerOne);
+
+	void ins_RL_bHLb();
+
+	void ins_RRC(Byte* registerOne);
+
+	void ins_RRC_bHLb();
+
+	void ins_RR(Byte* registerOne);
+
+	void ins_RR_bHLb();
+
+	void ins_SLA(Byte* registerOne);
+
+	void ins_SLA_bHLb();
+
+	void ins_SRA(Byte* registerOne);
+
+	void ins_SRA_bHLb();
+
+	void ins_SRL(Byte* registerOne);
+
+	void ins_SRL_bHLb();
+
+	void ins_SWAP(Byte* registerOne);
+
+	void ins_SWAP_bHLb();
+
+	void ins_BIT_b_r(Byte bit, Byte* registerOne);
+
+	void ins_BIT_b_r_bHLb(Byte bit);
+
+	void ins_RES_b_r(Byte bit, Byte* registerOne);
+
+	void ins_RES_b_r_bHLb(Byte bit);
+
+	void ins_SET_b_r(Byte bit, Byte* registerOne);
+
+	void ins_SET_b_r_bHLb(Byte bit);
+
+	/*
 	// old instruction declarations
 	int ins_LD_nn_n(Byte* registerOne, const Byte value);
 	int ins_LD_r1_r2(Byte* registerOne = nullptr, const Word address = NULL, Byte* registerTwo = nullptr, const Byte value = NULL);
@@ -297,28 +396,11 @@ private:
 	int ins_INC_nn(Byte* registerOne = nullptr, Byte* registerTwo = nullptr, Word* stackPointer = nullptr);
 	int ins_DEC_nn(Byte* registerOne = nullptr, Byte* registerTwo = nullptr, Word* stackPointer = nullptr);
 
-	int ins_SWAP_nn(Byte* registerOne = nullptr, const Word address = NULL);
-
-
-	int ins_RLC(Byte* registerOne = nullptr, const Word address = NULL);
-	int ins_RL(Byte* registerOne = nullptr, const Word address = NULL);
-
-	int ins_RRC(Byte* registerOne = nullptr, const Word address = NULL);
-	int ins_RR(Byte* registerOne = nullptr, const Word address = NULL);
-
-	int ins_SLA(Byte* registerOne = nullptr, const Word address = NULL);
-	int ins_SRA_n(Byte* registerOne = nullptr, const Word address = NULL);
-
-	int ins_SRL_n(Byte* registerOne = nullptr, const Word address = NULL);
-	int ins_BIT_b_r(const Byte bit, Byte* registerOne = nullptr, const Word address = NULL);
-
-	int ins_SET_b_r(const Byte bit, Byte* registerOne = nullptr, const Word address = NULL);
-	int ins_RES_b_r(const Byte bit, Byte* registerOne = nullptr, const Word address = NULL);
-
+	
 	int ins_JP_nn(const Word address);
 	int ins_JP_cc_nn(const enum JumpCondition condition, const Word address);
 
-	int ins_JP_HL();
+	
 	int ins_JR_n(const Byte_s jumpOffset);
 
 	int ins_JR_cc_n(const enum JumpCondition condition, const Byte_s jumpOffset);
@@ -328,8 +410,26 @@ private:
 
 	int ins_RST_n(const Byte addrOffset);
 
-	int ins_RET();
-	int ins_RET_cc(const enum JumpCondition condition);
+	//int ins_RET();
+	//int ins_RET_cc(const enum JumpCondition condition);
 
-	int ins_RETI();
+	//int ins_RETI();
+
+	*/
+	//int ins_SWAP_nn(Byte* registerOne = nullptr, const Word address = NULL);
+	//int ins_RLC(Byte* registerOne = nullptr, const Word address = NULL);
+	//int ins_RL(Byte* registerOne = nullptr, const Word address = NULL);
+
+	//int ins_RRC(Byte* registerOne = nullptr, const Word address = NULL);
+	//int ins_RR(Byte* registerOne = nullptr, const Word address = NULL);
+
+	//int ins_SLA(Byte* registerOne = nullptr, const Word address = NULL);
+	//int ins_SRA_n(Byte* registerOne = nullptr, const Word address = NULL);
+
+	//int ins_SRL_n(Byte* registerOne = nullptr, const Word address = NULL);
+	//int ins_BIT_b_r(const Byte bit, Byte* registerOne = nullptr, const Word address = NULL);
+
+	//int ins_SET_b_r(const Byte bit, Byte* registerOne = nullptr, const Word address = NULL);
+	//int ins_RES_b_r(const Byte bit, Byte* registerOne = nullptr, const Word address = NULL);
+
 };

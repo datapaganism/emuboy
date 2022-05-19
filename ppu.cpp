@@ -16,6 +16,7 @@ PPU::PPU()
 void PPU::connect_to_bus(BUS* pBus)
 {
 	this->bus = pBus;
+	this->LYptr = &this->bus->io[LY - IOOFFSET];
 }
 
 void PPU::update_graphics(const int cycles)

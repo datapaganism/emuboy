@@ -47,10 +47,8 @@ void WindowManager::run()
         this->windows.push_back(std::unique_ptr<Window>(std::make_unique<VRAMViewer>(EmulatorWindow_ptr, (8 * 16), (8 * 24), 2, "VRAMViewer", false)));
         this->windows.push_back(std::unique_ptr<Window>(std::make_unique<BGMapViewer>(EmulatorWindow_ptr, (8 * 32), (8 * 32), 2, "BGMapViewer", false)));
 
-
         bool quit = false;
         bool pause = false;
-
 
         unsigned int ticksNow = 0, ticksPrevious = 0;
         double tickDelta = 0;

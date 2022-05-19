@@ -44,7 +44,7 @@ public:
 
     Byte DEBUG_ascii_to_hex(char character);
     // replaces area of memory with opcode string, useful for writing quick debugging programs
-    int DEBUG_opcode_program(Word address, std::string byteString, int cycles);
+    void DEBUG_opcode_program(Word address, std::string byteString);
     bool DEBUG_PC_breakpoint_hit = false;
     
    

@@ -55,7 +55,7 @@ Byte BUS::DEBUG_ascii_to_hex(char character)
 }
 
 // 3E 18 06 FF 90
-int BUS::DEBUG_opcode_program(Word address, std::string byteString, int cycles)
+void BUS::DEBUG_opcode_program(Word address, std::string byteString)
 {
 
     std::vector<Byte> byteArray;
@@ -92,13 +92,6 @@ int BUS::DEBUG_opcode_program(Word address, std::string byteString, int cycles)
     }
 
     this->cpu.registers.pc = address;
-
-    int cyclesUsed = 0;
-    for (int i = 0; i < cycles; i++)
-    {
-        //cyclesUsed = this->cpu.fetch_decode_execute();
-    }
-    return cyclesUsed;
 }
 
 void BUS::DEBUG_fill_ram(Word address, std::string byteString)
@@ -402,7 +395,7 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
     }
 
     // temp return
-    return 0;
+    throw "get_memory no return";
 };
 
 void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYPE access_type)
@@ -425,15 +418,17 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
                 return;
 
         //this breaks the tests
+        /*
         if (0x8000 <= address && address <= 0x9FFF) // VIDEO RAM
             if ((this->ppu.lcd_enabled() && this->ppu.get_ppu_state() == 0x3))
                 return;
-
+         */
     } break;
 
     default: break;
     }
 
+    //Set to non-zero to disable boot ROM
     if (address == 0xFF50)
     {
         this->io[0xFF50 - IOOFFSET] = 0x1;
@@ -600,6 +595,8 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
 
         return;
     }
+
+    throw "set memory fail";
 }
 void BUS::set_memory_word(const Word address, const Word data, enum MEMORY_ACCESS_TYPE access_type)
 {

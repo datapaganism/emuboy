@@ -100,7 +100,7 @@ public:
 
 	
 	BUS* bus = nullptr;
-
+	Byte* LYptr = nullptr;
 	/// <summary>
 	/// 
 	/// </summary>
