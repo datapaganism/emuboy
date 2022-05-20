@@ -44,8 +44,8 @@ void WindowManager::run()
     {
         EmulatorWindow* EmulatorWindow_ptr = static_cast<EmulatorWindow*>(this->windows[0].get());
 
-        this->windows.push_back(std::unique_ptr<Window>(std::make_unique<VRAMViewer>(EmulatorWindow_ptr, (8 * 16), (8 * 24), 2, "VRAMViewer", false)));
-        this->windows.push_back(std::unique_ptr<Window>(std::make_unique<BGMapViewer>(EmulatorWindow_ptr, (8 * 32), (8 * 32), 2, "BGMapViewer", false)));
+        this->windows.push_back(std::unique_ptr<Window>(std::make_unique<VRAMViewer>(EmulatorWindow_ptr, (8 * 16), (8 * 24), 2, "VRAMViewer", true)));
+        this->windows.push_back(std::unique_ptr<Window>(std::make_unique<BGMapViewer>(EmulatorWindow_ptr, (8 * 32), (8 * 32), 2, "BGMapViewer", true)));
 
         bool quit = false;
         bool pause = false;

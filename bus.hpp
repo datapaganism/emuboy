@@ -46,7 +46,7 @@ public:
     // replaces area of memory with opcode string, useful for writing quick debugging programs
     void DEBUG_opcode_program(Word address, std::string byteString);
     bool DEBUG_PC_breakpoint_hit = false;
-    
+    Byte* ptr = &this->work_ram[0xdff0 - WORKRAMOFFSET];
    
     void init();
     void bios_init();

@@ -92,7 +92,7 @@ void FETCHER::update_fetcher(const int cycles)
 		{
 		case 0: // read tile address
 		{
-			Word base_address;
+			//Word base_address;
 			if (bus->io[LY - IOOFFSET] < YRES)
 				if (bg_active)
 				{

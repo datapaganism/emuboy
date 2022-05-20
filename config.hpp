@@ -24,11 +24,11 @@ const bool shownOnStart = false;
 
 #define EMULATOR_WINDOW_TITLE "emulator"
 
-#define Byte uint8_t
-#define Word uint16_t
+#define Byte std::uint8_t
+#define Word std::uint16_t
 
-#define Byte_s int8_t
-#define Word_s int16_t
+#define Byte_s std::int8_t
+#define Word_s std::int16_t
 
 #define WORKRAMOFFSET 0xC000
 #define IOOFFSET 0xFF00

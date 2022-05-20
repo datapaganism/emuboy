@@ -23,8 +23,11 @@ void BUS::cycle_system_one_frame()
         if ((this->io[0xFF02 - IOOFFSET] & ~0x7E) == 0x81)
         {
             char c = this->io[0xFF01 - IOOFFSET];
-            printf("%c", c);
-            this->io[0xFF02 - IOOFFSET] = 0x0;
+            if (c != 0)
+            {
+                printf("%c", c);
+                this->io[0xFF02 - IOOFFSET] = 0x0;
+            }
         }
     }
     
@@ -477,10 +480,10 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
     if (address <= 0xDFFF)
     {
         // working ram
-        if (address == 0xC242) {
+        /*if (address == 0xC242) {
             auto workramm = this->work_ram.get() + 0x0242;
             workramm = workramm;
-        }
+        }*/
         this->work_ram[address - 0xC000] = data;
         
         return;
