@@ -105,13 +105,12 @@ void CPU::ins_LD_bHLb_Apm(bool add)
 	{
 	case 0: this->mCyclesUsed++; break;
 	case 1:
-		if (add)
-		{
-			add = add;
-		}
-		this->bus->set_memory(this->registers.get_HL(), this->registers.a, MEMORY_ACCESS_TYPE::cpu);
-		add ? this->registers.set_HL(this->registers.get_HL() + 1) : this->registers.set_HL(this->registers.get_HL() - 1);
+	{
+		Byte hl = this->registers.get_HL();
+		this->bus->set_memory(hl, this->registers.a, MEMORY_ACCESS_TYPE::cpu);
+		add ? this->registers.set_HL(hl + 1) : this->registers.set_HL(hl - 1);
 		this->isExecutingInstruction = false;
+	}
 	}
 }
 
@@ -883,14 +882,12 @@ void CPU::ins_PUSH_XX(const Word wordRegisterValue)
 	case 1:  this->mCyclesUsed++; break;
 	case 2:
 		// move low byte to higher (sp)
-		this->registers.sp--;
-		this->bus->set_memory(this->registers.sp, ((wordRegisterValue & 0xff00) >> 8), MEMORY_ACCESS_TYPE::cpu);
+		this->bus->set_memory(--this->registers.sp, ((wordRegisterValue & 0xff00) >> 8), MEMORY_ACCESS_TYPE::cpu);
 
 		this->mCyclesUsed++; break;
 	case 3:
-		this->registers.sp--;
 		// move high byte to lower (sp)
-		this->bus->set_memory(this->registers.sp, (wordRegisterValue & 0x00ff), MEMORY_ACCESS_TYPE::cpu);
+		this->bus->set_memory(--this->registers.sp, (wordRegisterValue & 0x00ff), MEMORY_ACCESS_TYPE::cpu);
 
 		this->isExecutingInstruction = false;
 	}
@@ -906,7 +903,7 @@ void CPU::ins_JP_u16(const enum JumpCondition condition)
 		checkJumpCondition(condition) ? this->mCyclesUsed++ : this->isExecutingInstruction = false;
 		break;
 	case 3:
-		this->registers.pc = (instructionCache[0] << 8) | instructionCache[1];
+		this->registers.pc = (instructionCache[1] << 8) | instructionCache[0];
 		this->isExecutingInstruction = false;
 	}
 }
@@ -964,15 +961,11 @@ void CPU::ins_CALL_u16(const enum JumpCondition condition)
 	case 2: this->instructionCache[1] = this->get_byte_from_pc(); this->mCyclesUsed++; break;
 	case 3: checkJumpCondition(condition) ? this->mCyclesUsed++ : this->isExecutingInstruction = false; break;
 	case 4:
-		this->registers.sp--;
-		this->bus->set_memory(this->registers.sp, this->registers.get_highByte(&this->registers.pc), MEMORY_ACCESS_TYPE::cpu);
-
+		this->bus->set_memory(--this->registers.sp, this->registers.get_highByte(&this->registers.pc), MEMORY_ACCESS_TYPE::cpu);
 		this->mCyclesUsed++; break;
 	case 5:
-		this->registers.sp--;
-		this->bus->set_memory(this->registers.sp, this->registers.get_lowByte(&this->registers.pc), MEMORY_ACCESS_TYPE::cpu);
+		this->bus->set_memory(--this->registers.sp, this->registers.get_lowByte(&this->registers.pc), MEMORY_ACCESS_TYPE::cpu);
 		this->registers.pc = (instructionCache[1] << 8) | instructionCache[0];
-
 		this->isExecutingInstruction = false;
 	}
 }
@@ -985,12 +978,10 @@ void CPU::ins_RST(Byte jumpVector)
 	case 0:  this->mCyclesUsed++; break;
 	case 1:  this->mCyclesUsed++; break;
 	case 2:
-		this->registers.sp--;
-		this->bus->set_memory(this->registers.sp, this->registers.get_highByte(&this->registers.pc), MEMORY_ACCESS_TYPE::cpu);
+		this->bus->set_memory(--this->registers.sp, this->registers.get_highByte(&this->registers.pc), MEMORY_ACCESS_TYPE::cpu);
 		this->mCyclesUsed++; break;
 	case 3:
-		this->registers.sp--;
-		this->bus->set_memory(this->registers.sp, this->registers.get_lowByte(&this->registers.pc), MEMORY_ACCESS_TYPE::cpu);
+		this->bus->set_memory(--this->registers.sp, this->registers.get_lowByte(&this->registers.pc), MEMORY_ACCESS_TYPE::cpu);
 		this->registers.pc = 0x0000 + jumpVector;
 		this->isExecutingInstruction = false;
 	}
@@ -1013,7 +1004,7 @@ void CPU::ins_LD_A_bFF00_u8b()
 	switch (this->mCyclesUsed)
 	{
 	case 0:  this->mCyclesUsed++; break;
-	case 1: this->registers.a = this->bus->get_memory(0xFF00 + this->registers.c, MEMORY_ACCESS_TYPE::cpu); this->isExecutingInstruction = false;
+	case 1: this->registers.a = this->bus->get_memory(0xFF00 + this->get_byte_from_pc(), MEMORY_ACCESS_TYPE::cpu); this->isExecutingInstruction = false;
 	}
 }
 
@@ -1081,7 +1072,7 @@ void CPU::ins_LD_SP_HL()
 {
 	switch (this->mCyclesUsed)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0: this->mCyclesUsed++; break;
 	case 1: this->registers.sp = this->registers.get_HL(); this->isExecutingInstruction = false;
 	}
 }
@@ -1090,7 +1081,7 @@ void CPU::ins_LD_bu16u_A()
 {
 	switch (this->mCyclesUsed)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0: this->mCyclesUsed++; break;
 	case 1: this->instructionCache[0] = this->get_byte_from_pc(); this->mCyclesUsed++; break;
 	case 2: this->instructionCache[1] = this->get_byte_from_pc(); this->mCyclesUsed++; break;
 	case 3:
@@ -1103,12 +1094,15 @@ void CPU::ins_LD_A_bu16u()
 {
 	switch (this->mCyclesUsed)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0: this->mCyclesUsed++; break;
 	case 1: this->instructionCache[0] = this->get_byte_from_pc(); this->mCyclesUsed++; break;
 	case 2: this->instructionCache[1] = this->get_byte_from_pc(); this->mCyclesUsed++; break;
 	case 3:
-		this->registers.a = this->bus->get_memory((this->instructionCache[1] << 8) | this->instructionCache[0], MEMORY_ACCESS_TYPE::cpu);
+	{
+		Word address = (this->instructionCache[1] << 8) | this->instructionCache[0];
+		this->registers.a = this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
 		this->isExecutingInstruction = false;
+	}
 	}
 }
 

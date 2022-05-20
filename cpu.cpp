@@ -26,7 +26,7 @@ void CPU::mStepCPU()
 		//if finished instruction after this execution, prefetch
 		if (!this->isExecutingInstruction)
 		{
-			//this->DEBUG_printCurrentState(0x0040);
+			this->DEBUG_printCurrentState(0xC6D4);
 			this->prefetch_instruction();
 			this->check_for_interrupts();
 		}

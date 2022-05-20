@@ -3,11 +3,6 @@
 #include "bus.hpp"
 
 
-
-
-
-
-
 void FIFO::push(FIFO_pixel pixel)
 {
 	if (tail_pos <= 15)
@@ -15,12 +10,6 @@ void FIFO::push(FIFO_pixel pixel)
 		this->queue[++tail_pos] = pixel;
 	}
 }
-
-//void FIFO::push(const Word address)
-//{
-//	//need to access bus, write fetcher
-//	Byte tile_number = this->;
-//}
 
 
 FIFO_pixel FIFO::pop()

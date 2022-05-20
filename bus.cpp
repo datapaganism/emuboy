@@ -274,6 +274,7 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
 {
     switch (access_type)
     {
+        /*
         case MEMORY_ACCESS_TYPE::cpu:
         {
             if (this->dma_controller.dma_triggered)
@@ -289,7 +290,7 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
                     return 0xFF;
 
         } break;
-
+        */
         case MEMORY_ACCESS_TYPE::interrupt_handler:
         {
             if (address == 0xFFFF)
