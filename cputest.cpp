@@ -10,8 +10,8 @@ int main(int argc, char* argv[])
 
     BUS bus(rom_path, bios_path);
     bus.cpu.registers.pc = 0xC000;
-    bus.DEBUG_opcode_program(0xC000, "31 12 43 08 00 C0");
-
+    bus.DEBUG_opcode_program(0xC000, "F8 48");
+    bus.cpu.registers.sp = 0xFFFE;
     Byte temp = 0;
     while(1)
     {

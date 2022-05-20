@@ -1060,7 +1060,7 @@ void CPU::ins_LD_HL_SP_i8()
 		else
 		{
 			this->registers.set_flag(c, ((this->registers.sp & 0xFF) + value) > 0xFF);
-			this->registers.set_flag(h, ((this->registers.sp & 0xF) + value) > 0xF);
+			this->registers.set_flag(h, ((this->registers.sp & 0xF) + (value & 0xF)) > 0xF);
 		}
 		this->registers.set_HL(sum);
 
