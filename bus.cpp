@@ -23,6 +23,11 @@ void BUS::cycle_system_one_frame()
         if ((this->io[0xFF02 - IOOFFSET] & ~0x7E) == 0x81)
         {
             char c = this->io[0xFF01 - IOOFFSET];
+            if (c == ' ')
+            {
+                this->cpu.debug_toggle = true;
+                printf("");
+            }
             if (c != 0)
             {
                 printf("%c", c);
@@ -409,6 +414,8 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
         this->vram_ptr->render_vram_tiles(this);
         this->bg_map_ptr->render_vram_tiles(this);
     }*/
+
+    /*
     switch (access_type)
     {
     case MEMORY_ACCESS_TYPE::cpu:
@@ -422,15 +429,16 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
                 return;
 
         //this breaks the tests
-        /*
-        if (0x8000 <= address && address <= 0x9FFF) // VIDEO RAM
-            if ((this->ppu.lcd_enabled() && this->ppu.get_ppu_state() == 0x3))
-                return;
-         */
+        
+        //if (0x8000 <= address && address <= 0x9FFF) // VIDEO RAM
+        //    if ((this->ppu.lcd_enabled() && this->ppu.get_ppu_state() == 0x3))
+        //        return;
+         
     } break;
 
     default: break;
     }
+    */
 
     //Set to non-zero to disable boot ROM
     if (address == 0xFF50)

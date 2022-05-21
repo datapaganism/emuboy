@@ -5,7 +5,8 @@
 #include <bitset>
 #include <sstream>
 
-#define BREAKPOINT 0xCb15
+//#define BREAKPOINT 0xCb15
+#define BREAKPOINT 0x00EB
 
 void CPU::mStepCPU()
 {
@@ -14,9 +15,10 @@ void CPU::mStepCPU()
 	{
 		//decode and execute instruction // takes a cycle
 
-		if (this->registers.pc == 0xC6c8)
+		if (this->registers.pc == 0x100)
 		{
-			throw "";
+			this->registers.pc = this->registers.pc;
+			//throw "";
 		}
 
 		this->instruction_handler();
@@ -335,13 +337,13 @@ void CPU::request_interrupt(const InterruptTypes type)
 	this->set_interrupt_flag(type, 1, IF_REGISTER);
 }
 
-void CPU::dma_transfer(Byte data)
-{
-	for (int i = 0; i < 0xA0; i++)
-	{
-		this->bus->set_memory(OAM + i, this->bus->get_memory((data << 8) + i, MEMORY_ACCESS_TYPE::cpu), MEMORY_ACCESS_TYPE::cpu);
-	}
-}
+//void CPU::dma_transfer(Byte data)
+//{
+//	for (int i = 0; i < 0xA0; i++)
+//	{
+//		this->bus->set_memory(OAM + i, this->bus->get_memory((data << 8) + i, MEMORY_ACCESS_TYPE::cpu), MEMORY_ACCESS_TYPE::cpu);
+//	}
+//}
 
 Byte CPU::get_interrupt_flag(const enum InterruptTypes type, Word address)
 {
@@ -514,7 +516,7 @@ void CPU::instruction_handler()
 
 	case 0x38: { this->ins_JR_i8(C); } break;
 	case 0x39: { this->ins_ADD_HL_SP(); } break;
-	case 0x3A: { this->ins_LD_X_bYYb(&this->registers.l, &this->registers.h, &this->registers.l, -1);  } break;
+	case 0x3A: { this->ins_LD_X_bYYb(&this->registers.a, &this->registers.h, &this->registers.l, -1);  } break;
 	case 0x3B: { this->ins_DEC_SP(); } break;
 	case 0x3C: { this->ins_INC_X(&this->registers.a); } break;
 	case 0x3D: { this->ins_DEC_X(&this->registers.a); } break;
@@ -671,7 +673,7 @@ void CPU::instruction_handler()
 	case 0xC3: { this->ins_JP_u16(); } break;
 	case 0xC4: { this->ins_CALL_u16(NZ); } break;
 	case 0xC5: { this->ins_PUSH_XX(this->registers.get_BC()); } break;
-	case 0xC6: { this->ins_AND_A_u8(); } break;
+	case 0xC6: { this->ins_ADD_A_u8(); } break;
 	case 0xC7: { this->ins_RST(0x00); } break;
 
 	case 0xC8: { this->ins_RET_CC(Z); } break;
@@ -721,7 +723,7 @@ void CPU::instruction_handler()
 
 	case 0xF0: { ins_LD_A_bFF00_u8b(); } break;
 	case 0xF1: { this->ins_POP_XX(&this->registers.a, &this->registers.f); } break;
-	case 0xF2: { this->ins_LD_A_bFF00_u8b(); } break;
+	case 0xF2: { this->ins_LD_A_bFF00_Cb(); } break;
 	case 0xF3: { this->interrupt_master_enable = 0; this->EI_triggered = false; this->isExecutingInstruction = false; } break; //DIsable interrupts immediately, if EI is set to trigger, we can disable it so we can keep the behaviour of EI then DI never enabling interrupts
 	//case 0xF4: { } break;
 	case 0xF5: { this->ins_PUSH_XX(this->registers.get_AF()); } break;
@@ -1380,13 +1382,18 @@ void CPU::ins_LD_bu16b_SP()
 	case 3:
 	{
 		Word address = (this->instructionCache[1] << 8) | this->instructionCache[0];
-		this->bus->set_memory(address, (this->registers.sp & 0x00FF), MEMORY_ACCESS_TYPE::cpu);
+		if (this->instructionCache[1] == 0x91 || this->instructionCache[1] == 0xFF)
+		{
+			printf("");
+		}
+		this->bus->set_memory(address, (this->registers.sp & 0xFF), MEMORY_ACCESS_TYPE::cpu);
 		this->mCyclesUsed++; break;
 	}
 	case 4:
 	{
 		Word address = (this->instructionCache[1] << 8) | this->instructionCache[0];
-		this->bus->set_memory(address + 1, (this->registers.sp & 0xFF00 >> 8), MEMORY_ACCESS_TYPE::cpu);
+	
+		this->bus->set_memory(address + 1, (this->registers.sp >> 8), MEMORY_ACCESS_TYPE::cpu);
 		this->isExecutingInstruction = false;
 	}
 	}
@@ -1420,16 +1427,19 @@ void CPU::ins_ADD_HL_XX(Byte* const registerOne, Byte* const registerTwo)
 	{
 		Word HLvalue = this->registers.get_HL();
 		Word registerWord = (*registerOne << 8) | *registerTwo;
+		Word sum = HLvalue + registerWord;
+		this->instructionCache[0] = sum >> 8;
+
 		this->registers.set_flag(c, this->checkCarry(HLvalue, registerWord, 16));
 		this->registers.set_flag(h, this->checkCarry(HLvalue, registerWord, 12));
 		this->registers.set_flag(n, 0);
-		this->registers.l = *registerTwo;
+		this->registers.l = sum & 0xFF;
 
 		this->mCyclesUsed++;
 		break;
 	}
 	case 1:
-		this->registers.h = *registerOne;
+		this->registers.h = this->instructionCache[0];
 		this->isExecutingInstruction = false;
 	}
 }
@@ -1441,15 +1451,18 @@ void CPU::ins_ADD_HL_SP()
 	case 0:
 	{
 		Word HLvalue = this->registers.get_HL();
+		Word sum = HLvalue + this->registers.sp;
+		this->instructionCache[0] = sum >> 8;
+
 		this->registers.set_flag(c, this->checkCarry(HLvalue, this->registers.sp, 16));
 		this->registers.set_flag(h, this->checkCarry(HLvalue, this->registers.sp, 12));
 		this->registers.set_flag(n, 0);
-		this->registers.l = this->registers.sp & 0x00FF;
+		this->registers.l = sum & 0xFF;
 
 		this->mCyclesUsed++; break;
 	}
 	case 1:
-		this->registers.h = (this->registers.sp & 0xFF00) >> 8;
+		this->registers.h = this->instructionCache[0];
 		this->isExecutingInstruction = false;
 	}
 }
@@ -1476,7 +1489,27 @@ void CPU::ins_ADD_A_bHLb()
 	case 0:  this->mCyclesUsed++; break;
 	case 1:
 		Byte immediateValue = this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu);
+		this->registers.set_flag(c, this->checkCarry(this->registers.a, immediateValue, 8));
+		this->registers.set_flag(h, this->checkCarry(this->registers.a, immediateValue, 4));
 
+		// perform addition
+		this->registers.a += immediateValue;
+
+		//evaluate z flag an clear the n flag
+		this->registers.set_flag(z, (this->registers.a == 0x0));
+		this->registers.set_flag(n, 0);
+
+		this->isExecutingInstruction = false;
+	}
+}
+
+void CPU::ins_ADD_A_u8()
+{
+	switch (this->mCyclesUsed)
+	{
+	case 0:	this->mCyclesUsed++; break;
+	case 1:
+		Byte immediateValue = this->get_byte_from_pc();
 		this->registers.set_flag(c, this->checkCarry(this->registers.a, immediateValue, 8));
 		this->registers.set_flag(h, this->checkCarry(this->registers.a, immediateValue, 4));
 
@@ -1867,7 +1900,7 @@ void CPU::ins_CP_A_X(Byte* const registerByte)
 	this->registers.set_flag(h, this->checkBorrow(this->registers.a, *registerByte, 4));
 
 	//evaluate z flag an clear the n flag
-	(this->registers.a == *registerByte) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+	this->registers.set_flag(z, (this->registers.a == *registerByte));
 	this->registers.set_flag(n, 1);
 
 
@@ -1883,7 +1916,7 @@ void CPU::ins_CP_A_u8()
 		Byte immediateValue = this->get_byte_from_pc();
 		this->registers.set_flag(c, this->checkBorrow(this->registers.a, immediateValue, 8));
 		this->registers.set_flag(h, this->checkBorrow(this->registers.a, immediateValue, 4));
-		(this->registers.a == immediateValue) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+		this->registers.set_flag(z, (this->registers.a == immediateValue));
 		this->registers.set_flag(n, 1);
 
 		this->isExecutingInstruction = false;
@@ -1900,7 +1933,7 @@ void CPU::ins_CP_A_bHLb()
 		Byte immediateValue = this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu);
 		this->registers.set_flag(c, this->checkBorrow(this->registers.a, immediateValue, 8));
 		this->registers.set_flag(h, this->checkBorrow(this->registers.a, immediateValue, 4));
-		(this->registers.a == immediateValue) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
+		this->registers.set_flag(z, (this->registers.a == immediateValue));
 		this->registers.set_flag(n, 1);
 
 		this->isExecutingInstruction = false;
@@ -2069,9 +2102,20 @@ void CPU::ins_LD_A_bFF00_u8b()
 	switch (this->mCyclesUsed)
 	{
 	case 0: this->mCyclesUsed++; break;
-	case 1: this->registers.a = this->bus->get_memory(0xFF00 + this->get_byte_from_pc(), MEMORY_ACCESS_TYPE::cpu); this->isExecutingInstruction = false;
+	case 1: this->instructionCache[0] = this->get_byte_from_pc(); this->mCyclesUsed++; break;
+	case 2: this->registers.a = this->bus->get_memory(0xFF00 + this->instructionCache[0], MEMORY_ACCESS_TYPE::cpu); this->isExecutingInstruction = false;
 	}
 }
+
+void CPU::ins_LD_A_bFF00_Cb()
+{
+	switch (this->mCyclesUsed)
+	{
+	case 0: this->mCyclesUsed++; break;
+	case 1: this->registers.a = this->bus->get_memory(0xFF00 + this->registers.c, MEMORY_ACCESS_TYPE::cpu); this->isExecutingInstruction = false;
+	}
+}
+
 
 void CPU::ins_ADD_SP_i8()
 {
@@ -2095,8 +2139,9 @@ void CPU::ins_ADD_SP_i8()
 		this->registers.set_flag(z, 0);
 		this->registers.set_flag(n, 0);
 
-		instructionCache[1] = (this->registers.sp + value) >> 8;
-		this->registers.set_lowByte(&this->registers.sp, instructionCache[1]);
+		Word sum = (this->registers.sp + value);
+		instructionCache[1] = sum >> 8;
+		this->registers.set_lowByte(&this->registers.sp, sum & 0xFF);
 
 		this->mCyclesUsed++; break;
 	}
@@ -2559,11 +2604,11 @@ void CPU::ins_SET_b_r_bHLb(Byte bit)
 }
 
 
-// INSTRUCTION HANDLING OLD
-
-
 void CPU::ins_DAA()
 {
+	// Source from
+	//https://ehaskins.com/2018-01-30%20Z80%20DAA/
+	// 
 	// this is a weird one, take whatever is in register a and re shuffle it to a packed binary coded decimal
 	// since we only have 1 byte of space to work with then we can only display upto 99 using BCD
 	// which would require to set the overflow flag.
@@ -2578,96 +2623,26 @@ void CPU::ins_DAA()
 
 
 	//DAA is used after addition or subtraction to fix the BCD value. So if we take the decimal numbers 42 and add 9, we expect to get 51. But if we do this with BCD values, we'll get $4B instead. Executing DAA after this addition will adjust $4B to $51 as expected. The first if determines whether we need to ...
-	Byte adjust = 0x0;
 
-	bool flagZ = this->registers.get_flag(z);
-	bool flagN = this->registers.get_flag(n);
-	bool flagH = this->registers.get_flag(h);
-	bool flagC = this->registers.get_flag(c);
+	Byte adjust = 0;
+	bool setFlagC = false;
 
-	// temp store of value of the carry bit, set to reset
-	bool need_carry = false;
+	if (this->registers.get_flag(h) || (!this->registers.get_flag(n) && (this->registers.a & 0xF) > 9))
+		adjust |= 0x6;
 
-	if (!flagN)
+	if (this->registers.get_flag(c) || (!this->registers.get_flag(n) && this->registers.a > 0x99))
 	{
-		if (flagH || ((this->registers.a & 0xF) > 0x9))
-			adjust += 0x6;
-
-		if (flagC || ((this->registers.a) > 0x9F))
-		{
-			adjust += 0x60;
-			need_carry = true;
-		}
+		adjust |= 0x60;
+		setFlagC = true;
 	}
-	else
-	{
-		if (flagH)
-			adjust -= 0x6;
-		if (flagC)
-			adjust -= 0x60;
-	}
-
-	(need_carry) ? this->registers.set_flag(c, 1) : this->registers.set_flag(c, 0);
-
-	this->registers.set_flag(h, 0);
-
-	this->registers.a += adjust;
-
-	(this->registers.a == 0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-
-
-	this->isExecutingInstruction = false;
-	return;
-
-	// check if lower nibble is bigger than 9 or flag H is set
-	if (((this->registers.a) > 9) || flagH)
-	{
-		adjust += 0x6;
-	}
-
-	// check if higher nibble is bigger than 90, set carry to true
-	if (((this->registers.a & 0xF0) > 90) || flagC)
-	{
-		adjust += 0x60;
-		need_carry = true;
-	}
-
-	if (flagN && flagC)
-	{
-
-		need_carry = true;
-		adjust = 0xA0;
-	}
-	if (flagH && flagC)
-	{
-
-		need_carry = true;
-		adjust = 0x66;
-	}
-	if (flagH && flagN)
-		adjust = 0xFA;
-
-	if (flagH && flagN && flagC)
-	{
-		need_carry = true;
-		adjust = 0x9A;
-	}
-
-
-	//this->checkCarry(this->registers.a, adjust);
-	this->registers.set_flag(c, (need_carry));
-
-	this->registers.set_flag(h, 0);
-
-	this->registers.a += adjust;
+	
+	this->registers.a += (this->registers.get_flag(n)) ? -adjust : adjust;
 
 	this->registers.set_flag(z, (this->registers.a == 0));
-
-
+	this->registers.set_flag(c, setFlagC);
+	this->registers.set_flag(h, 0);
 
 	this->isExecutingInstruction = false;
-	return;
-
 }
 
 

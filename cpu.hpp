@@ -241,6 +241,7 @@ private:
 	void ins_ADD_HL_SP();
 	void ins_ADD_A_X(Byte* const registerByte);
 	void ins_ADD_A_bHLb();
+	void ins_ADD_A_u8();
 	void ins_LD_X_Y(Byte* const registerOne, Byte* const registerTwo);
 	void ins_LD_X_bYYb(Byte* const leftRegister, Byte* const rightRegisterOne, Byte* const rightRegisterTwo, const Byte_s addToHL = NULL);
 
@@ -302,6 +303,8 @@ private:
 
 	void ins_LD_bFF00_u8b_A();
 	void ins_LD_A_bFF00_u8b();
+
+	void ins_LD_A_bFF00_Cb();
 
 	void ins_ADD_SP_i8();
 
