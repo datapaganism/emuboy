@@ -2,28 +2,26 @@
 
 void EmulatorWindow::handleEvent(SDL_Event& e)
 {
-    if (e.type == SDL_WINDOWEVENT && e.window.windowID == this->mWindowID)
+    if (e.window.windowID == this->mWindowID)
     {
-        while (SDL_PollEvent(&e))
+
+        switch (e.type)
         {
-            switch (e.type)
-            {
-            case SDL_KEYDOWN:
-            {
-                int keyPressed = e.key.keysym.sym;
-                enum JoypadButtons pressed = keyToEnum(keyPressed);
-                if (pressed != UNKNOWN)
-                    this->pressButton(pressed);
-            } break;
-            case SDL_KEYUP:
-            {
-                int keyPressed = e.key.keysym.sym;
-                enum JoypadButtons pressed = keyToEnum(keyPressed);
-                if (pressed != UNKNOWN)
-                    this->depressButton(pressed);
-            } break;
-            };
-        }
+        case SDL_KEYDOWN:
+        {
+            int keyPressed = e.key.keysym.sym;
+            enum JoypadButtons pressed = keyToEnum(keyPressed);
+            if (pressed != UNKNOWN)
+                this->pressButton(pressed);
+        } break;
+        case SDL_KEYUP:
+        {
+            int keyPressed = e.key.keysym.sym;
+            enum JoypadButtons pressed = keyToEnum(keyPressed);
+            if (pressed != UNKNOWN)
+                this->depressButton(pressed);
+        } break;
+        };
     }
 }
 

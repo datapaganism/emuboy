@@ -35,6 +35,7 @@ enum InterruptTypes
 
 };
 static const InterruptTypes InterruptTypes_all[] = { vblank, lcdstat, timer, serial, joypad };
+static const InterruptTypes InterruptTypes_all_prioritised[] = { joypad, serial, timer, lcdstat, vblank };
 
 
 // The registers of the CPU, including SP and PC, access single registers directly, use functions to get combinations of registers as a word, nibble manipulation of single bytes as well.
@@ -162,6 +163,8 @@ public:
 
 	void DEBUG_printCurrentState(Word pc);
 
+	void update_timers_by_mCycle();
+
 	//int do_interrupts();
 	void update_timers(const int cycles);
 
@@ -175,14 +178,24 @@ private:
 	Byte get_interrupt_flag(const enum InterruptTypes type, Word address);
 	void set_interrupt_flag(const enum InterruptTypes type, const bool value, Word address);
 
+	
+	int tCyclesTickedTotal = 0;
+
+	Byte mCycleTimerCounter = 0;
+
+
 	int timerCounter = 0;
 	int divTimerCounter = DIVinit;
 
+	int timerCounterFrom0 = 0;
+	int divTimerCounterFrom0 = 0;
+
 	Byte get_TMC_frequency();
+	int get_TAC_freq();
 
 	Byte currentRunningOpcode = 0;
 	Byte currentRunningCB = 0;
-	Byte  mCyclesUsed = 0;
+	Byte mCyclesUsed = 0;
 	bool isExecutingInstruction = false;
 	bool isExecutingCB = false;
 	Byte instructionCache[5] = { 0 };
@@ -311,9 +324,9 @@ private:
 	void ins_LD_HL_SP_i8();
 	void ins_LD_SP_HL();
 
-	void ins_LD_bu16u_A();
+	void ins_LD_bu16b_A();
 
-	void ins_LD_A_bu16u();
+	void ins_LD_A_bu16b();
 
 	void CPU::ins_RLC(Byte* registerOne);
 	void CPU::ins_RLC_bHLb();

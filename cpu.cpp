@@ -8,36 +8,55 @@
 //#define BREAKPOINT 0xCb15
 #define BREAKPOINT 0x00EB
 
+/*
+Not sure where you got that documentation from, but it's not correct.
+
+Like you said above, if a HALT instruction is executed while interrupts are enabled, the Game Boy CPU will halt until an interrupt is requested, at which point the CPU will resume operation and service the interrupt.
+
+If a HALT instruction is executed while interrupts are disabled and there are no pending interrupts, then the CPU will still halt! The difference is that when an interrupt is requested, the CPU resumes operation and continues executing normally without servicing the interrupt. This is because the IME flag actually does not disable interrupts altogether, rather it disables servicing them.
+
+The behavior you describe above is the HALT bug. This bug is triggered when a HALT instruction is executed while interrupts are disabled, and there are pending interrupts waiting to be serviced. That is, IF & IE != 0. In this case, the CPU will not halt, and instead fail to increment the PC, causing the next instruction to be executed twice. It does not execute HALT twice, because the PC has already incremented during instruction decoding.
+
+	How important is it to pass this test? Does implementing HALT really matter if I'm going to just fake it without saving any processing power?
+
+Yes! Not implementing the HALT instruction will cause your timings to be wildly off in basically every game. In addition, Thunderbirds is a game which actually hits the HALT bug, and depends on it being emulated accurately to run correctly!
+*/
+
+
+
 void CPU::mStepCPU()
 {
 
-	if (this->isExecutingInstruction)
+	//this->DEBUG_printCurrentState(this->registers.pc);
+	if (!this->is_halted)
 	{
-		//decode and execute instruction // takes a cycle
-
-		if (this->registers.pc == 0x100)
+		if (this->isExecutingInstruction)
 		{
-			this->registers.pc = this->registers.pc;
-			//throw "";
+			//decode and execute instruction // takes a cycle
+			this->instruction_handler();
+			//if finished instruction after this execution, prefetch
+			if (!this->isExecutingInstruction)
+			{
+				if (this->EI_triggered && this->currentRunningOpcode != 0xFB)
+				{
+					this->interrupt_master_enable = 1;
+					this->EI_triggered = false;
+				}
+				//this->DEBUG_printCurrentState(this->registers.pc);
+				this->prefetch_instruction();
+				this->check_for_interrupts();
+			}
+			return;
 		}
 
-		this->instruction_handler();
-		//if finished instruction after this execution, prefetch
-		if (!this->isExecutingInstruction)
-		{
-			//this->DEBUG_printCurrentState(BREAKPOINT);
-			/*if (this->bus->work_ram[0xdffd - WORKRAMOFFSET] == 0xc2 && this->bus->work_ram[0xdffe - WORKRAMOFFSET] == 0x4c)
-				throw "";*/
-
-			this->prefetch_instruction();
-			this->check_for_interrupts();
-		}
+		// if we havent prefetched anything, fetch instruction // takes a cycle
+		this->currentRunningOpcode = this->get_byte_from_pc(); // read opcode
+		this->setup_for_next_instruction();
 		return;
 	}
+	if ((this->bus->get_memory(IF_REGISTER, MEMORY_ACCESS_TYPE::cpu) != 0) || this->interrupt_master_enable) 
+		this->is_halted = false;
 
-	// if we havent prefetched anything, fetch instruction // takes a cycle
-	this->currentRunningOpcode = this->get_byte_from_pc(); // read opcode
-	this->setup_for_next_instruction();
 };
 
 
@@ -48,15 +67,23 @@ void CPU::DEBUG_printCurrentState(Word pc)
 	if (this->debug_toggle)
 	{
 		printf("%s:0x%.4X  ", "pc", this->registers.pc);
-		printf("%s:0x%.2X  ", "cyclesused", this->mCyclesUsed);
+		//printf("%s:0x%.2X  ", "cyclesused", this->mCyclesUsed);
 		printf("op:0x%.2X | ", this->bus->get_memory(this->registers.pc, MEMORY_ACCESS_TYPE::cpu));
-		printf("%s:0x%.2X%.2X  ", "AF", this->registers.a, this->registers.f);
+		/*printf("%s:0x%.2X%.2X  ", "AF", this->registers.a, this->registers.f);
 		printf("%s:0x%.2X%.2X  ", "BC", this->registers.b, this->registers.c);
 		printf("%s:0x%.2X%.2X  ", "DE", this->registers.d, this->registers.e);
 		printf("%s:0x%.2X%.2X  ", "HL", this->registers.h, this->registers.l);
 		printf("%s:0x%.4X  ", "SP", this->registers.sp);
 		printf("%s:0x%.4X  ", "STAT", this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::cpu));
 		printf("%s:%i  ", "IME", this->interrupt_master_enable);
+		printf("%s:%x  ", "LY", *this->bus->ppu.LYptr);*/
+		printf("%s:%x  ", "DIV", this->bus->io[4]);
+		printf("%s:%x  ", "TIMA", this->bus->io[5]);
+		printf("%s:%x  ", "TMA", this->bus->io[6]);
+		printf("%s:%x  ", "TAC", this->bus->io[7]);
+		printf("%s:%x  ", "divC", this->divTimerCounterFrom0);
+		printf("%s:%x  ", "timC", this->timerCounterFrom0);
+		
 
 		/*printf("%s:%i  ","z", this->registers.get_flag(z));
 		printf("%s:%i  ","n", this->registers.get_flag(n));
@@ -223,59 +250,43 @@ void CPU::set_nibble(Byte* registerOne, const Byte value, const bool setHi)
 	(setHi) ? *registerOne = ((*registerOne & 0x0F) | (value << 4)) : *registerOne = ((*registerOne & 0xF0) | value);
 }
 
-/// <summary>
-/// This is the master interrupt function, we need to emulate interrupts, There is a master switch for interrupt enable which takes prority over all interrupts, this is being modelled as a boolean inside the CPU class.
-/// The only way this bool is ever modified is during the DI and EI instructions of the processor.
-/// 
-/// interrupts need to be requested externally to the CPU, this is done with request_interrupt function, there are only 5 types of interrupts that can be requested, so when we enter an interrupt period in a different part of hardware we write to a special register stating the type of interrupt.
-/// Interrupts per type can be enabled or disabled accordingly modifiying using the IE register, if the master is enabled, then we need to check through each type of interrupt to see if it has been requested (and enabled, since if it has been requested but disabled then that interrupt will need to wait the next cpu cycle)
-/// if it has been requested then we aknowledge the interrupt by turning off the request flag and disabling the master interrupt switch, at that point we push the current program counter onto the stack and depending on the interrupt type set the program counter to its corresponding interrupt vector.
-/// </summary>
-/// <returns></returns>
 
-//int CPU::do_interrupts()
-//{
-//	int cyclesUsed = 0;
-//	//check master to see if interrupts are enabled
-//	if (this->interrupt_master_enable == true)
-//	{
-//		// iterate through all types, this allows us to check each interrupt and also service them in order of priority
-//		for (const auto type : InterruptTypes_all)
-//		{
-//			// if it has been requested and its corresponding flag is enabled
-//			if (this->get_interrupt_flag(type, IF_REGISTER) && this->get_interrupt_flag(type, IE_REGISTER))
-//			{
-//				//disable interrupts in general and for this type
-//				this->set_interrupt_flag(type, 0, IF_REGISTER);
-//				this->interrupt_master_enable = 0;
-//
-//				//push the current pc to the stack
-//				this->ins_PUSH_nn(this->registers.pc);
-//
-//				// jump
-//				switch (type)
-//				{
-//				case InterruptTypes::vblank: { this->registers.pc = 0x0040; } break;
-//				case InterruptTypes::lcdstat: { this->registers.pc = 0x0048; } break;
-//				case InterruptTypes::timer: { this->registers.pc = 0x0050; } break;
-//				case InterruptTypes::serial: { this->registers.pc = 0x0058; } break;
-//				case InterruptTypes::joypad: { this->registers.pc = 0x0060; } break;
-//				default: throw "Unreachable interrupt type"; break;
-//				}
-//
-//				//cyclesUsed += 20;
-//			}
-//		}
-//	}
-//	return cyclesUsed;
-//}
+void CPU::update_timers_by_mCycle()
+
+{
+	// DIV updates at 16384hz, the CPU in mCycles is = 1048576hz
+	// 1048576 / 163384 = 64
+	// every 64 mCycles, div increments by 1
+	
+	if (++this->divTimerCounterFrom0 >= DIV_INC_RATE)
+	{
+		this->divTimerCounterFrom0 = 0;
+		this->bus->io[DIV - IOOFFSET]++;
+	}
+		// if TMC bit 2 is set, this means that the timer is enabled
+	if (this->bus->io[TAC - IOOFFSET] & (0b00000100))
+	{
+		if (++this->timerCounterFrom0 >= this->get_TAC_freq())
+		{
+			this->timerCounterFrom0 = 0;
+			this->bus->io[TIMA - IOOFFSET]++;
+
+			if (this->bus->io[TIMA - IOOFFSET] == 0xFF)
+			{
+				this->bus->io[TIMA - IOOFFSET] = this->bus->io[TMA - IOOFFSET]; //TIMA gets reset to TMA on overflow
+				this->request_interrupt(timer);
+			}
+			
+		}
+	}
+}
 
 /// <summary>
 /// This is the master function for handling the CPU timers, timers do not increment every CPU cycle but after a specified amount of cycles.
 /// Since there are two types of timers (normal timer and div timer) we need to store a rolling counter of how many cycles have been executed before the timer needs to advance.
 /// this is done in the divTimerCounter and timerCounter respectively, each hold the amount of cycles it takes for the counter to increment.
 /// 
-/// the div counter increments once every 256 counters, we remove the mount of cycles done this CPU 'tick' from divTimerCounter and when that reaches 0 or less then we increment the register at position DIV, however the Gameboy cannot directly write to postion DIV since every write will reset the register.
+/// the div counter increments once every 256 counters, we remove the amount of cycles done this CPU 'tick' from divTimerCounter and when that reaches 0 or less then we increment the register at position DIV, however the Gameboy cannot directly write to postion DIV since every write will reset the register.
 /// so we access the io regsiters directly and increment the register.
 /// divCounter is reset back to its initial value and we can continue all over again.
 /// 
@@ -284,9 +295,13 @@ void CPU::set_nibble(Byte* registerOne, const Byte value, const bool setHi)
 /// </summary>
 /// <param name="cycles"></param>
 void CPU::update_timers(const int cycles)
+
 {
+
+
 	//run the DIV timer, every 256cpu cycles we need to increment the DIV register once,
 	this->divTimerCounter -= cycles;
+	this->divTimerCounterFrom0 += cycles;
 	if (this->divTimerCounter <= 0)
 	{
 		this->divTimerCounter = DIVinit;
@@ -295,7 +310,7 @@ void CPU::update_timers(const int cycles)
 	}
 
 	// if TMC bit 2 is set, this means that the timer is enabled
-	if (this->bus->get_memory(TAC, MEMORY_ACCESS_TYPE::cpu) & (0b00000100))
+	if (this->bus->io[TAC - IOOFFSET] & (0b00000100))
 	{
 		//the timer increment holds the amount of cycles needed to tick TIMA register up one, we can decrement it and see if it has hit 0
 		this->timerCounter -= cycles;
@@ -303,14 +318,29 @@ void CPU::update_timers(const int cycles)
 		// if the TIMA needs updating
 		if (this->timerCounter <= 0)
 		{
-			if (this->bus->get_memory(TIMA, MEMORY_ACCESS_TYPE::cpu) == 0xFF)
+			if (this->bus->io[TIMA - IOOFFSET] == 0xFF)
 			{
-				this->bus->set_memory(TIMA, this->bus->get_memory(TMA, MEMORY_ACCESS_TYPE::cpu), MEMORY_ACCESS_TYPE::cpu);
+				//this->bus->set_memory(TIMA, this->bus->get_memory(TMA, MEMORY_ACCESS_TYPE::cpu), MEMORY_ACCESS_TYPE::cpu);
+				this->bus->io[TIMA - IOOFFSET] = this->bus->io[TMA - IOOFFSET];
 				this->request_interrupt(timer);
 			}
 
-			this->bus->set_memory(TIMA, this->bus->get_memory(TIMA, MEMORY_ACCESS_TYPE::cpu) + 1, MEMORY_ACCESS_TYPE::cpu);
+			//this->bus->set_memory(TIMA, this->bus->get_memory(TIMA, MEMORY_ACCESS_TYPE::cpu) + 1, MEMORY_ACCESS_TYPE::cpu);
+			this->bus->io[TIMA - IOOFFSET]++;
 		}
+	}
+
+
+	if (0xFF00 + this->instructionCache[0] == 0xFF07 && this->registers.a == 5)
+	{
+		for (int i = 0; i < 4; i++)
+		{
+			printf("%x %x\n", 0xFF04 + i, this->bus->io[0xFF04 - IOOFFSET + i]);
+			
+		}
+		printf("\n");
+
+		printf("");
 	}
 }
 
@@ -326,9 +356,23 @@ void CPU::update_timerCounter()
 	case 0: { this->timerCounter = GB_CLOCKSPEED / 4096; } break;
 	case 1: { this->timerCounter = GB_CLOCKSPEED / 262144; } break;
 	case 2: { this->timerCounter = GB_CLOCKSPEED / 65536; } break;
-	case 3: { this->timerCounter = GB_CLOCKSPEED / 16382; } break;
+	case 3: { this->timerCounter = GB_CLOCKSPEED / 16384; } break;
 	default: throw "Unreachable timer frequency"; break;
 	}
+}
+
+int CPU::get_TAC_freq()
+{
+
+	switch (this->get_TMC_frequency())
+	{
+	case 0: { return GB_CPU_MCYCLE_CLOCKSPEED / 4096; } break;
+	case 1: { return GB_CPU_MCYCLE_CLOCKSPEED / 262144; } break;
+	case 2: { return GB_CPU_MCYCLE_CLOCKSPEED / 65536; } break;
+	case 3: { return GB_CPU_MCYCLE_CLOCKSPEED / 16384; } break;
+	default: throw "Unreachable timer frequency"; break;
+	}
+
 }
 
 
@@ -371,32 +415,32 @@ void CPU::check_for_interrupts()
 	if (this->interrupt_master_enable == true)
 	{
 		// iterate through all types, this allows us to check each interrupt and also service them in order of priority
-		for (const auto type : InterruptTypes_all)
+		for (const auto type : InterruptTypes_all_prioritised)
 		{
-			// if it has been requested and its corresponding flag is enabled
+			// if it has been requested and its corresponding flag is enabled, due to priority, might need to do this in reverse
 			if (this->get_interrupt_flag(type, IF_REGISTER) && this->get_interrupt_flag(type, IE_REGISTER))
 			{
 				//disable interrupts in general and for this type
 				this->set_interrupt_flag(type, 0, IF_REGISTER);
 				this->interrupt_master_enable = 0;
 
-				//push the current pc to the stack
-				//this->ins_PUSH_nn(this->registers.pc);
-
 				// set jump vector
 				switch (type)
 				{
-				case InterruptTypes::vblank: { this->interrupt_vector = 0x0040; } break;
+				case InterruptTypes::vblank:  { this->interrupt_vector = 0x0040; } break;
 				case InterruptTypes::lcdstat: { this->interrupt_vector = 0x0048; } break;
-				case InterruptTypes::timer: { this->interrupt_vector = 0x0050; } break;
-				case InterruptTypes::serial: { this->interrupt_vector = 0x0058; } break;
-				case InterruptTypes::joypad: { this->interrupt_vector = 0x0060; } break;
+				case InterruptTypes::timer:   { this->interrupt_vector = 0x0050; } break;
+				case InterruptTypes::serial:  { this->interrupt_vector = 0x0058; } break;
+				case InterruptTypes::joypad:  { this->interrupt_vector = 0x0060; } break;
 				default: throw "Unreachable interrupt type"; break;
 				}
 			}
 		}
 	}
 }
+
+// https://gbdev.io/pandocs/Interrupts.html
+// source on length
 void CPU::setup_interrupt_handler()
 {
 	switch (this->mCyclesUsed)
@@ -407,20 +451,20 @@ void CPU::setup_interrupt_handler()
 		break;
 	case 1:
 		this->mCyclesUsed++;
-
-		this->registers.sp--;
-		this->bus->set_memory(this->registers.sp, ((this->registers.pc & 0xff00) >> 8), MEMORY_ACCESS_TYPE::cpu);
-
+		// undocumented_internal_operation
 		break;
 	case 2:
+		this->registers.pc--;
+		this->bus->set_memory(--this->registers.sp, (this->registers.pc >> 8), MEMORY_ACCESS_TYPE::cpu);
 		this->mCyclesUsed++;
-
-		this->registers.sp--;
-		this->bus->set_memory(this->registers.sp, (this->registers.pc & 0x00ff), MEMORY_ACCESS_TYPE::cpu);
-
+		break;
+	
+	case 3:
+		this->bus->set_memory(--this->registers.sp, (this->registers.pc & 0xff), MEMORY_ACCESS_TYPE::cpu);
+		this->mCyclesUsed++;
 		break;
 
-	case 3:
+	case 4:
 
 		this->registers.pc = this->interrupt_vector;
 
@@ -583,7 +627,7 @@ void CPU::instruction_handler()
 	case 0x73: { this->ins_LD_bXXb_Y(this->registers.get_HL(), &this->registers.e); } break;
 	case 0x74: { this->ins_LD_bXXb_Y(this->registers.get_HL(), &this->registers.h); } break;
 	case 0x75: { this->ins_LD_bXXb_Y(this->registers.get_HL(), &this->registers.l); } break;
-	case 0x76: { this->is_halted = true; } break; //HALT
+	case 0x76: { this->is_halted = true; this->isExecutingInstruction = false; } break; //HALT
 	case 0x77: { this->ins_LD_bXXb_Y(this->registers.get_HL(), &this->registers.a); } break;
 
 	case 0x78: { this->ins_LD_X_Y(&this->registers.a, &this->registers.b); } break;
@@ -714,7 +758,7 @@ void CPU::instruction_handler()
 
 	case 0xE8: { this->ins_ADD_SP_i8(); } break;
 	case 0xE9: { this->ins_JP_HL(); } break;
-	case 0xEA: { this->ins_LD_bu16u_A(); } break;
+	case 0xEA: { this->ins_LD_bu16b_A(); } break;
 		//case 0xEB: { } break;
 		//case 0xEC: { } break;
 		//case 0xED: { } break;
@@ -732,19 +776,13 @@ void CPU::instruction_handler()
 
 	case 0xF8: { this->ins_LD_HL_SP_i8(); } break;
 	case 0xF9: { this->ins_LD_SP_HL(); } break;
-	case 0xFA: { this->ins_LD_A_bu16u(); } break;
+	case 0xFA: { this->ins_LD_A_bu16b(); } break;
 	case 0xFB: { this->EI_triggered = true; this->isExecutingInstruction = false; return; } break; // EI is set to trigger, only activates after next instruction finishes note the early return
 	//case 0xFC: { } break;
 	//case 0xFD: { } break;
 	case 0xFE: { this->ins_CP_A_u8(); } break;
 	case 0xFF: { this->ins_RST(0x38); } break;
 	default: { printf("ILLEGAL OPCODE CALL %0.2X \n", this->currentRunningOpcode); }
-	}
-
-	if (this->EI_triggered)
-	{
-		this->interrupt_master_enable = 1;
-		this->EI_triggered = false;
 	}
 }
 void CPU::CB_instruction_handler()
@@ -1214,8 +1252,8 @@ void CPU::ins_INC_bHLb()
 {
 	switch (this->mCyclesUsed)
 	{
-	case 0:  this->mCyclesUsed++; break;
-	case 1:  this->instructionCache[0] = this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu); this->mCyclesUsed++; break;
+	case 0: this->mCyclesUsed++; break;
+	case 1: this->instructionCache[0] = this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu); this->mCyclesUsed++; break;
 	case 2:
 		Word address = this->registers.get_HL();
 		Byte temp = this->instructionCache[0];
@@ -1402,10 +1440,6 @@ void CPU::ins_LD_bu16b_SP()
 // 0x18
 void CPU::ins_JR_i8(const enum JumpCondition condition)
 {
-	// DEBUG
-	if (this->registers.get_flag(z))
-		printf("");
-	//
 	switch (this->mCyclesUsed)
 	{
 	case 0:  this->mCyclesUsed++; break;
@@ -1548,9 +1582,15 @@ void CPU::ins_DEC_XX(Byte* registerOne, Byte* registerTwo)
 	switch (this->mCyclesUsed)
 	{
 	case 0:
-		this->registers.set_word(registerOne, registerTwo, (this->registers.get_word(registerOne, registerTwo) - 1));
+	{
+		Word sum = this->registers.get_word(registerOne, registerTwo) - 1;
+		this->instructionCache[0] = sum >> 8;
+		*registerTwo = (sum & 0xFF);
 		this->mCyclesUsed++; break;
-	case 1: this->isExecutingInstruction = false;
+	}
+	case 1:
+		*registerOne = this->instructionCache[0];
+		this->isExecutingInstruction = false;
 	}
 }
 
@@ -1558,8 +1598,8 @@ void CPU::ins_DEC_SP()
 {
 	switch (this->mCyclesUsed)
 	{
-	case 0: this->registers.sp--; this->mCyclesUsed++; break;
-	case 1:  this->isExecutingInstruction = false;
+	case 0: this->mCyclesUsed++; break;
+	case 1: this->registers.sp--; this->isExecutingInstruction = false;
 	}
 }
 
@@ -1967,8 +2007,8 @@ void CPU::ins_PUSH_XX(const Word wordRegisterValue)
 {
 	switch (this->mCyclesUsed)
 	{
-	case 0:  this->mCyclesUsed++; break;
-	case 1:  this->mCyclesUsed++; break;
+	case 0: this->mCyclesUsed++; break;
+	case 1: this->mCyclesUsed++; break;
 	case 2:
 		// move low byte to higher (sp)
 		this->bus->set_memory(--this->registers.sp, (wordRegisterValue >> 8), MEMORY_ACCESS_TYPE::cpu);
@@ -1977,13 +2017,6 @@ void CPU::ins_PUSH_XX(const Word wordRegisterValue)
 	case 3:
 		// move high byte to lower (sp)
 		this->bus->set_memory(--this->registers.sp, (wordRegisterValue & 0xff), MEMORY_ACCESS_TYPE::cpu);
-
-		//for (int i = 0; i > -10; i-=2)
-		//{
-		//	printf("%x %x%x\n", (0xE000 + i) -1, this->bus->get_memory(0xE000 + i, MEMORY_ACCESS_TYPE::debug), this->bus->get_memory((0xE000 + i) -1, MEMORY_ACCESS_TYPE::debug));
-		//}
-		//printf("%x\n", this->bus->work_ram[0xdffe - WORKRAMOFFSET]);
-		//printf("%x\n", this->bus->work_ram[0xdffd - WORKRAMOFFSET]);
 
 		this->isExecutingInstruction = false;
 	}
@@ -1995,11 +2028,11 @@ void CPU::ins_JP_u16(const enum JumpCondition condition)
 {
 	switch (this->mCyclesUsed)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0: this->mCyclesUsed++; break;
 	case 1: this->instructionCache[0] = this->get_byte_from_pc(); this->mCyclesUsed++; break;
-	case 2: this->instructionCache[1] = this->get_byte_from_pc();
-		checkJumpCondition(condition) ? this->mCyclesUsed++ : this->isExecutingInstruction = false;
-		break;
+	case 2: 
+		this->instructionCache[1] = this->get_byte_from_pc();
+		checkJumpCondition(condition) ? this->mCyclesUsed++ : this->isExecutingInstruction = false; break;
 	case 3:
 		this->registers.pc = (instructionCache[1] << 8) | instructionCache[0];
 		this->isExecutingInstruction = false;
@@ -2011,8 +2044,8 @@ void CPU::ins_RET_CC(const enum JumpCondition condition)
 {
 	switch (this->mCyclesUsed)
 	{
-	case 0:  this->mCyclesUsed++; break;
-	case 1:  checkJumpCondition(condition) ? this->mCyclesUsed++ : this->isExecutingInstruction = false; break;
+	case 0: this->mCyclesUsed++; break;
+	case 1: checkJumpCondition(condition) ? this->mCyclesUsed++ : this->isExecutingInstruction = false; break;
 	case 2: this->instructionCache[0] = this->bus->get_memory(this->registers.sp++, MEMORY_ACCESS_TYPE::cpu); this->mCyclesUsed++; break;
 	case 3: this->instructionCache[1] = this->bus->get_memory(this->registers.sp++, MEMORY_ACCESS_TYPE::cpu); this->mCyclesUsed++; break;
 	case 4: this->registers.pc = (instructionCache[1] << 8) | instructionCache[0]; this->isExecutingInstruction = false;
@@ -2023,7 +2056,7 @@ void CPU::ins_RET()
 {
 	switch (this->mCyclesUsed)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0: this->mCyclesUsed++; break;
 	case 1: this->instructionCache[0] = this->bus->get_memory(this->registers.sp++, MEMORY_ACCESS_TYPE::cpu); this->mCyclesUsed++; break;
 	case 2: this->instructionCache[1] = this->bus->get_memory(this->registers.sp++, MEMORY_ACCESS_TYPE::cpu); this->mCyclesUsed++; break;
 	case 3: this->registers.pc = (instructionCache[1] << 8) | instructionCache[0]; this->isExecutingInstruction = false;
@@ -2034,7 +2067,7 @@ void CPU::ins_RETI()
 {
 	switch (this->mCyclesUsed)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0: this->mCyclesUsed++; break;
 	case 1: this->instructionCache[0] = this->bus->get_memory(this->registers.sp++, MEMORY_ACCESS_TYPE::cpu); this->mCyclesUsed++; break;
 	case 2: this->instructionCache[1] = this->bus->get_memory(this->registers.sp++, MEMORY_ACCESS_TYPE::cpu); this->mCyclesUsed++; break;
 	case 3: this->registers.pc = (instructionCache[1] << 8) | instructionCache[0]; this->interrupt_master_enable = 1; this->isExecutingInstruction = false;
@@ -2054,10 +2087,12 @@ void CPU::ins_CALL_u16(const enum JumpCondition condition)
 {
 	switch (this->mCyclesUsed)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0: this->mCyclesUsed++; break;
 	case 1: this->instructionCache[0] = this->get_byte_from_pc(); this->mCyclesUsed++; break;
-	case 2: this->instructionCache[1] = this->get_byte_from_pc(); this->mCyclesUsed++; break;
-	case 3: checkJumpCondition(condition) ? this->mCyclesUsed++ : this->isExecutingInstruction = false; break;
+	case 2: 
+		this->instructionCache[1] = this->get_byte_from_pc();
+		checkJumpCondition(condition) ? this->mCyclesUsed++ : this->isExecutingInstruction = false; break;
+	case 3: this->mCyclesUsed++; break; // strange behaviour since a short call is only 3m long
 	case 4:
 		this->bus->set_memory(--this->registers.sp, this->registers.get_lowByte(&this->registers.pc), MEMORY_ACCESS_TYPE::cpu);
 		this->mCyclesUsed++; break;
@@ -2073,8 +2108,8 @@ void CPU::ins_RST(Byte jumpVector)
 {
 	switch (this->mCyclesUsed)
 	{
-	case 0:  this->mCyclesUsed++; break;
-	case 1:  this->mCyclesUsed++; break;
+	case 0: this->mCyclesUsed++; break;
+	case 1: this->mCyclesUsed++; break;
 	case 2:
 		this->bus->set_memory(--this->registers.sp, this->registers.get_lowByte(&this->registers.pc), MEMORY_ACCESS_TYPE::cpu);
 		this->mCyclesUsed++; break;
@@ -2089,7 +2124,7 @@ void CPU::ins_LD_bFF00_u8b_A()
 {
 	switch (this->mCyclesUsed)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0: this->mCyclesUsed++; break;
 	case 1: this->instructionCache[0] = this->get_byte_from_pc(); this->mCyclesUsed++; break;
 	case 2:
 		this->bus->set_memory(0xFF00 + this->instructionCache[0], this->registers.a, MEMORY_ACCESS_TYPE::cpu);
@@ -2103,7 +2138,9 @@ void CPU::ins_LD_A_bFF00_u8b()
 	{
 	case 0: this->mCyclesUsed++; break;
 	case 1: this->instructionCache[0] = this->get_byte_from_pc(); this->mCyclesUsed++; break;
-	case 2: this->registers.a = this->bus->get_memory(0xFF00 + this->instructionCache[0], MEMORY_ACCESS_TYPE::cpu); this->isExecutingInstruction = false;
+	case 2:
+		this->registers.a = this->bus->get_memory(0xFF00 + this->instructionCache[0], MEMORY_ACCESS_TYPE::cpu);
+		this->isExecutingInstruction = false;
 	}
 }
 
@@ -2187,7 +2224,7 @@ void CPU::ins_LD_SP_HL()
 	}
 }
 
-void CPU::ins_LD_bu16u_A()
+void CPU::ins_LD_bu16b_A()
 {
 	switch (this->mCyclesUsed)
 	{
@@ -2200,7 +2237,7 @@ void CPU::ins_LD_bu16u_A()
 	}
 }
 
-void CPU::ins_LD_A_bu16u()
+void CPU::ins_LD_A_bu16b()
 {
 	switch (this->mCyclesUsed)
 	{

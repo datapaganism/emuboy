@@ -2,6 +2,10 @@
 
 #include "bus.hpp"
 
+#include <iostream>
+#include <bitset>
+#include <sstream>
+
 
 void BUS::cycle_system_one_frame()
 {
@@ -11,13 +15,13 @@ void BUS::cycle_system_one_frame()
     {
 
         this->cpu.mStepCPU();
-        this->cpu.update_timers(4);
+        this->cpu.update_timers_by_mCycle();
         
         this->dma_controller.update_dma(4);
 
         this->ppu.update_graphics(4);
 
-        currentCycles += 4;
+        currentCycles++;
 
         // Serial monitoring
         if ((this->io[0xFF02 - IOOFFSET] & ~0x7E) == 0x81)
@@ -238,38 +242,44 @@ void BUS::depressButton(const enum JoypadButtons button)
 {
     switch (button)
     {
-    case dRight:
-    case bA: { this->io[0xFF00 - IOOFFSET] |= (0b1 << 0) ; } break;
+    case dRight:    { this->directionButtonsState |= (0b1 << 0); } break;
+    case dLeft:     { this->directionButtonsState |= (0b1 << 1); } break;
+    case dUp:       { this->directionButtonsState |= (0b1 << 2); } break;
+    case dDown:     { this->directionButtonsState |= (0b1 << 3); } break;
+
+    case bA:        { this->actionButtonsState |= (0b1 << 0); }  break;
+    case bB:        { this->actionButtonsState |= (0b1 << 1); } break;
+    case bSelect:   { this->actionButtonsState |= (0b1 << 2); } break;
+    case bStart:    { this->actionButtonsState |= (0b1 << 3); } break;
     
-    case dLeft:
-    case bB: { this->io[0xFF00 - IOOFFSET] |= (0b1 << 1) ; } break;
-    
-    case dUp:
-    case bSelect: { this->io[0xFF00 - IOOFFSET] |= (0b1 << 2) ; } break;
-    
-    case dDown:
-    case bStart: { this->io[0xFF00 - IOOFFSET] |= (0b1 << 3) ; } break;
-    default: throw "Unreachable button press"; break;
+    default: throw "Unreachable button depress"; break;
     }
+
+    /*Byte newJOYP = this->io[0xFF00 - IOOFFSET] & 0xF0;
+    newJOYP |= (newJOYP & (1 << 4)) ? (this->directionButtonsState & 0x0F) : (this->actionButtonsState & 0x0F);
+    this->io[0xFF00 - IOOFFSET] = newJOYP;*/
 }
 
 void BUS::pressButton(const enum JoypadButtons button)
 {
     switch (button)
     {
-    case dRight:
-    case bA: { this->io[0xFF00 - IOOFFSET] &= ~(0b1 << 0) ; } break;
-    
-    case dLeft:
-    case bB: { this->io[0xFF00 - IOOFFSET] &= ~(0b1 << 1) ; } break;
-    
-    case dUp:
-    case bSelect: { this->io[0xFF00 - IOOFFSET] &= ~(0b1 << 2) ; } break;
-    
-    case dDown:
-    case bStart: { this->io[0xFF00 - IOOFFSET] &= ~(0b1 << 3) ; } break;
+    case dRight:    { this->directionButtonsState &= ~(0b1 << 0); } break;
+    case dLeft:     { this->directionButtonsState &= ~(0b1 << 1); } break;
+    case dUp:       { this->directionButtonsState &= ~(0b1 << 2); } break;
+    case dDown:     { this->directionButtonsState &= ~(0b1 << 3); } break;
+
+    case bA:        { this->actionButtonsState &= ~(0b1 << 0); }  break;
+    case bB:        { this->actionButtonsState &= ~(0b1 << 1); } break;
+    case bSelect:   { this->actionButtonsState &= ~(0b1 << 2); } break;
+    case bStart:    { this->actionButtonsState &= ~(0b1 << 3); } break;
+
     default: throw "Unreachable button press"; break;
     }
+
+    //Byte newJOYP = this->io[0xFF00 - IOOFFSET] & 0xF0;
+    //newJOYP |= (newJOYP & (1 << 4)) ? (this->directionButtonsState & 0x0F) : (this->actionButtonsState & 0x0F);
+    //this->io[0xFF00 - IOOFFSET] = newJOYP;
 
     this->cpu.request_interrupt(joypad);
 }
@@ -377,14 +387,27 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
     }
     if (address <= 0xFF4B) // from 0xFF00
     {
-        // i/o registers
+        switch (address)
+        {
+        case 0xFF00:
+        {
+            Byte newJOYP = this->io[address - 0xFF00] & 0xF0;
+            newJOYP |= (newJOYP & (1 << 4)) ? (this->directionButtonsState & 0x0F) : (this->actionButtonsState & 0x0F);
+            return newJOYP | 0xC0;
+            break;
+        }
+        case 0xFF26:// NR52
+        {
+            break;
+        }
+        }
 
         if (address == 0xFF26) // NR52
         {
 
         }
 
-        return this->io[address - 0xFF00];
+        return this->io[address - IOOFFSET];
     }
     if (address <= 0xFF7F) // from 0xFF4C
     {
@@ -409,13 +432,7 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
 
 void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYPE access_type)
 {
-   /* if (0x9800 <= address && 0x9BFF >= address && this->DEBUG_PC_breakpoint_hit) {
-        this->DEBUG_fill_ram(0x8200, "3C 00 42 00 B9 00 A5 00 B9 00 A5 00 42 00 3C 00");
-        this->vram_ptr->render_vram_tiles(this);
-        this->bg_map_ptr->render_vram_tiles(this);
-    }*/
-
-    /*
+     /*
     switch (access_type)
     {
     case MEMORY_ACCESS_TYPE::cpu:
@@ -519,8 +536,19 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
         switch (address)
         {
         case 0xFF00:
-            this->io[address - 0xFF00] = (data | 0xCF);
-            break;
+            {
+                Byte newJOYP = data & 0xF0;
+                newJOYP |= (newJOYP & (1 << 4)) ? (this->directionButtonsState & 0x0F) : (this->actionButtonsState & 0x0F);
+                this->io[address - 0xFF00] = newJOYP | 0xC0;
+
+
+                int joy = (int)this->io[0];
+                std::stringstream caption;
+                caption << std::bitset<8>(joy);
+                std::cout << caption.str() << "\n";
+
+                break;
+            }            
         case 0xFF02:
             this->io[address - 0xFF00] = (data | 0x7E);
             break;

@@ -121,12 +121,12 @@ void Window::handleWindowEvent(SDL_Event& e)
 		default: break;
 		}
 
-		if (updateCaption)
-		{
-			std::stringstream caption;
-			caption << this->title << " - ID: " << this->mWindowID << " MouseFocus:" << ((this->mMouseFocus) ? "On" : "Off") << " KeyboardFocus:" << ((this->mKeyboardFocus) ? "On" : "Off");
-			SDL_SetWindowTitle(this->mWindow, caption.str().c_str());
-		}
+		//if (updateCaption)
+		//{
+		//	std::stringstream caption;
+		//	caption << this->title << " - ID: " << this->mWindowID << " MouseFocus:" << ((this->mMouseFocus) ? "On" : "Off") << " KeyboardFocus:" << ((this->mKeyboardFocus) ? "On" : "Off");
+		//	SDL_SetWindowTitle(this->mWindow, caption.str().c_str());
+		//}
 	}
 }
 

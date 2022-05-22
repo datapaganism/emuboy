@@ -39,6 +39,12 @@ public:
     std::unique_ptr<Byte[]> oam_ram   = std::make_unique<Byte[]>(0x100);
     Byte interrupt_enable_register = 0;
 
+    Byte directionButtonsState = 0xFF;
+    Byte actionButtonsState = 0xFF;
+    
+
+
+    
     std::unique_ptr<FRAMEBUFFER_PIXEL[]> framebuffer = std::make_unique<FRAMEBUFFER_PIXEL[]>(XRES * YRES);
     
 
