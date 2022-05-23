@@ -25,38 +25,53 @@ Yes! Not implementing the HALT instruction will cause your timings to be wildly 
 
 
 void CPU::mStepCPU()
-{
-	if (!this->is_halted)
+{	
+	if (this->isExecutingInstruction)
 	{
-		if (this->isExecutingInstruction)
+		//decode and execute instruction // takes a cycle
+		this->instruction_handler();
+			
+		//if finished instruction after this execution, prefetch
+		if (!this->isExecutingInstruction)
 		{
-			//decode and execute instruction // takes a cycle
-			this->instruction_handler();
-			//if finished instruction after this execution, prefetch
-			if (!this->isExecutingInstruction)
+			if (!this->is_halted)
 			{
 				if (this->EI_triggered && this->currentRunningOpcode != 0xFB)
 				{
-					this->interrupt_master_enable = 1;
+					this->interrupt_master_enable = true;
 					this->EI_triggered = false;
 				}
-				if (!this->is_halted)
+
+				this->check_for_interrupts();
+				if (this->interrupt_vector != 0)
 				{
-					//this->DEBUG_printCurrentState(this->registers.pc);
-					this->prefetch_instruction();
-					this->check_for_interrupts();
-					//return;
+					this->setup_for_next_instruction();
+					return;
 				}
-				//this->halt_handler();
+
+				this->prefetch_instruction();
 			}
-			return;
 		}
-		// if we havent prefetched anything, fetch instruction // takes a cycle
-		this->currentRunningOpcode = this->get_byte_from_pc();
-		this->setup_for_next_instruction();
+
+		if (this->halt_bug)
+		{
+			this->halt_bug = false;
+			this->registers.pc--;
+		}
 		return;
 	}
-	this->halt_handler();	
+
+	if (this->is_halted)
+	{
+		this->halt_handler();
+		return;
+	}
+
+	// if we havent prefetched anything, fetch instruction // takes a cycle
+	this->currentRunningOpcode = this->get_byte_from_pc();
+	this->setup_for_next_instruction();
+	return;
+
 };
 
 void CPU::halt_handler()
@@ -64,20 +79,39 @@ void CPU::halt_handler()
 
 	Byte interrupt_request_register = this->bus->get_memory(IF_REGISTER, MEMORY_ACCESS_TYPE::cpu);
 	Byte interrupt_types_enabled_register = this->bus->get_memory(IE_REGISTER, MEMORY_ACCESS_TYPE::cpu);
-	bool any_pending_interrupts = (interrupt_request_register & interrupt_types_enabled_register & 0x1F) != 0;
+	bool any_pending_interrupts = ((interrupt_request_register & interrupt_types_enabled_register) & 0x1F) != 0;
 	bool ime = this->interrupt_master_enable;
-	// if IME is set, CPU wakes up and checks for interrupts
+
+	if (!ime && !any_pending_interrupts)
+		this->halt_bug = true;
+
 	if (ime)
 	{
 		if (any_pending_interrupts)
 		{
 			this->is_halted = false;
+			prefetch_instruction();
 			this->check_for_interrupts();
 			return;
 		}
+	}
+	if (any_pending_interrupts && this->halt_bug)
+	{
+		this->is_halted = false;
+		this->halt_bug = false;
+		prefetch_instruction();
 		return;
 	}
-	// if IME is disabled
+	if (any_pending_interrupts)
+	{
+		this->is_halted = false;
+		prefetch_instruction();
+		this->registers.pc--;		
+		return;
+	}	
+};
+
+// if IME is disabled
 	// If interrupt pending, exit HALT, however enter HALT bug area, during this condition, halt exits immediately but instead fails to increment the PC, causing the next instruction to be executed twice. It does not execute HALT twice, because the PC has already incremented during instruction decoding.
 
 	// The halt bug fails to increment the pc, so the next byte read is the same, this can cause a completely different instruction to execute
@@ -88,15 +122,6 @@ void CPU::halt_handler()
 	// 3E 3E
 	// 14
 	// to emulate it we need to make sure that post fetch we decrement the pc by one
-	if (any_pending_interrupts)
-	{
-		this->is_halted = false;
-		prefetch_instruction();
-		//this->registers.pc--;
-		this->halt_bug = true;
-		return;
-	}
-};
 
 void CPU::check_for_interrupts()
 {
@@ -111,7 +136,7 @@ void CPU::check_for_interrupts()
 			{
 				//disable interrupts in general and for this type
 				this->set_interrupt_flag(type, 0, IF_REGISTER);
-				this->interrupt_master_enable = 0;
+				this->interrupt_master_enable = false;
 
 				// set jump vector
 				switch (type)
@@ -129,6 +154,39 @@ void CPU::check_for_interrupts()
 	}
 }
 
+// https://gbdev.io/pandocs/Interrupts.html
+// source on length
+void CPU::setup_interrupt_handler()
+{
+	switch (this->mCyclesUsed)
+	{
+	case 0:
+		this->mCyclesUsed++;
+		// undocumented_internal_operation
+		break;
+	case 1:
+		this->mCyclesUsed++;
+		// undocumented_internal_operation
+		break;
+	case 2:
+		this->bus->set_memory(--this->registers.sp, (this->registers.pc >> 8), MEMORY_ACCESS_TYPE::cpu);
+		this->mCyclesUsed++;
+		break;
+
+	case 3:
+		this->bus->set_memory(--this->registers.sp, (this->registers.pc & 0xff), MEMORY_ACCESS_TYPE::cpu);
+		this->mCyclesUsed++;
+		break;
+
+	case 4:
+
+		this->registers.pc = this->interrupt_vector;
+
+		this->interrupt_vector = 0;
+		this->isExecutingInstruction = false;
+		break;
+	}
+}
 
 
 void CPU::DEBUG_printCurrentState(Word pc)
@@ -410,40 +468,7 @@ void CPU::set_interrupt_flag(const enum InterruptTypes type, const bool value, W
 
 
 
-// https://gbdev.io/pandocs/Interrupts.html
-// source on length
-void CPU::setup_interrupt_handler()
-{
-	switch (this->mCyclesUsed)
-	{
-	case 0:
-		this->mCyclesUsed++;
-		// undocumented_internal_operation
-		break;
-	case 1:
-		this->mCyclesUsed++;
-		// undocumented_internal_operation
-		break;
-	case 2:
-		this->registers.pc--;
-		this->bus->set_memory(--this->registers.sp, (this->registers.pc >> 8), MEMORY_ACCESS_TYPE::cpu);
-		this->mCyclesUsed++;
-		break;
-	
-	case 3:
-		this->bus->set_memory(--this->registers.sp, (this->registers.pc & 0xff), MEMORY_ACCESS_TYPE::cpu);
-		this->mCyclesUsed++;
-		break;
 
-	case 4:
-
-		this->registers.pc = this->interrupt_vector;
-
-		this->interrupt_vector = 0;
-		this->isExecutingInstruction = false;
-		break;
-	}
-}
 
 void CPU::setup_for_next_instruction()
 {
@@ -454,13 +479,7 @@ void CPU::setup_for_next_instruction()
 void CPU::prefetch_instruction()
 {
 	this->setup_for_next_instruction();
-	if (this->halt_bug)
-	{
-		this->halt_bug = false;
-		this->registers.pc--;
-	}
 	this->currentRunningOpcode = this->get_byte_from_pc();
-	
 }
 
 void CPU::instruction_handler()
@@ -2047,7 +2066,7 @@ void CPU::ins_RETI()
 	case 0: this->mCyclesUsed++; break;
 	case 1: this->instructionCache[0] = this->bus->get_memory(this->registers.sp++, MEMORY_ACCESS_TYPE::cpu); this->mCyclesUsed++; break;
 	case 2: this->instructionCache[1] = this->bus->get_memory(this->registers.sp++, MEMORY_ACCESS_TYPE::cpu); this->mCyclesUsed++; break;
-	case 3: this->registers.pc = (instructionCache[1] << 8) | instructionCache[0]; this->interrupt_master_enable = 1; this->isExecutingInstruction = false;
+	case 3: this->registers.pc = (instructionCache[1] << 8) | instructionCache[0]; this->interrupt_master_enable = true; this->isExecutingInstruction = false;
 	}
 }
 

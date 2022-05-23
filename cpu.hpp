@@ -130,7 +130,6 @@ public:
 	bool interrupt_master_enable = 0;
 	bool is_halted = 0;
 	bool halt_bug = 0;
-
 	/// <summary>
 	/// Allows a CPU to access any device on the BUS
 	/// </summary>
