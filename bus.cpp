@@ -391,10 +391,18 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
         {
         case 0xFF00:
         {
-            Byte newJOYP = this->io[address - 0xFF00] & 0xF0;
-            newJOYP |= (newJOYP & (1 << 4)) ? (this->directionButtonsState & 0x0F) : (this->actionButtonsState & 0x0F);
-            return newJOYP | 0xC0;
-            break;
+            Byte requestedJOYP = this->io[0] & 0x30;
+            if (requestedJOYP & 0b00010000) {
+                return 0xF0 | (this->actionButtonsState & 0x0F);
+            }
+            if (requestedJOYP & 0b00100000) {
+                return 0xF0 | (this->directionButtonsState & 0x0F);
+            }
+                
+            
+           
+
+            throw "cannot return input";
         }
         case 0xFF26:// NR52
         {
@@ -531,9 +539,10 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
         {
         case 0xFF00:
             {
-                Byte newJOYP = data & 0xF0;
-                newJOYP |= (newJOYP & (1 << 4)) ? (this->directionButtonsState & 0x0F) : (this->actionButtonsState & 0x0F);
-                this->io[address - 0xFF00] = newJOYP | 0xC0;
+                //Byte newJOYP = data & 0xF0;
+                //newJOYP |= (newJOYP & (1 << 4)) ? (this->directionButtonsState & 0x0F) : (this->actionButtonsState & 0x0F);
+                //this->io[address - 0xFF00] = newJOYP | 0xC0;
+                this->io[0] = data;
                 break;
             }            
         case 0xFF02:
