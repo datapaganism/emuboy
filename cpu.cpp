@@ -45,7 +45,9 @@ void CPU::mStepCPU()
 					//this->DEBUG_printCurrentState(this->registers.pc);
 					this->prefetch_instruction();
 					this->check_for_interrupts();
+					//return;
 				}
+				//this->halt_handler();
 			}
 			return;
 		}
@@ -59,31 +61,74 @@ void CPU::mStepCPU()
 
 void CPU::halt_handler()
 {
-	
+
+	Byte interrupt_request_register = this->bus->get_memory(IF_REGISTER, MEMORY_ACCESS_TYPE::cpu);
+	Byte interrupt_types_enabled_register = this->bus->get_memory(IE_REGISTER, MEMORY_ACCESS_TYPE::cpu);
+	bool any_pending_interrupts = (interrupt_request_register & interrupt_types_enabled_register & 0x1F) != 0;
+	bool ime = this->interrupt_master_enable;
 	// if IME is set, CPU wakes up and checks for interrupts
-	if (this->interrupt_master_enable)
+	if (ime)
 	{
-		this->is_halted = false;
-		this->check_for_interrupts();
+		if (any_pending_interrupts)
+		{
+			this->is_halted = false;
+			this->check_for_interrupts();
+			return;
+		}
 		return;
 	}
-
-	Byte interrupt_request_register = (this->bus->io[IF_REGISTER - IOOFFSET]);
-	Byte interrupt_types_enabled_register = (this->bus->high_ram[IE_REGISTER - HIGHRAMOFFSET]);
-	bool any_pending_interrupts = (interrupt_request_register & interrupt_types_enabled_register) != 0;
-
 	// if IME is disabled
 	// If interrupt pending, exit HALT, however enter HALT bug area, during this condition, halt exits immediately but instead fails to increment the PC, causing the next instruction to be executed twice. It does not execute HALT twice, because the PC has already incremented during instruction decoding.
+
+	// The halt bug fails to increment the pc, so the next byte read is the same, this can cause a completely different instruction to execute
+	// halt
+	// 3E 14
+	// actually
+	// halt
+	// 3E 3E
+	// 14
+	// to emulate it we need to make sure that post fetch we decrement the pc by one
 	if (any_pending_interrupts)
 	{
 		this->is_halted = false;
+		prefetch_instruction();
+		//this->registers.pc--;
 		this->halt_bug = true;
-		this->setup_for_next_instruction();
-		this->currentRunningOpcode = this->get_byte_from_pc();
-		//this->check_for_interrupts();
 		return;
 	}
 };
+
+void CPU::check_for_interrupts()
+{
+	//check master to see if interrupts are enabled
+	if (this->interrupt_master_enable == true)
+	{
+		// iterate through all types, this allows us to check each interrupt and also service them in order of priority
+		for (const auto type : InterruptTypes_all)
+		{
+			// if it has been requested and its corresponding flag is enabled, due to priority
+			if (this->get_interrupt_flag(type, IF_REGISTER) && this->get_interrupt_flag(type, IE_REGISTER))
+			{
+				//disable interrupts in general and for this type
+				this->set_interrupt_flag(type, 0, IF_REGISTER);
+				this->interrupt_master_enable = 0;
+
+				// set jump vector
+				switch (type)
+				{
+				case InterruptTypes::vblank:  { this->interrupt_vector = 0x0040; } break;
+				case InterruptTypes::lcdstat: { this->interrupt_vector = 0x0048; } break;
+				case InterruptTypes::timer:   { this->interrupt_vector = 0x0050; } break;
+				case InterruptTypes::serial:  { this->interrupt_vector = 0x0058; } break;
+				case InterruptTypes::joypad:  { this->interrupt_vector = 0x0060; } break;
+				default: throw "Unreachable interrupt type"; break;
+				}
+				return;
+			}
+		}
+	}
+}
+
 
 
 void CPU::DEBUG_printCurrentState(Word pc)
@@ -120,7 +165,7 @@ void CPU::DEBUG_printCurrentState(Word pc)
 
 		printf("\n");
 	}
-	if (this->registers.pc == pc || this->registers.pc == 0xFFFF)
+	if (this->registers.pc == pc)
 		this->debug_toggle = true;
 }
 
@@ -199,28 +244,13 @@ void CPU::DEBUG_print_IO()
 	std::cout << "\t0xFF49  [OPB1]: ";  printf("%.2X\n", this->bus->get_memory(0xFF49, MEMORY_ACCESS_TYPE::cpu));
 	std::cout << "\t0xFF4A    [WY]: ";  printf("%.2X\n", this->bus->get_memory(0xFF4A, MEMORY_ACCESS_TYPE::cpu));
 	std::cout << "\t0xFF4B    [WX]: ";  printf("%.2X\n", this->bus->get_memory(0xFF4B, MEMORY_ACCESS_TYPE::cpu));
-	std::cout << "\t0xFFFF    [IE]: ";  printf("%.2X\n", this->bus->interrupt_enable_register);
+	std::cout << "\t0xFFFF    [IE]: ";  printf("%.2X\n", this->bus->get_memory(0xFFFF, MEMORY_ACCESS_TYPE::cpu));
+	std::cout << "\t         [IME]: ";  printf("%.2X\n", this->bus->interrupt_enable_register);
 }
 
 void CPU::connect_to_bus(BUS* pBus)
 {
 	this->bus = pBus;
-}
-
-void CPU::interrupt_DI_EI_handler()
-{
-	if (this->DI_triggered)
-	{
-		this->interrupt_master_enable = 0;
-		this->DI_triggered = false;
-		return;
-	}
-	if (this->EI_triggered)
-	{
-		this->interrupt_master_enable = 1;
-		this->EI_triggered = false;
-		return;
-	}
 }
 
 bool CPU::checkCarry(const int a, const int b, const int shift, const int c)
@@ -319,55 +349,6 @@ void CPU::update_timers_by_mCycle()
 /// and when the TIMA overflows we set to the value of TMA and request an interrupt of type timer.
 /// </summary>
 /// <param name="cycles"></param>
-void CPU::update_timers(const int cycles)
-
-{
-
-
-	//run the DIV timer, every 256cpu cycles we need to increment the DIV register once,
-	this->divTimerCounter -= cycles;
-	this->divTimerCounterFrom0 += cycles;
-	if (this->divTimerCounter <= 0)
-	{
-		this->divTimerCounter = DIVinit;
-		//register is read only to gameboy
-		this->bus->io[DIV - IOOFFSET]++;
-	}
-
-	// if TMC bit 2 is set, this means that the timer is enabled
-	if (this->bus->io[TAC - IOOFFSET] & (0b00000100))
-	{
-		//the timer increment holds the amount of cycles needed to tick TIMA register up one, we can decrement it and see if it has hit 0
-		this->timerCounter -= cycles;
-
-		// if the TIMA needs updating
-		if (this->timerCounter <= 0)
-		{
-			if (this->bus->io[TIMA - IOOFFSET] == 0xFF)
-			{
-				//this->bus->set_memory(TIMA, this->bus->get_memory(TMA, MEMORY_ACCESS_TYPE::cpu), MEMORY_ACCESS_TYPE::cpu);
-				this->bus->io[TIMA - IOOFFSET] = this->bus->io[TMA - IOOFFSET];
-				this->request_interrupt(timer);
-			}
-
-			//this->bus->set_memory(TIMA, this->bus->get_memory(TIMA, MEMORY_ACCESS_TYPE::cpu) + 1, MEMORY_ACCESS_TYPE::cpu);
-			this->bus->io[TIMA - IOOFFSET]++;
-		}
-	}
-
-
-	if (0xFF00 + this->instructionCache[0] == 0xFF07 && this->registers.a == 5)
-	{
-		for (int i = 0; i < 4; i++)
-		{
-			printf("%x %x\n", 0xFF04 + i, this->bus->io[0xFF04 - IOOFFSET + i]);
-			
-		}
-		printf("\n");
-
-		printf("");
-	}
-}
 
 Byte CPU::get_TMC_frequency()
 {
@@ -406,13 +387,7 @@ void CPU::request_interrupt(const InterruptTypes type)
 	this->set_interrupt_flag(type, 1, IF_REGISTER);
 }
 
-//void CPU::dma_transfer(Byte data)
-//{
-//	for (int i = 0; i < 0xA0; i++)
-//	{
-//		this->bus->set_memory(OAM + i, this->bus->get_memory((data << 8) + i, MEMORY_ACCESS_TYPE::cpu), MEMORY_ACCESS_TYPE::cpu);
-//	}
-//}
+
 
 Byte CPU::get_interrupt_flag(const enum InterruptTypes type, Word address)
 {
@@ -434,36 +409,6 @@ void CPU::set_interrupt_flag(const enum InterruptTypes type, const bool value, W
 // therefore next cycle we just execute it, this is why it may looks like f d e is performed in one go
 
 
-void CPU::check_for_interrupts()
-{
-	//check master to see if interrupts are enabled
-	if (this->interrupt_master_enable == true)
-	{
-		// iterate through all types, this allows us to check each interrupt and also service them in order of priority
-		for (const auto type : InterruptTypes_all)
-		{
-			// if it has been requested and its corresponding flag is enabled, due to priority
-			if (this->get_interrupt_flag(type, IF_REGISTER) && this->get_interrupt_flag(type, IE_REGISTER))
-			{
-				//disable interrupts in general and for this type
-				this->set_interrupt_flag(type, 0, IF_REGISTER);
-				this->interrupt_master_enable = 0;
-
-				// set jump vector
-				switch (type)
-				{
-				case InterruptTypes::vblank:  { this->interrupt_vector = 0x0040; } break;
-				case InterruptTypes::lcdstat: { this->interrupt_vector = 0x0048; } break;
-				case InterruptTypes::timer:   { this->interrupt_vector = 0x0050; } break;
-				case InterruptTypes::serial:  { this->interrupt_vector = 0x0058; } break;
-				case InterruptTypes::joypad:  { this->interrupt_vector = 0x0060; } break;
-				default: throw "Unreachable interrupt type"; break;
-				}
-				return;
-			}
-		}
-	}
-}
 
 // https://gbdev.io/pandocs/Interrupts.html
 // source on length
@@ -512,9 +457,10 @@ void CPU::prefetch_instruction()
 	if (this->halt_bug)
 	{
 		this->halt_bug = false;
-		return;
+		this->registers.pc--;
 	}
 	this->currentRunningOpcode = this->get_byte_from_pc();
+	
 }
 
 void CPU::instruction_handler()
@@ -2610,8 +2556,7 @@ void CPU::ins_BIT_b_r_bHLb(Byte bit)
 	switch (this->mCyclesUsed)
 	{
 	case 0: this->mCyclesUsed++; break;
-	case 1: this->mCyclesUsed++; break;
-	case 2:
+	case 1:
 
 		this->instructionCache[0] = this->bus->get_memory(this->registers.get_HL(), MEMORY_ACCESS_TYPE::cpu);
 		this->registers.set_flag(n, 0);

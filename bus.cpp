@@ -417,7 +417,7 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
     if (address <= 0xFFFF) // from 0xFF80
     {
         // high ram area
-        return this->high_ram[address-0xFF80];
+        return this->high_ram[address - HIGHRAMOFFSET];
     }
     
     // temp return
@@ -612,16 +612,9 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
     if (address <= 0xFFFF)
     {
         // high ram area
-        this->high_ram[address - 0xFF80] = data;
+        this->high_ram[address - HIGHRAMOFFSET] = data;
         return;
     }
-    //if (address <= 0xFFFF)
-    //{
-    //    // interrupt enabled register, write only data
-    //    
-
-    //    return;
-    //}
 
     throw "set memory fail";
 }

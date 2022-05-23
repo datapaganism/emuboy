@@ -125,7 +125,6 @@ public:
 	CPU();
 
 	Registers registers;
-	void DEBUG_printCurrentState();
 	void DEBUG_print_IO();
 
 	bool interrupt_master_enable = 0;
@@ -167,13 +166,13 @@ public:
 
 	void update_timers_by_mCycle();
 
-	//int do_interrupts();
+
 	void update_timers(const int cycles);
 
 	void update_timerCounter();
 	void request_interrupt(const InterruptTypes type);
 
-	void dma_transfer(Byte data);
+
 
 private:
 
@@ -209,17 +208,13 @@ private:
 
 	void instruction_handler();
 	void CB_instruction_handler();
-	void interrupt_DI_EI_handler();
 	void STOP_instruction_handler();
 	void check_for_interrupts();
 	void setup_interrupt_handler();
 	void setup_for_next_instruction();
 	void prefetch_instruction();
 
-	//int CB_instruction_handler();
-
-	//int STOP_instruction_handler();
-
+	
 	Byte get_nibble(const Byte input, const bool getHi);
 	void set_nibble(Byte* registerOne, const Byte value, const bool setHi);
 
