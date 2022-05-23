@@ -161,6 +161,8 @@ public:
 	/// </summary>
 	void mStepCPU();
 
+	void halt_handler();
+
 	void DEBUG_printCurrentState(Word pc);
 
 	void update_timers_by_mCycle();

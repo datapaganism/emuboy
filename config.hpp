@@ -35,6 +35,7 @@ const bool shownOnStart = false;
 #define IOOFFSET 0xFF00
 #define OAMOFFSET 0xFE00
 #define VIDEORAMOFFSET 0x8000
+#define HIGHRAMOFFSET 0xFF80
 
 #define IF_REGISTER 0xFF0F
 #define IE_REGISTER 0xFFFF

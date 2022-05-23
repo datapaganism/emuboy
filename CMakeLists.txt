@@ -21,7 +21,6 @@ function(enable_cxx_compiler_flag_if_supported flag)
     endif()
 endfunction()
 
-# example usage
 #enable_cxx_compiler_flag_if_supported("-Wall")
 #enable_cxx_compiler_flag_if_supported("-Wextra")
 #enable_cxx_compiler_flag_if_supported("-pedantic")

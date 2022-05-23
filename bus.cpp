@@ -309,12 +309,12 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
 
         } break;
         */
-        case MEMORY_ACCESS_TYPE::interrupt_handler:
+     /*   case MEMORY_ACCESS_TYPE::interrupt_handler:
         {
             if (address == 0xFFFF)
                 return this->interrupt_enable_register;
         } break;
-        default: break;
+        default: break;*/
     }
 
     // boot rom area, or rom bank 0
@@ -414,18 +414,12 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
         // unused part of the map, just return
         return 0b0;
     }
-    if (address <= 0xFFFE) // from 0xFF80
+    if (address <= 0xFFFF) // from 0xFF80
     {
         // high ram area
         return this->high_ram[address-0xFF80];
     }
-    if (address <= 0xFFFF) // from 0xFFFF, yep
-    {
-        // interrupt enabled register, cannot be accessed
-        //return this->interrupt_enable_register;
-        return 0b0;
-    }
-
+    
     // temp return
     throw "get_memory no return";
 };
@@ -540,13 +534,6 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
                 Byte newJOYP = data & 0xF0;
                 newJOYP |= (newJOYP & (1 << 4)) ? (this->directionButtonsState & 0x0F) : (this->actionButtonsState & 0x0F);
                 this->io[address - 0xFF00] = newJOYP | 0xC0;
-
-
-                int joy = (int)this->io[0];
-                std::stringstream caption;
-                caption << std::bitset<8>(joy);
-                std::cout << caption.str() << "\n";
-
                 break;
             }            
         case 0xFF02:
@@ -622,19 +609,19 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
         // unused part of the map, just return
         return;
     }
-    if (address <= 0xFFFE)
+    if (address <= 0xFFFF)
     {
         // high ram area
         this->high_ram[address - 0xFF80] = data;
         return;
     }
-    if (address <= 0xFFFF)
-    {
-        // interrupt enabled register, write only data
-        this->interrupt_enable_register = data;
+    //if (address <= 0xFFFF)
+    //{
+    //    // interrupt enabled register, write only data
+    //    
 
-        return;
-    }
+    //    return;
+    //}
 
     throw "set memory fail";
 }
