@@ -48,10 +48,8 @@ public:
 
     Byte get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type);
     void set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYPE access_type);
-    void set_memory_word(const Word address, const Word data, enum MEMORY_ACCESS_TYPE access_type);
-    const Word get_memory_word_lsbf(const Word address, enum MEMORY_ACCESS_TYPE access_type);
     
-    Byte joypadState = 0xFD;
+    Byte joypadState = 0xFF;
     void set_joypadState(const enum JoypadButtons button, bool value);
     void pressButton(const enum JoypadButtons button);
     void depressButton(const enum JoypadButtons button);
@@ -60,8 +58,6 @@ public:
     
     Byte DEBUG_get_memory(const Word address);
     void DEBUG_set_memory(const Word address, const Byte data);
-    void DEBUG_set_memory_word(const Word address, const Word data);
-    const Word DEBUG_get_memory_word_lsbf(const Word address);
     Byte DEBUG_ascii_to_hex(char character);
     void DEBUG_opcode_program(Word address, std::string byteString);
     bool DEBUG_PC_breakpoint_hit = false;

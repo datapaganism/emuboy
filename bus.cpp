@@ -15,7 +15,7 @@ void BUS::cycle_system_one_frame()
     {
 
         this->cpu.mStepCPU();
-        this->cpu.update_timers_by_mCycle();
+        this->cpu.update_timers();
         
         this->dma_controller.update_dma(4);
 
@@ -549,7 +549,7 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
             break;
         case 0xFF07:
             this->io[address - 0xFF00] = (data | 0xF8);
-            this->cpu.update_timerCounter();
+            //this->cpu.update_timerCounter();
             break;
         case 0xFF0F:
             this->io[address - 0xFF00] = (data | 0xE0);
@@ -623,42 +623,6 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
 
     throw "set memory fail";
 }
-void BUS::set_memory_word(const Word address, const Word data, enum MEMORY_ACCESS_TYPE access_type)
-{
-    //store in little endian byte order 
-    this->set_memory(address, (data & 0x00ff),access_type);
-    this->set_memory(address + 1, ((data & 0xff00) >> 8), access_type);
-}
-
-const Word BUS::get_memory_word_lsbf(const Word address, enum MEMORY_ACCESS_TYPE access_type)
-{
-        return (this->get_memory(address, access_type) | (this->get_memory(address + 1, access_type) << 8));
-}
-
-Byte BUS::DEBUG_get_memory(const Word address)
-{
-    return this->get_memory(address, MEMORY_ACCESS_TYPE::debug);
-}
-
-void BUS::DEBUG_set_memory(const Word address, const Byte data)
-{
-    this->set_memory(address, data, MEMORY_ACCESS_TYPE::debug);   
-}
-
-void BUS::DEBUG_set_memory_word(const Word address, const Word data)
-{
-    this->set_memory_word(address, data, MEMORY_ACCESS_TYPE::debug);
-}
-
-const Word BUS::DEBUG_get_memory_word_lsbf(const Word address)
-{
-    return this->get_memory_word_lsbf(address, MEMORY_ACCESS_TYPE::debug);
-}
-
-
-
-
-
 
 /// <summary>
 /// A function to load the bios into memory, as the bios is property of Nintendo, we can not legally release this emulator with the bios,
