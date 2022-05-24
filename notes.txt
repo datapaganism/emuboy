@@ -1,0 +1,14 @@
+0x27CC is where tetris starts copying tiles
+
+found diverengce, tetris rom 0x021b, writing of IF register, emulators don't write of IF but mine does
+
+writing to work ram issue, C241 of workram fails to be written to
+
+something is overwriting the work ram
+its the ppu but idk where
+
+okay jr test, def8 is the wram address where the instructions are called
+
+investigate tac register not working when set to 0x5
+see if we can increment the registers anyway
+cause an timer interrupt
