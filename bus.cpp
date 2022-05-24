@@ -44,6 +44,31 @@ void BUS::cycle_system_one_frame()
 
 
 
+void BUS::set_joypadState(const enum JoypadButtons button, bool value)
+{
+    // joypadstate
+    // 0000 0000
+    // ACT  DIR
+    
+    Byte bit = 0;
+    switch (button)
+    {
+    case dRight:    {bit = 0b00000001; break;}
+    case dLeft:     {bit = 0b00000010; break;}
+    case dUp:       {bit = 0b00000100; break;}
+    case dDown:     {bit = 0b00001000; break;}
+    case bA:        {bit = 0b00010000; break;}
+    case bB:        {bit = 0b00100000; break;}
+    case bSelect:   {bit = 0b01000000; break;}
+    case bStart:    {bit = 0b10000000; break;}
+    default: throw "Unreachable button press"; break;
+    }
+    this->joypadState = (value) ? (this->joypadState | bit) : (this->joypadState & ~bit);
+}
+
+
+
+
 Byte BUS::DEBUG_ascii_to_hex(char character)
 {
     Byte temp = 0x0;
@@ -240,48 +265,25 @@ BUS::BUS(const std::string rom_path, const std::string bios_path)
 
 void BUS::depressButton(const enum JoypadButtons button)
 {
-    switch (button)
-    {
-    case dRight:    { this->directionButtonsState |= (0b1 << 0); } break;
-    case dLeft:     { this->directionButtonsState |= (0b1 << 1); } break;
-    case dUp:       { this->directionButtonsState |= (0b1 << 2); } break;
-    case dDown:     { this->directionButtonsState |= (0b1 << 3); } break;
-
-    case bA:        { this->actionButtonsState |= (0b1 << 0); }  break;
-    case bB:        { this->actionButtonsState |= (0b1 << 1); } break;
-    case bSelect:   { this->actionButtonsState |= (0b1 << 2); } break;
-    case bStart:    { this->actionButtonsState |= (0b1 << 3); } break;
-    
-    default: throw "Unreachable button depress"; break;
-    }
-
-    /*Byte newJOYP = this->io[0xFF00 - IOOFFSET] & 0xF0;
-    newJOYP |= (newJOYP & (1 << 4)) ? (this->directionButtonsState & 0x0F) : (this->actionButtonsState & 0x0F);
-    this->io[0xFF00 - IOOFFSET] = newJOYP;*/
+    this->set_joypadState(button, 1);
 }
+
 
 void BUS::pressButton(const enum JoypadButtons button)
 {
-    switch (button)
-    {
-    case dRight:    { this->directionButtonsState &= ~(0b1 << 0); } break;
-    case dLeft:     { this->directionButtonsState &= ~(0b1 << 1); } break;
-    case dUp:       { this->directionButtonsState &= ~(0b1 << 2); } break;
-    case dDown:     { this->directionButtonsState &= ~(0b1 << 3); } break;
-
-    case bA:        { this->actionButtonsState &= ~(0b1 << 0); }  break;
-    case bB:        { this->actionButtonsState &= ~(0b1 << 1); } break;
-    case bSelect:   { this->actionButtonsState &= ~(0b1 << 2); } break;
-    case bStart:    { this->actionButtonsState &= ~(0b1 << 3); } break;
-
-    default: throw "Unreachable button press"; break;
-    }
-
-    //Byte newJOYP = this->io[0xFF00 - IOOFFSET] & 0xF0;
-    //newJOYP |= (newJOYP & (1 << 4)) ? (this->directionButtonsState & 0x0F) : (this->actionButtonsState & 0x0F);
-    //this->io[0xFF00 - IOOFFSET] = newJOYP;
-
+    this->set_joypadState(button, 0);
     this->cpu.request_interrupt(joypad);
+}
+
+
+Byte BUS::getActionButtonNibble()
+{
+    return this->joypadState >> 4;
+}
+
+Byte BUS::getDirectionButtonNibble()
+{
+    return this->joypadState & 0xF;
 }
 
 
@@ -391,12 +393,12 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
         {
         case 0xFF00:
         {
-            Byte requestedJOYP = this->io[0] & 0x30;
-            if (requestedJOYP & 0b00010000) {
-                return 0xF0 | (this->actionButtonsState & 0x0F);
+            Byte requestedJOYP = this->io[0];
+            if (requestedJOYP & 0x10) {
+                return 0xD0 | this->getActionButtonNibble();
             }
-            if (requestedJOYP & 0b00100000) {
-                return 0xF0 | (this->directionButtonsState & 0x0F);
+            if (requestedJOYP & 0x20) {
+                return 0xE0 | this->getDirectionButtonNibble();
             }
                 
             
@@ -538,13 +540,7 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
         switch (address)
         {
         case 0xFF00:
-            {
-                //Byte newJOYP = data & 0xF0;
-                //newJOYP |= (newJOYP & (1 << 4)) ? (this->directionButtonsState & 0x0F) : (this->actionButtonsState & 0x0F);
-                //this->io[address - 0xFF00] = newJOYP | 0xC0;
-                this->io[0] = data;
-                break;
-            }            
+            this->io[address - 0xFF00] = data & 0x30; break;              
         case 0xFF02:
             this->io[address - 0xFF00] = (data | 0x7E);
             break;
