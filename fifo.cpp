@@ -3,11 +3,6 @@
 #include "bus.hpp"
 
 
-
-
-
-
-
 void FIFO::push(FIFO_pixel pixel)
 {
 	if (tail_pos <= 15)
@@ -15,12 +10,6 @@ void FIFO::push(FIFO_pixel pixel)
 		this->queue[++tail_pos] = pixel;
 	}
 }
-
-//void FIFO::push(const Word address)
-//{
-//	//need to access bus, write fetcher
-//	Byte tile_number = this->;
-//}
 
 
 FIFO_pixel FIFO::pop()
@@ -75,7 +64,7 @@ void FIFO::update_fifo(int cyclesUsed)
 				/*
 				The scroll registers are re - read on each tile fetch, except for the low 3 bits of SCX, which are only read at the beginning of the scanline(for the initial shifting of pixels).
 
-					All models before the CGB - D read the Y coordinate once for each bitplane(so a very precisely timed SCY write allows “desyncing” them), but CGB - D and later use the same Y coordinate for both no matter what.
+					All models before the CGB - D read the Y coordinate once for each bitplane(so a very precisely timed SCY write allows ï¿½desyncingï¿½ them), but CGB - D and later use the same Y coordinate for both no matter what.
 					*/
 				if (ly < 144 && this->ppu_parent->scanline_x < 160)
 					this->ppu_parent->add_to_framebuffer(this->ppu_parent->scanline_x, ly, this->pop());

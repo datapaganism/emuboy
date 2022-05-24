@@ -7,11 +7,12 @@ const bool shownOnStart = false;
 
 
 #define GB_CLOCKSPEED  4194304 // Hz
+#define GB_CPU_MCYCLE_CLOCKSPEED 1048576
 #define GBC_CLOCKSPEED 8388000 // Hz, Color model, maybe implement in the future.
 
 #define VSYNC 59.73 // Hz, basically 60 but I want to be accurate
 
-#define CYCLES_PER_FRAME GB_CLOCKSPEED/VSYNC // used to figure out how many CPU operations can be done before we need update the screen a single frame
+#define CYCLES_PER_FRAME GB_CPU_MCYCLE_CLOCKSPEED/VSYNC // used to figure out how many CPU operations can be done before we need update the screen a single frame
 
 // the CPU uses cycles 70221 times per video frame
 // a video frame takes 70221/4 cycles to render.
@@ -24,16 +25,17 @@ const bool shownOnStart = false;
 
 #define EMULATOR_WINDOW_TITLE "emulator"
 
-#define Byte uint8_t
-#define Word uint16_t
+#define Byte std::uint8_t
+#define Word std::uint16_t
 
-#define Byte_s int8_t
-#define Word_s int16_t
+#define Byte_s std::int8_t
+#define Word_s std::int16_t
 
 #define WORKRAMOFFSET 0xC000
 #define IOOFFSET 0xFF00
 #define OAMOFFSET 0xFE00
 #define VIDEORAMOFFSET 0x8000
+#define HIGHRAMOFFSET 0xFF80
 
 #define IF_REGISTER 0xFF0F
 #define IE_REGISTER 0xFFFF
@@ -46,6 +48,7 @@ const bool shownOnStart = false;
 #define TAC  0xFF07
 
 #define DIVinit GB_CLOCKSPEED / 16382
+#define DIV_INC_RATE GB_CPU_MCYCLE_CLOCKSPEED / 16382
 
 #define LCDC 0xFF40  //LCD Control R/W Register //ff40
 #define STAT 0xFF41 //LCDC Status R/W Register //ff41

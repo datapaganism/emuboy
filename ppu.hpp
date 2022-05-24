@@ -1,9 +1,10 @@
 #pragma once
-
-#include "config.h"
-#include "fifo.hpp"
 #include <array>
 #include <memory>
+
+#include "config.hpp"
+#include "fifo.hpp"
+
 class BUS;
 
 // gameboy graphics use a tiling system, instead of a frame buffer like modern systems.
@@ -77,7 +78,7 @@ public:
 	void init();
 	void connect_to_bus(BUS* pBus);
 
-	std::unique_ptr<FRAMEBUFFER_PIXEL[]> framebuffer = std::make_unique<FRAMEBUFFER_PIXEL[]>(XRES * YRES);
+	
 	
 	TILE tile;
 
@@ -99,7 +100,7 @@ public:
 
 	
 	BUS* bus = nullptr;
-
+	Byte* LYptr = nullptr;
 	/// <summary>
 	/// 
 	/// </summary>

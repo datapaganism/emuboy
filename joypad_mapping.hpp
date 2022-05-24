@@ -20,10 +20,9 @@ static const JoypadButtons JoypadButtons_all[] = { dUp, dDown, dLeft, dRight, bA
 static enum JoypadButtons keyToEnum(int key)
 {
     for (const auto keyEnum : JoypadButtons_all)
-    {
         if (keyEnum == key)
             return keyEnum;
-    }
+
     return UNKNOWN;
 };
 

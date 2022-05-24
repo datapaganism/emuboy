@@ -1,5 +1,5 @@
 #pragma once
-#include "config.h"
+#include "config.hpp"
 class BUS;
 
 class DMA_CONTROLLER

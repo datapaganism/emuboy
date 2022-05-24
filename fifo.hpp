@@ -1,8 +1,10 @@
 #pragma once
-#include "config.h"
+#include <array>
+
+#include "config.hpp"
 #include "fetcher.hpp"
 #include "FIFO_pixel.hpp"
-#include <array>
+
 
 class PPU;
 
@@ -33,8 +35,5 @@ public:
 
 	void reset();
 private:
-	
-
-	
 
 };

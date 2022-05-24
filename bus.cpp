@@ -1,8 +1,11 @@
-#include "bus.hpp"
 #include <iterator>
 
-#include "vram_renderer.hpp"
-#include "bg_map_renderer.hpp"
+#include "bus.hpp"
+
+#include <iostream>
+#include <bitset>
+#include <sstream>
+
 
 void BUS::cycle_system_one_frame()
 {
@@ -11,27 +14,60 @@ void BUS::cycle_system_one_frame()
     while (currentCycles <= CYCLES_PER_FRAME)
     {
 
-            int cyclesUsed = this->cpu.fetch_decode_execute();
+        this->cpu.mStepCPU();
+        this->cpu.update_timers_by_mCycle();
+        
+        this->dma_controller.update_dma(4);
 
-            this->cpu.update_timers(cyclesUsed);
+        this->ppu.update_graphics(4);
 
-            cyclesUsed += this->cpu.do_interrupts();
+        currentCycles++;
 
-            this->dma_controller.update_dma(cyclesUsed);
-
-            this->ppu.update_graphics(cyclesUsed);
-
-            currentCycles += cyclesUsed;
-
-            // Serial monitoring
-            if ((this->io[0xFF02 - IOOFFSET] & ~0x7E) == 0x81)
+        // Serial monitoring
+        if ((this->io[0xFF02 - IOOFFSET] & ~0x7E) == 0x81)
+        {
+            char c = this->io[0xFF01 - IOOFFSET];
+            if (c == ' ')
             {
-                char c = this->io[0xFF01 - IOOFFSET];
+                this->cpu.debug_toggle = true;
+                printf("");
+            }
+            if (c != 0)
+            {
                 printf("%c", c);
                 this->io[0xFF02 - IOOFFSET] = 0x0;
             }
+        }
     }
+    
 }
+
+
+
+void BUS::set_joypadState(const enum JoypadButtons button, bool value)
+{
+    // joypadstate
+    // 0000 0000
+    // ACT  DIR
+    
+    Byte bit = 0;
+    switch (button)
+    {
+    case dRight:    {bit = 0b00000001; break;}
+    case dLeft:     {bit = 0b00000010; break;}
+    case dUp:       {bit = 0b00000100; break;}
+    case dDown:     {bit = 0b00001000; break;}
+    case bA:        {bit = 0b00010000; break;}
+    case bB:        {bit = 0b00100000; break;}
+    case bSelect:   {bit = 0b01000000; break;}
+    case bStart:    {bit = 0b10000000; break;}
+    default: throw "Unreachable button press"; break;
+    }
+    this->joypadState = (value) ? (this->joypadState | bit) : (this->joypadState & ~bit);
+}
+
+
+
 
 Byte BUS::DEBUG_ascii_to_hex(char character)
 {
@@ -56,7 +92,7 @@ Byte BUS::DEBUG_ascii_to_hex(char character)
 }
 
 // 3E 18 06 FF 90
-int BUS::DEBUG_opcode_program(Word address, std::string byteString, int cycles)
+void BUS::DEBUG_opcode_program(Word address, std::string byteString)
 {
 
     std::vector<Byte> byteArray;
@@ -93,13 +129,6 @@ int BUS::DEBUG_opcode_program(Word address, std::string byteString, int cycles)
     }
 
     this->cpu.registers.pc = address;
-
-    int cyclesUsed = 0;
-    for (int i = 0; i < cycles; i++)
-    {
-        cyclesUsed = this->cpu.fetch_decode_execute();
-    }
-    return cyclesUsed;
 }
 
 void BUS::DEBUG_fill_ram(Word address, std::string byteString)
@@ -215,59 +244,46 @@ void BUS::DEBUG_nintendo_logo()
 
 }
 
-BUS::BUS()
+BUS::BUS(const std::string rom_path, const std::string bios_path)
 {
     this->cpu.connect_to_bus(this);
     this->ppu.connect_to_bus(this);
     this->dma_controller.connect_to_bus(this);
     this->init();
+
+    this->gamepak = GAMEPAK(rom_path);
+    this->load_bios(bios_path);
+
+    //fill framebuffer
+    for (int i = 0; i < XRES * YRES; i++)
+    {
+        this->framebuffer[i] = FRAMEBUFFER_PIXEL(GB_PALLETE_00_r, GB_PALLETE_00_g, GB_PALLETE_00_b);
+    }
 }
 
-BUS::BUS(const std::string game_name, const std::string bios_name) : BUS::BUS()
-{
-    this->gamepak = GAMEPAK(game_name);
-    this->load_bios(bios_name);
-}
 
 
 void BUS::depressButton(const enum JoypadButtons button)
 {
-    switch (button)
-    {
-    case dRight:
-    case bA: { this->io[0xFF00 - IOOFFSET] |= (0b1 << 0) ; } break;
-    
-    case dLeft:
-    case bB: { this->io[0xFF00 - IOOFFSET] |= (0b1 << 1) ; } break;
-    
-    case dUp:
-    case bSelect: { this->io[0xFF00 - IOOFFSET] |= (0b1 << 2) ; } break;
-    
-    case dDown:
-    case bStart: { this->io[0xFF00 - IOOFFSET] |= (0b1 << 3) ; } break;
-    default: throw "Unreachable button press"; break;
-    }
+    this->set_joypadState(button, 1);
 }
+
 
 void BUS::pressButton(const enum JoypadButtons button)
 {
-    switch (button)
-    {
-    case dRight:
-    case bA: { this->io[0xFF00 - IOOFFSET] &= ~(0b1 << 0) ; } break;
-    
-    case dLeft:
-    case bB: { this->io[0xFF00 - IOOFFSET] &= ~(0b1 << 1) ; } break;
-    
-    case dUp:
-    case bSelect: { this->io[0xFF00 - IOOFFSET] &= ~(0b1 << 2) ; } break;
-    
-    case dDown:
-    case bStart: { this->io[0xFF00 - IOOFFSET] &= ~(0b1 << 3) ; } break;
-    default: throw "Unreachable button press"; break;
-    }
-
+    this->set_joypadState(button, 0);
     this->cpu.request_interrupt(joypad);
+}
+
+
+Byte BUS::getActionButtonNibble()
+{
+    return this->joypadState >> 4;
+}
+
+Byte BUS::getDirectionButtonNibble()
+{
+    return this->joypadState & 0xF;
 }
 
 
@@ -278,6 +294,7 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
 {
     switch (access_type)
     {
+        /*
         case MEMORY_ACCESS_TYPE::cpu:
         {
             if (this->dma_controller.dma_triggered)
@@ -293,13 +310,13 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
                     return 0xFF;
 
         } break;
-
-        case MEMORY_ACCESS_TYPE::interrupt_handler:
+        */
+     /*   case MEMORY_ACCESS_TYPE::interrupt_handler:
         {
             if (address == 0xFFFF)
                 return this->interrupt_enable_register;
         } break;
-        default: break;
+        default: break;*/
     }
 
     // boot rom area, or rom bank 0
@@ -372,43 +389,54 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
     }
     if (address <= 0xFF4B) // from 0xFF00
     {
-        // i/o registers
+        switch (address)
+        {
+        case 0xFF00:
+        {
+            Byte requestedJOYP = this->io[0];
+            if (requestedJOYP & 0x10) {
+                return 0xD0 | this->getActionButtonNibble();
+            }
+            if (requestedJOYP & 0x20) {
+                return 0xE0 | this->getDirectionButtonNibble();
+            }
+                
+            
+           
+
+            throw "cannot return input";
+        }
+        case 0xFF26:// NR52
+        {
+            break;
+        }
+        }
 
         if (address == 0xFF26) // NR52
         {
 
         }
 
-        return this->io[address - 0xFF00];
+        return this->io[address - IOOFFSET];
     }
     if (address <= 0xFF7F) // from 0xFF4C
     {
         // unused part of the map, just return
         return 0b0;
     }
-    if (address <= 0xFFFE) // from 0xFF80
+    if (address <= 0xFFFF) // from 0xFF80
     {
         // high ram area
-        return this->high_ram[address-0xFF80];
+        return this->high_ram[address - HIGHRAMOFFSET];
     }
-    if (address <= 0xFFFF) // from 0xFFFF, yep
-    {
-        // interrupt enabled register, cannot be accessed
-        //return this->interrupt_enable_register;
-        return 0b0;
-    }
-
+    
     // temp return
-    return 0;
+    throw "get_memory no return";
 };
 
 void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYPE access_type)
 {
-   /* if (0x9800 <= address && 0x9BFF >= address && this->DEBUG_PC_breakpoint_hit) {
-        this->DEBUG_fill_ram(0x8200, "3C 00 42 00 B9 00 A5 00 B9 00 A5 00 42 00 3C 00");
-        this->vram_ptr->render_vram_tiles(this);
-        this->bg_map_ptr->render_vram_tiles(this);
-    }*/
+     /*
     switch (access_type)
     {
     case MEMORY_ACCESS_TYPE::cpu:
@@ -422,15 +450,18 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
                 return;
 
         //this breaks the tests
-        if (0x8000 <= address && address <= 0x9FFF) // VIDEO RAM
-            if ((this->ppu.lcd_enabled() && this->ppu.get_ppu_state() == 0x3))
-                return;
-
+        
+        //if (0x8000 <= address && address <= 0x9FFF) // VIDEO RAM
+        //    if ((this->ppu.lcd_enabled() && this->ppu.get_ppu_state() == 0x3))
+        //        return;
+         
     } break;
 
     default: break;
     }
+    */
 
+    //Set to non-zero to disable boot ROM
     if (address == 0xFF50)
     {
         this->io[0xFF50 - IOOFFSET] = 0x1;
@@ -478,10 +509,10 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
     if (address <= 0xDFFF)
     {
         // working ram
-        if (address == 0xC242) {
+        /*if (address == 0xC242) {
             auto workramm = this->work_ram.get() + 0x0242;
             workramm = workramm;
-        }
+        }*/
         this->work_ram[address - 0xC000] = data;
         
         return;
@@ -509,8 +540,7 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
         switch (address)
         {
         case 0xFF00:
-            this->io[address - 0xFF00] = (data | 0xCF);
-            break;
+            this->io[address - 0xFF00] = data & 0x30; break;              
         case 0xFF02:
             this->io[address - 0xFF00] = (data | 0x7E);
             break;
@@ -578,87 +608,20 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
             this->io[address - 0xFF00] = data;
         }
         return;
-
-        //if (address == 0xFF0F)
-        //{
-        //    this->io[address - 0xFF00] = (data | 0xE0);
-        //    return;
-        //}
-        //if (address == STAT)
-        //{
-        //    this->io[address - 0xFF00] = (this->io[address - 0xFF00] & 0x80) | (data & 0x7F);
-
-        //    return;
-        //}
-
-        ////if changing timers
-        //if (address == TAC)
-        //{
-        //    this->io[address - 0xFF00] = data;
-        //    this->cpu.update_timerCounter();
-        //    return;
-        //}
-        //if (address == DIV)
-        //{
-        //    this->io[address - 0xFF00] = 0;
-        //    return;
-        //}
-
-        //// i/o registers
-
-        //if (address == DMA)
-        //{
-        //    this->dma_controller.request_dma(data);
-        //    return;
-        //}
-
-
-        //// LY register gets reset if written to
-        //if (address == LY)
-        //{
-        //    //this->io[LY - IOOFFSET] = 0;
-        //    return;
-        //}
-
-        //if (address == 0xFF26) // NR52
-        //{
-        //    this->io[0xFF26 - IOOFFSET] |= (data & 0x80);
-
-        //    if ((this->io[0xFF26 - IOOFFSET] & 0x80) == 0)
-        //    {
-        //        //destroy sound registers.
-        //    }
-
-        //    return;
-        //}
-
-        //if (address == 0xFF50)
-        //{
-        //    this->io[0xFF50 - IOOFFSET] = 0x1;
-        //    return;
-        //}
-
-        //this->io[address - 0xFF00] = data;
-        //return;
     }
     if (address <= 0xFF7F)
     {
         // unused part of the map, just return
         return;
     }
-    if (address <= 0xFFFE)
-    {
-        // high ram area
-        this->high_ram[address - 0xFF80] = data;
-        return;
-    }
     if (address <= 0xFFFF)
     {
-        // interrupt enabled register, write only data
-        this->interrupt_enable_register = data;
-
+        // high ram area
+        this->high_ram[address - HIGHRAMOFFSET] = data;
         return;
     }
+
+    throw "set memory fail";
 }
 void BUS::set_memory_word(const Word address, const Word data, enum MEMORY_ACCESS_TYPE access_type)
 {

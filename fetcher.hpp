@@ -1,6 +1,7 @@
 #pragma once
-#include "config.h"
 #include <array>
+
+#include "config.hpp"
 #include "FIFO_pixel.hpp"
 
 class FIFO;

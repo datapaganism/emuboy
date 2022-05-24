@@ -1,8 +1,8 @@
 #pragma once
-
 #include <fstream>
 #include <vector>
-#include "config.h"
+
+#include "config.hpp"
 
 class GAMEPAK
 {

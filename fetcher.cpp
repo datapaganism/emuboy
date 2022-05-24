@@ -92,7 +92,7 @@ void FETCHER::update_fetcher(const int cycles)
 		{
 		case 0: // read tile address
 		{
-			Word base_address;
+			//Word base_address;
 			if (bus->io[LY - IOOFFSET] < YRES)
 				if (bg_active)
 				{
@@ -115,7 +115,7 @@ void FETCHER::update_fetcher(const int cycles)
 					/*
 						Besides the Background, there is also a Window overlaying it. The content of the Window is not scrollable; it is always displayed starting at the top left tile of its tile map. The only way to adjust the Window is by modifying its position on the screen, which is done via the WX and WY registers. The screen coordinates of the top left corner of the Window are (WX-7,WY). The tiles for the Window are stored in the Tile Data Table. Both the Background and the Window share the same Tile Data Table.
 
-	Whether the Window is displayed can be toggled using LCDC bit 5. But in Non-CGB mode this bit is only functional as long as LCDC bit 0 is set. Enabling the Window makes Mode 3 slightly longer on scanlines where it’s visible. (See WX and WY for the definition of “Window visibility”.)
+	Whether the Window is displayed can be toggled using LCDC bit 5. But in Non-CGB mode this bit is only functional as long as LCDC bit 0 is set. Enabling the Window makes Mode 3 slightly longer on scanlines where itï¿½s visible. (See WX and WY for the definition of ï¿½Window visibilityï¿½.)
 					*/
 
 
