@@ -101,9 +101,6 @@ public:
 	
 	BUS* bus = nullptr;
 	Byte* LYptr = nullptr;
-	/// <summary>
-	/// 
-	/// </summary>
 	int cycle_counter = 0;
 
 	void add_to_framebuffer(const int x, const int y, const FIFO_pixel fifo_pixel);
@@ -115,11 +112,14 @@ public:
 	/// <returns></returns>
 
 	Byte get_ppu_state();
-
-
 	void new_scanline();
 
 	void update_state(Byte new_state);
+	
+	Byte get_memory(const Word address);
+	void set_memory(const Word address, const Byte data);
+
+
 private:
 
 	

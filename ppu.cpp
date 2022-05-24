@@ -19,6 +19,16 @@ void PPU::connect_to_bus(BUS* pBus)
 	this->LYptr = &this->bus->io[LY - IOOFFSET];
 }
 
+Byte PPU::get_memory(const Word address)
+{
+	return this->bus->get_memory(address, MEMORY_ACCESS_TYPE::ppu);
+}
+
+void PPU::set_memory(const Word address, const Byte data)
+{
+	this->bus->set_memory(address, data, MEMORY_ACCESS_TYPE::ppu);
+}
+
 void PPU::update_graphics(const int cycles)
 {
 	// one frame takes 70221 cycles
@@ -56,7 +66,7 @@ void PPU::update_graphics(const int cycles)
 		this->cycle_counter += cycles;
 
 		//switch (this->bus->io[STAT - IOOFFSET] & 0b00000011)
-		switch (this->bus->get_memory(STAT,MEMORY_ACCESS_TYPE::ppu) & 0b00000011)
+		switch (this->get_memory(STAT) & 0b00000011)
 		{
 		case 0: // h blank
 		{
@@ -260,7 +270,7 @@ Word PPU::get_tile_address_from_number(const Byte tile_number, const enum tile_t
 	case PPU::background:
 	case PPU::window:
 	{
-		bool addressing_mode = (this->bus->get_memory(LCDC, MEMORY_ACCESS_TYPE::ppu) & (0b1 << 4));
+		bool addressing_mode = (this->get_memory(LCDC) & (0b1 << 4));
 		// LCDC.4 = 1, $8000 addressing
 		if (addressing_mode == 1)
 		{
@@ -283,8 +293,8 @@ Word PPU::get_tile_address_from_number(const Byte tile_number, const enum tile_t
 //	//this->fifo_sprite = FIFO();
 //
 //	// temp setting of scx, scy, ly registers
-//	this->bus->set_memory(SCX, 0x80);
-//	this->bus->set_memory(SCY, 0x40);
+//	this->set_memory(SCX, 0x80);
+//	this->set_memory(SCY, 0x40);
 //	this->bus->io[LY - IOOFFSET] = 0x00;
 //	
 //	// get tile number and address of topleft tile of viewport
@@ -292,11 +302,11 @@ Word PPU::get_tile_address_from_number(const Byte tile_number, const enum tile_t
 //	Word tile_address = this->get_tile_address(tile_number, PPU::background);
 //
 //	// get scy
-//	Byte scy = this->bus->get_memory(SCY);
+//	Byte scy = this->get_memory(SCY);
 //
 //	// get top and bottom byte of 8 pixel line from tile
-//	Byte line_data0 = this->bus->get_memory(tile_address + 2 * (scy % 8));
-//	Byte line_data1 = this->bus->get_memory((tile_address + 1) + 2 * (scy % 8));
+//	Byte line_data0 = this->get_memory(tile_address + 2 * (scy % 8));
+//	Byte line_data1 = this->get_memory((tile_address + 1) + 2 * (scy % 8));
 //	
 //	for (int i = 0; i < 8; i++) 
 //	{
@@ -312,7 +322,7 @@ Word PPU::get_tile_address_from_number(const Byte tile_number, const enum tile_t
 //	}
 //
 //	// get ly for setting to framebuffer
-//	Byte ly = this->bus->get_memory(LY);
+//	Byte ly = this->get_memory(LY);
 //	
 //	
 //	// pop fifo 8 times into framebuffer
@@ -335,7 +345,7 @@ void PPU::add_to_framebuffer(const int x, const int y, const FIFO_pixel fifo_pix
 FRAMEBUFFER_PIXEL PPU::dmg_framebuffer_pixel_to_rgb(const FIFO_pixel fifo_pixel)
 {
 
-	Byte palette_register = this->bus->get_memory(0xFF47, MEMORY_ACCESS_TYPE::ppu);
+	Byte palette_register = this->get_memory(0xFF47);
 
 	Byte id_to_palette_id = 0;
 	switch (fifo_pixel.colour)
@@ -387,33 +397,33 @@ void PPU::new_scanline()
 void PPU::update_state(Byte new_state)
 {
 	//Byte* lcdstat_register_ptr = &this->bus->io[STAT - IOOFFSET];
-	Byte original_mode = (this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0x3);
+	Byte original_mode = (this->get_memory(STAT) & 0x3);
 	bool irq_needed = false;
 
 	switch (new_state)
 	{
 	case 0: {
 		//*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000000);
-		this->bus->set_memory(STAT, ((this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0xFC) | 0x0), MEMORY_ACCESS_TYPE::ppu);
-		irq_needed = (this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0b00001000);
+		this->set_memory(STAT, ((this->get_memory(STAT) & 0xFC) | 0x0));
+		irq_needed = (this->get_memory(STAT) & 0b00001000);
 	}break;
 
 	case 1: {
 		//*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000001);
-		this->bus->set_memory(STAT, ((this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0xFC) | 0x1), MEMORY_ACCESS_TYPE::ppu);
+		this->set_memory(STAT, ((this->get_memory(STAT) & 0xFC) | 0x1));
 		if (this->lcd_enabled())
-			irq_needed = (this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0b00010000);
+			irq_needed = (this->get_memory(STAT) & 0b00010000);
 	}break;
 
 	case 2: {
 		//*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000010);
-		this->bus->set_memory(STAT, ((this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0xFC) | 0x2), MEMORY_ACCESS_TYPE::ppu);
-		irq_needed = (this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0b00100000);
+		this->set_memory(STAT, ((this->get_memory(STAT) & 0xFC) | 0x2));
+		irq_needed = (this->get_memory(STAT) & 0b00100000);
 	}break;
 
 	case 3: {
 		//*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000011);
-		this->bus->set_memory(STAT, ((this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0xFC) | 0x3), MEMORY_ACCESS_TYPE::ppu);
+		this->set_memory(STAT, ((this->get_memory(STAT) & 0xFC) | 0x3));
 	}break;
 
 	default: throw "Unreachable PPU new state"; break;
@@ -421,7 +431,7 @@ void PPU::update_state(Byte new_state)
 
 	//if mode has changed
 
-	if ((original_mode != (this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0x3)) && irq_needed)
+	if ((original_mode != (this->get_memory(STAT) & 0x3)) && irq_needed)
 		this->bus->cpu.request_interrupt(lcdstat);
 
 	//time to check LYC = LY
@@ -430,19 +440,19 @@ void PPU::update_state(Byte new_state)
 	if (this->bus->io[LY - IOOFFSET] == this->bus->io[LYC - IOOFFSET])
 	{
 		//*lcdstat_register_ptr |= 0b00000100;
-		this->bus->set_memory(STAT, (this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) | 0b00000100), MEMORY_ACCESS_TYPE::ppu);
+		this->set_memory(STAT, (this->get_memory(STAT) | 0b00000100));
 		// if interrupt is enabled
-		if ((this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0b01000000))
+		if ((this->get_memory(STAT) & 0b01000000))
 			this->bus->cpu.request_interrupt(lcdstat);
 	}
 	else
-		this->bus->set_memory(STAT, (this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & ~0b00000100), MEMORY_ACCESS_TYPE::ppu);
+		this->set_memory(STAT, (this->get_memory(STAT) & ~0b00000100));
 		//*lcdstat_register_ptr &= ~0b00000100;
 }
 
 Byte PPU::get_ppu_state()
 {
-	return this->bus->get_memory(STAT, MEMORY_ACCESS_TYPE::ppu) & 0b00000011;
+	return this->get_memory(STAT) & 0b00000011;
 }
 
 void TILE::consolePrint()
