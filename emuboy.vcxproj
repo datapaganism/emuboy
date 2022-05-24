@@ -227,7 +227,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="bios.bin" />
-    <None Include="cpp.hint" />
     <None Include="empty.bin" />
     <None Include="roms\blargg cpu.gb" />
     <None Include="roms\blargg\01-special.gb" />

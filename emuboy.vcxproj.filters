@@ -55,7 +55,6 @@
     </None>
     <None Include="roms\TETRIS.gb" />
     <None Include="roms\blargg cpu.gb" />
-    <None Include="cpp.hint" />
     <None Include="roms\POKEMON YELLOW.sav" />
     <None Include="roms\blargg\01-special.gb" />
     <None Include="roms\blargg\02-interrupts.gb" />

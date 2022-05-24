@@ -18,7 +18,7 @@
 int main(int argv, char** args)
 {
     //BUS bus("./roms/TETRIS.gb", "bios.bin");
-    BUS bus("./roms/blargg/02-interrupts.gb", "bio s.bin");
+    BUS bus("C:\\dev\\repos\\emuboy-v2\\roms\\blargg\\01-read_timing.gb", "bio s.bin");
     RENDERER renderer;
 
     /*bus.set_memory(0xFF01,0x30);
