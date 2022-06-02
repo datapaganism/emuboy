@@ -58,15 +58,6 @@ struct TILE
 };
 
 
-
-/// <summary>
-/// im am such a fool, how do we know where we draw? well a framebuffer would be nice but there isnt enough ram for that,
-/// what is the work around? a tile map and tiles.
-/// you store the tiles in a region of memory and then a tile map which is like a frame buffer but has tile references.
-/// </summary>
-
-
-
 class PPU
 {
 public:
@@ -75,13 +66,10 @@ public:
 
 	enum tile_type { background, window, sprite };
 	PPU();
-	void init();
 	void connect_to_bus(BUS* pBus);
 
 	
-	
 	TILE tile;
-
 	FIFO fifo_bg;
 	FIFO fifo_sprite;
 
@@ -102,14 +90,10 @@ public:
 	BUS* bus = nullptr;
 	Byte* LYptr = nullptr;
 	int cycle_counter = 0;
+	bool window_wy_triggered = false;
 
 	void add_to_framebuffer(const int x, const int y, const FIFO_pixel fifo_pixel);
 	FRAMEBUFFER_PIXEL dmg_framebuffer_pixel_to_rgb(const FIFO_pixel fifo_pixel);
-
-	/// <summary>
-	/// convert scx and scy position to the top left tile's (of the viewport) address, ignores shifting
-	/// </summary>
-	/// <returns></returns>
 
 	Byte get_ppu_state();
 	void new_scanline();

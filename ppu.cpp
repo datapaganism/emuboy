@@ -87,6 +87,9 @@ void PPU::update_graphics(const int cycles)
 		case 2: // oam search
 		{
 			// do stuff
+			if (this->get_memory(WY) == this->get_memory(LY))
+				this->window_wy_triggered = true;
+
 			if (this->cycle_counter >= (80 / 4))
 			{
 				this->update_state(3);
@@ -392,6 +395,7 @@ void PPU::new_scanline()
 	this->scanline_x = 0;
 	this->fifo_bg.reset();
 	this->fifo_sprite.reset();
+	this->window_wy_triggered = false;
 }
 
 void PPU::update_state(Byte new_state)

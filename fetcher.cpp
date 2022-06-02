@@ -106,7 +106,7 @@ void FETCHER::update_fetcher(const int cycles)
 					this->tile_address = bus->ppu.get_tile_address_from_number(this->tile_number,PPU::background); // basically 0x8000 + (16 * tile_number)
 				}
 
-				if (window_active)
+				if (this->is_window_active())
 				{
 					Byte wx = bus->io[WX - IOOFFSET];
 					Byte wy = bus->io[WY - IOOFFSET];
@@ -114,25 +114,23 @@ void FETCHER::update_fetcher(const int cycles)
 
 					/*
 						Besides the Background, there is also a Window overlaying it. The content of the Window is not scrollable; it is always displayed starting at the top left tile of its tile map. The only way to adjust the Window is by modifying its position on the screen, which is done via the WX and WY registers. The screen coordinates of the top left corner of the Window are (WX-7,WY). The tiles for the Window are stored in the Tile Data Table. Both the Background and the Window share the same Tile Data Table.
-
-	Whether the Window is displayed can be toggled using LCDC bit 5. But in Non-CGB mode this bit is only functional as long as LCDC bit 0 is set. Enabling the Window makes Mode 3 slightly longer on scanlines where it�s visible. (See WX and WY for the definition of �Window visibility�.)
+						Whether the Window is displayed can be toggled using LCDC bit 5. But in Non-CGB mode this bit is only functional as long as LCDC bit 0 is set. Enabling the Window makes Mode 3 slightly longer on scanlines where it�s visible. (See WX and WY for the definition of �Window visibility�.)
 					*/
 
 
 					//if current x and y inside window
-					//if ((ly >= wy) && (this->fetcher_scanline_x >= (wx + 7)))
-					//{
-					//	this->fifo_parent->reset();
-					//	
-					//	
-					//	this->fetcher_x = (((wx + 7) / 8) + this->fetcher_scanline_x) & 0x1F;
-					//	this->fetcher_y = (wy + bus->io[LY - IOOFFSET]) & 255;
+					if (this->fifo_parent->ppu_parent->window_wy_triggered && (this->fetcher_scanline_x >= (wx + 7)))
+					{
+						this->fifo_parent->reset();
+						
+						this->fetcher_x = (((wx + 7) / 8) + this->fetcher_scanline_x) & 0x1F;
+						this->fetcher_y = (wy + bus->io[LY - IOOFFSET]) & 255;
 
-					//	Word win_tile_map_area_address = ((bus->io[(LCDC) - IOOFFSET] & (0b1 << 6)) == 1) ? 0x9C00 : 0x9800;
-					//	this->tile_map_address = win_tile_map_area_address + (this->fetcher_x) + ((this->fetcher_y / 8) * 0x20);
-					//	this->tile_number = bus->video_ram[this->tile_map_address - VIDEORAMOFFSET];
-					//	this->tile_address = bus->ppu.get_tile_address_from_number(this->tile_number, PPU::window); // basically 0x8000 + (16 * tile_number)
-					//}
+						Word win_tile_map_area_address = ((bus->io[(LCDC) - IOOFFSET] & (0b1 << 6)) == 1) ? 0x9C00 : 0x9800;
+						this->tile_map_address = win_tile_map_area_address + (this->fetcher_x) + ((this->fetcher_y / 8) * 0x20);
+						this->tile_number = bus->get_memory(this->tile_map_address, MEMORY_ACCESS_TYPE::ppu);
+						this->tile_address = bus->ppu.get_tile_address_from_number(this->tile_number, PPU::window); // basically 0x8000 + (16 * tile_number)
+					}
 				}
 
 			this->state++;
@@ -221,4 +219,9 @@ void FETCHER::inc_address()
 	inc++;
 
 	this->tile_address |= (inc & 0x1F);
+}
+
+bool FETCHER::is_window_active()
+{
+	return this->fifo_parent->ppu_parent->get_memory(LCDC) & 0b00100000;
 }

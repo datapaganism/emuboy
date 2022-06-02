@@ -53,6 +53,8 @@ public:
 	void reset();
 
 	void inc_address();
+
+	bool is_window_active();
 private:
 	
 };

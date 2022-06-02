@@ -31,9 +31,7 @@ FIFO_pixel FIFO::pop()
 
 void FIFO::update_fifo(int cyclesUsed)
 {
-
 	this->fifo_cycle_counter += cyclesUsed;
-
 
 	while (this->fifo_cycle_counter >= (4/4))
 	{
