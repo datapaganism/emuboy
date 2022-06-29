@@ -324,7 +324,8 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
     {
         // if the bios has never been loaded or if the register at 0xFF50 is set 1 (which is done by the bios program) we need to access the cartridge bank
         if (this->io[(0xFF50) - IOOFFSET] == 0x1|| !this->biosLoaded)
-            return this->gamepak.rom[address];
+            return this->gamepak.get_memory(address);
+        
         
         return this->bios[address];
     }
@@ -333,7 +334,7 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
     {
 
         // game rom bank 0
-        return this->gamepak.rom[address];
+        return this->gamepak.get_memory(address);
     }
 
     if (address <= 0x7FFF) // from 0x4000
@@ -341,7 +342,7 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
         // game rom bank N
 
         //banking is not implemented but we will just now read the whole cart
-        return this->gamepak.rom[address];
+        return this->gamepak.get_memory(address);
   //      return 0b0;
     }
 
@@ -358,8 +359,7 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
 
     if (address <= 0xBFFF) // from 0xA000
     {
-        // cartridge ram
-        return 0b0;
+        return this->gamepak.get_memory(address);
     }
 
     if (address <= 0xDFFF) // from 0xC000
@@ -471,18 +471,20 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
     if (address <= 0x00ff)
     {
         // boot rom area, or rom bank 0
+        if (this->io[(0xFF50) - IOOFFSET] == 0x1 || !this->biosLoaded)
+            this->gamepak.set_memory(address,data);
         return;
     }
 
     if (address <= 0x3fff)
     {
-        // game rom bank 0
+        this->gamepak.set_memory(address, data);
         return;
     }
 
     if (address <= 0x7fff)
     {
-        // game rom bank N
+        this->gamepak.set_memory(address, data);
         return;
     }
 
@@ -502,8 +504,7 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
 
     if (address <= 0xBFFF)
     {
-        // cartridge ram
-        return;
+        return this->gamepak.set_memory(address,data);
     }
 
     if (address <= 0xDFFF)
