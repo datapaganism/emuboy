@@ -16,9 +16,10 @@ WindowManager::WindowManager(const std::string rom_path, const std::string bios_
     }
     else
     {
+        // Create an EmulatorWindow object (holds the emulator and it's window) and then push it back to the Window array, however,
+        // the window array is of a base type, due to polymorphism, the objects it holds are treated as a base type instead of derived ones.
+        this->windows.push_back(std::make_unique<EmulatorWindow>(rom_path, bios_path, XRES, YRES, RES_SCALING, EMULATOR_WINDOW_TITLE, true));
 
-        //attempt making first window of type emulator
-        this->windows.push_back(std::unique_ptr<Window>(std::make_unique<EmulatorWindow>(rom_path, bios_path, XRES, YRES, RES_SCALING, EMULATOR_WINDOW_TITLE, true)));
         if (!this->windows[0].get()->initSuccess())
         {
             std::cout << "Window 0 could not be created!\n";
@@ -42,10 +43,12 @@ void WindowManager::run()
         std::cout << "Failed to initialize!\n";
     else
     {
+        // Cast the base pointer back to dervied class so we can access BUS class element.
         EmulatorWindow* EmulatorWindow_ptr = static_cast<EmulatorWindow*>(this->windows[0].get());
-
-        this->windows.push_back(std::unique_ptr<Window>(std::make_unique<VRAMViewer>(EmulatorWindow_ptr, (8 * 16), (8 * 24), 2, "VRAMViewer", false)));
-        this->windows.push_back(std::unique_ptr<Window>(std::make_unique<BGMapViewer>(EmulatorWindow_ptr, (8 * 32), (8 * 32), 2, "BGMapViewer", false)));
+        
+        //Create and push back secondary windows, and pass the new pointer so the other windows can acess the emulator's BUS.
+        this->windows.push_back(std::make_unique<VRAMViewer>(EmulatorWindow_ptr, (8 * 16), (8 * 24), 2, "VRAMViewer", false));
+        this->windows.push_back(std::make_unique<BGMapViewer>(EmulatorWindow_ptr, (8 * 32), (8 * 32), 2, "BGMapViewer", false));
 
         bool quit = false;
         bool pause = false;
