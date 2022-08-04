@@ -252,7 +252,7 @@ BUS::BUS(const std::string rom_path, const std::string bios_path)
     this->dma_controller.connectToBus(this);
     this->init();
 
-    this->gamepak = GamePak(rom_path);
+    this->GamePak = GamePak(rom_path);
     this->loadBios(bios_path);
 
     //fill framebuffer
@@ -325,7 +325,7 @@ Byte BUS::getMemory(const Word address, enum eMemoryAccessType access_type)
     {
         // if the bios has never been loaded or if the register at 0xFF50 is set 1 (which is done by the bios program) we need to access the cartridge bank
         if (this->io[(0xFF50) - IOOFFSET] == 0x1|| !this->biosLoaded)
-            return this->gamepak.get_memory(address);
+            return this->GamePak.getMemory(address);
         
         
         return this->bios[address];
@@ -335,7 +335,7 @@ Byte BUS::getMemory(const Word address, enum eMemoryAccessType access_type)
     {
 
         // game rom bank 0
-        return this->gamepak.get_memory(address);
+        return this->GamePak.getMemory(address);
     }
 
     if (address <= 0x7FFF) // from 0x4000
@@ -343,7 +343,7 @@ Byte BUS::getMemory(const Word address, enum eMemoryAccessType access_type)
         // game rom bank N
 
         //banking is not implemented but we will just now read the whole cart
-        return this->gamepak.get_memory(address);
+        return this->GamePak.getMemory(address);
   //      return 0b0;
     }
 
@@ -360,7 +360,7 @@ Byte BUS::getMemory(const Word address, enum eMemoryAccessType access_type)
 
     if (address <= 0xBFFF) // from 0xA000
     {
-        return this->gamepak.get_memory(address);
+        return this->GamePak.getMemory(address);
     }
 
     if (address <= 0xDFFF) // from 0xC000
@@ -473,19 +473,19 @@ void BUS::setMemory(const Word address, const Byte data, enum eMemoryAccessType 
     {
         // boot rom area, or rom bank 0
         if (this->io[(0xFF50) - IOOFFSET] == 0x1 || !this->biosLoaded)
-            this->gamepak.set_memory(address,data);
+            this->GamePak.setMemory(address,data);
         return;
     }
 
     if (address <= 0x3fff)
     {
-        this->gamepak.set_memory(address, data);
+        this->GamePak.setMemory(address, data);
         return;
     }
 
     if (address <= 0x7fff)
     {
-        this->gamepak.set_memory(address, data);
+        this->GamePak.setMemory(address, data);
         return;
     }
 
@@ -505,7 +505,7 @@ void BUS::setMemory(const Word address, const Byte data, enum eMemoryAccessType 
 
     if (address <= 0xBFFF)
     {
-        return this->gamepak.set_memory(address,data);
+        return this->GamePak.setMemory(address,data);
     }
 
     if (address <= 0xDFFF)

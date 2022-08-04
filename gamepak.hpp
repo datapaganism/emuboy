@@ -11,28 +11,28 @@ public:
 	GamePak();
 
 	std::vector<Byte> rom;
-	bool gamepakLoaded = false;
+	bool gamepak_loaded = false;
 
-	bool saveLoaded = false;
-	void read_save();
-	void write_save();
+	bool save_loaded = false;
+	void readSave();
+	void writeSave();
 
 	Byte current_rom_bank = 0;
 	Byte current_ram_bank = 0;
-	Byte get_cartridge_type();
-	Byte get_rom_size();
-	Byte get_ram_size();
+	Byte getCartridgeType();
+	Byte getRomSize();
+	Byte getRamSize();
 
-	Byte get_memory(const Word address);
-	void set_memory(const Word address, const Byte data);
+	Byte getMemory(const Word address);
+	void setMemory(const Word address, const Byte data);
 
 	std::unique_ptr<Byte[]> ram = nullptr;
 
-	void allocate_ram();
+	void allocateRam();
 	bool ram_bank_enable = false;
-	void ram_bank_enable_handler(const Word address, const Byte data);
-	void ram_bank_change(const Word address, const Byte data);
-	void rom_bank_change(const Word address, const Byte data);
+	void ramBankEnableHandler(const Word address, const Byte data);
+	void ramBankChange(const Word address, const Byte data);
+	void romBankChange(const Word address, const Byte data);
 private:
 	
 	std::string filename;

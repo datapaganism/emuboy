@@ -1,4 +1,4 @@
-#include "gamepak.hpp"
+#include "GamePak.hpp"
 #include <iostream>
 #include <fstream>
 
@@ -22,29 +22,29 @@ GamePak::GamePak(const std::string filename) : GamePak::GamePak()
 	std::cout << "GamePak NOT LOADED\n";
 	file.close();
 
-	this->allocate_ram();
+	this->allocateRam();
 }
 
 GamePak::GamePak()
 {
 }
 
-Byte GAMEPAK::get_cartridge_type()
+Byte GamePak::getCartridgeType()
 {
 	return this->rom[0x147];
 }
 
-Byte GAMEPAK::get_rom_size()
+Byte GamePak::getRomSize()
 {
 	return this->rom[0x148];
 }
 
-Byte GAMEPAK::get_ram_size()
+Byte GamePak::getRamSize()
 {
 	return this->rom[0x149];
 }
 
-Byte GAMEPAK::get_memory(const Word address)
+Byte GamePak::getMemory(const Word address)
 {
 	if (address <= 0x3FFF) // if address is within rom bank 0
 		return this->rom[address];
@@ -56,28 +56,28 @@ Byte GAMEPAK::get_memory(const Word address)
 		return this->rom[(address - 0x2000) + (this->current_ram_bank * 0x2000)];
 }
 
-void GAMEPAK::set_memory(const Word address, const Byte data)
+void GamePak::setMemory(const Word address, const Byte data)
 {
 	if (address < 0x2000) // enable ram bank writing
-		this->ram_bank_enable_handler(address, data); return;
+		this->ramBankEnableHandler(address, data); return;
 
 	if (address <= 0x4000) // rom bank change
-		this->rom_bank_change(address, data); return;
+		this->romBankChange(address, data); return;
 
 	if (address <= 0x6000) // rom / ram bank change
 		return;
 }
 
-void GAMEPAK::allocate_ram()
+void GamePak::allocateRam()
 {
-	if (this->get_cartridge_type() == 0x05 || this->get_cartridge_type() == 0x06)
+	if (this->getCartridgeType() == 0x05 || this->getCartridgeType() == 0x06)
 	{
 		this->ram = std::make_unique<Byte[]>(256);
 		return;
 	}
 
-	Byte numOfBanks = this->get_ram_size();
-	switch (numOfBanks)
+	Byte number_of_banks = this->getRamSize();
+	switch (number_of_banks)
 	{
 	case 0: break;
 	case 1: break;
@@ -89,9 +89,9 @@ void GAMEPAK::allocate_ram()
 	}
 }
 
-void GAMEPAK::ram_bank_enable_handler(const Word address, const Byte data)
+void GamePak::ramBankEnableHandler(const Word address, const Byte data)
 {
-	switch (this->get_cartridge_type())
+	switch (this->getCartridgeType())
 	{
 	case 0x00: break; // ROM ONLY
 	case 0x01: // MBC1
@@ -149,9 +149,9 @@ void GAMEPAK::ram_bank_enable_handler(const Word address, const Byte data)
 	}
 }
 
-void GAMEPAK::ram_bank_change(const Word address, const Byte data)
+void GamePak::ramBankChange(const Word address, const Byte data)
 {
-	switch (this->get_cartridge_type())
+	switch (this->getCartridgeType())
 	{
 	case 0x00: break; // ROM ONLY
 	case 0x01: // MBC1
@@ -184,9 +184,9 @@ void GAMEPAK::ram_bank_change(const Word address, const Byte data)
 	}
 }
 
-void GAMEPAK::rom_bank_change(const Word address, const Byte data)
+void GamePak::romBankChange(const Word address, const Byte data)
 {
-	switch (this->get_cartridge_type())
+	switch (this->getCartridgeType())
 	{
 	case 0x00: break; // ROM ONLY
 	case 0x01: // MBC1
