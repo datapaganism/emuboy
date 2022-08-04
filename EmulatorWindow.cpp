@@ -2,22 +2,21 @@
 
 void EmulatorWindow::handleEvent(SDL_Event& e)
 {
-    if (e.window.windowID == this->mWindowID)
+    if (e.window.windowID == this->window_id)
     {
-
         switch (e.type)
         {
         case SDL_KEYDOWN:
         {
             int keyPressed = e.key.keysym.sym;
-            enum JoypadButtons pressed = keyToEnum(keyPressed);
+            enum eJoypadButtons pressed = keyToEnum(keyPressed);
             if (pressed != UNKNOWN)
                 this->pressButton(pressed);
         } break;
         case SDL_KEYUP:
         {
             int keyPressed = e.key.keysym.sym;
-            enum JoypadButtons pressed = keyToEnum(keyPressed);
+            enum eJoypadButtons pressed = keyToEnum(keyPressed);
             if (pressed != UNKNOWN)
                 this->depressButton(pressed);
         } break;
@@ -27,15 +26,15 @@ void EmulatorWindow::handleEvent(SDL_Event& e)
 
 void EmulatorWindow::updateState()
 {
-    this->cycle_system_one_frame();
+    this->cycleSystemOneFrame();
 }
 
 void EmulatorWindow::updateRender()
 {
-    if (this->ppu.lcd_enabled())
+    if (this->ppu.lcdEnabled())
     {
-        SDL_UpdateTexture(this->mTexture, NULL, this->framebuffer.get(), XRES * sizeof(FRAMEBUFFER_PIXEL));
-        SDL_RenderCopy(this->mRenderer, this->mTexture, NULL, NULL);
+        SDL_UpdateTexture(this->texture, NULL, this->framebuffer.get(), XRES * sizeof(FramebufferPixel));
+        SDL_RenderCopy(this->renderer, this->texture, NULL, NULL);
     }
 }
 

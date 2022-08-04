@@ -1,7 +1,6 @@
 #include "SDL.h"
 #include "WindowManager.hpp"
 #include <iostream>
-#include <string>
 
 //passed
 // 06-ld r,r.gb
@@ -19,6 +18,14 @@
 //not passed
 
 
+// Naming Convention
+
+// Classes / structs -> PascalCase
+// Functions -> camelCase
+// variables / object instances -> under_score
+// enums -> ePascalCase::under_score
+// arrays of enums -> ePascalCase_all_optional[]
+// debug -> DEBUG_under_score
 
 
 

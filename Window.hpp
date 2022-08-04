@@ -19,7 +19,7 @@
 class Window
 {
 public:
-	Window(int width, int height, int scaling, const char* title, bool shownOnStart);
+	Window(int width, int height, int scaling, const char* title, bool shown_on_start);
 	~Window();
 
 	void handleWindowEvent(SDL_Event& e);
@@ -43,22 +43,22 @@ public:
 	bool initSuccess();
 
 
-	int mWindowID = -1;
-	SDL_Renderer* mRenderer = nullptr;
-	SDL_Texture* mTexture = nullptr;
+	int window_id = -1;
+	SDL_Renderer* renderer = nullptr;
+	SDL_Texture* texture = nullptr;
 
 protected:
-	SDL_Window* mWindow = nullptr;
+	SDL_Window* window = nullptr;
 	
 	const char* title = NULL;
 
-	int mWidth = 0;
-	int mHeight = 0;
-	int mScaling = 0;
+	int width = 0;
+	int height = 0;
+	int scaling = 0;
 
-	bool mMouseFocus = 0;
-	bool mKeyboardFocus = 0;
-	bool mFullScreen = 0;
-	bool mMinimized = 0;
-	bool mShown = 0;
+	bool mouse_focus = 0;
+	bool keyboard_focus = 0;
+	bool fullscreen = 0;
+	bool minimized = 0;
+	bool shown = 0;
 };

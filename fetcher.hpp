@@ -7,10 +7,10 @@
 class FIFO;
 
 
-class FETCHER
+class Fetcher
 {
 public:
-	FETCHER();
+	Fetcher();
 	
 	Word address_to_read = 0;
 	Word tile_map_address = 0;
@@ -18,41 +18,21 @@ public:
 	Byte tile_number = 0;
 	Byte data0 = 0;
 	Byte data1 = 0;
-
-	/// <summary>
-	/// ranges between 0 - 31
-	/// </summary>
-	Byte fetcher_x = 0;
-	
-	/// <summary>
-	/// ranges between 0 - 255
-	/// </summary>
-	Byte fetcher_y = 0;
-
-	/// <summary>
-	/// increments by 1 per pixel fetch, 0 to 159 range, independent of x's pushed
-	/// </summary>
-	Byte fetcher_scanline_x = 0;
-
+	Byte fetcher_x = 0; // ranges between 0 - 31
+	Byte fetcher_y = 0; // ranges between 0 - 255
+	Byte fetcher_scanline_x = 0; // increments by 1 per pixel fetch, 0 to 159 range, independent of x's pushed 
 	Byte state = 0;
-	
-	std::array<FIFO_pixel, 8> temp_buffer;
-
+	std::array<FIFOPixel, 8> temp_buffer;
 	int cycle_counter = 0;
-	
-	void connect_to_fifo(FIFO* pFIFO);
-	
-	Word sc_registers_to_top_left_bg_map_address();
-
-	Byte get_tile_number(Word address);
-
-	void update_fetcher(const int cycles);
-
 	FIFO* fifo_parent = nullptr;
-
+	
+	void connectToFIFO(FIFO* fifo_ptr);
+	Word SCRegistersToTopLeftBGMapAddress();
+	Byte getTileNumber(Word address);
+	void updateFetcher(const int cycles);
 	void reset();
+	void incAddress();
 
-	void inc_address();
 private:
 	
 };

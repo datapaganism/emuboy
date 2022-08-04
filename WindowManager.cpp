@@ -6,13 +6,12 @@
 
 WindowManager::WindowManager(const std::string rom_path, const std::string bios_path)
 {
-    this->mInitSuccess = true;
-
+    this->init_success = true;
 
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
         std::cout << "SDL could not initialize! SDL Error: " << SDL_GetError() << "\n";
-        this->mInitSuccess = false;
+        this->init_success = false;
     }
     else
     {
@@ -23,7 +22,7 @@ WindowManager::WindowManager(const std::string rom_path, const std::string bios_
         if (!this->windows[0].get()->initSuccess())
         {
             std::cout << "Window 0 could not be created!\n";
-            this->mInitSuccess = false;
+            this->init_success = false;
         }
     }
 }
@@ -39,22 +38,22 @@ WindowManager::~WindowManager()
 
 void WindowManager::run()
 {
-    if (!this->mInitSuccess)
+    if (!this->init_success)
         std::cout << "Failed to initialize!\n";
     else
     {
         // Cast the base pointer back to dervied class so we can access BUS class element.
-        EmulatorWindow* EmulatorWindow_ptr = static_cast<EmulatorWindow*>(this->windows[0].get());
+        EmulatorWindow* emulator_window_ptr = static_cast<EmulatorWindow*>(this->windows[0].get());
         
         //Create and push back secondary windows, and pass the new pointer so the other windows can acess the emulator's BUS.
-        this->windows.push_back(std::make_unique<VRAMViewer>(EmulatorWindow_ptr, (8 * 16), (8 * 24), 2, "VRAMViewer", false));
-        this->windows.push_back(std::make_unique<BGMapViewer>(EmulatorWindow_ptr, (8 * 32), (8 * 32), 2, "BGMapViewer", false));
+        this->windows.push_back(std::make_unique<VRAMViewer>(emulator_window_ptr, (8 * 16), (8 * 24), 2, "VRAM Viewer", false));
+        this->windows.push_back(std::make_unique<BGMapViewer>(emulator_window_ptr, (8 * 32), (8 * 32), 2, "BG Map Viewer", false));
 
         bool quit = false;
         bool pause = false;
 
-        unsigned int ticksNow = 0, ticksPrevious = 0;
-        double tickDelta = 0;
+        unsigned int ticks_now = 0, ticks_previous = 0;
+        double tick_delta = 0;
         while (!quit)
         {
             SDL_Event e;
@@ -90,7 +89,7 @@ void WindowManager::run()
                         this->windows[2].get()->focus();
                         break;
 
-                    case JoypadButtonsDebug::pause:
+                    case eJoypadButtonsDebug::pause:
                         pause = !pause;
                         break;
                     }
@@ -99,12 +98,12 @@ void WindowManager::run()
 
             // tick at custom frequency
 
-            ticksNow = SDL_GetTicks();
-            tickDelta = ticksNow - ticksPrevious;
+            ticks_now = SDL_GetTicks();
+            tick_delta = ticks_now - ticks_previous;
 
-            if (tickDelta > 1000 / VSYNC)
+            if (tick_delta > 1000 / VSYNC)
             {
-                ticksPrevious = ticksNow;
+                ticks_previous = ticks_now;
 
                  // render each window
                 if (!pause)
@@ -136,7 +135,7 @@ void WindowManager::run()
     }
 }
 
-bool WindowManager::initSuccess()
+bool WindowManager::getInitSuccess()
 {
-    return this->mInitSuccess;
+    return this->init_success;
 }

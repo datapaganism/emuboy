@@ -6,22 +6,22 @@
 BGMapViewer::BGMapViewer(BUS* bus_ptr, int width, int height, int scaling, const char* title, bool shownOnStart) : Window(width, height, scaling, title, shownOnStart)
 {
     this->bus_ptr = bus_ptr;
-	this->framebuffer = std::make_unique<FRAMEBUFFER_PIXEL[]>(8 * 32 * 8 * 32);
+	this->framebuffer = std::make_unique<FramebufferPixel[]>(8 * 32 * 8 * 32);
 }
 
 void BGMapViewer::handleEvent(SDL_Event& e) {}
 void BGMapViewer::updateState() {}
 void BGMapViewer::updateRender()
 {
-    this->generate_bg_map_framebuffer();
-    SDL_UpdateTexture(this->mTexture, NULL, this->framebuffer.get(), 8 * 32 * sizeof(FRAMEBUFFER_PIXEL));
-    SDL_RenderCopy(this->mRenderer, this->mTexture, NULL, NULL);
+    this->generateBGMapFramebuffer();
+    SDL_UpdateTexture(this->texture, NULL, this->framebuffer.get(), 8 * 32 * sizeof(FramebufferPixel));
+    SDL_RenderCopy(this->renderer, this->texture, NULL, NULL);
 }
 
-void BGMapViewer::generate_bg_map_framebuffer()
+void BGMapViewer::generateBGMapFramebuffer()
 {
     int temp_framebuffer_buffer_itr = 0;
-    FIFO_pixel temp_pixel_buffer;
+    FIFOPixel temp_pixel_buffer;
 
     Word start_tile_no_address = 0x9800;
     Word start_memory_address = 0x8000;
@@ -48,20 +48,20 @@ void BGMapViewer::generate_bg_map_framebuffer()
         for (int x = 0; x < width; x++)
         {
             Word tile_map_cell_pointer = start_tile_no_address + (1 * x) + (0x20 * y);
-            Byte tilenumber = this->bus_ptr->get_memory(tile_map_cell_pointer, MEMORY_ACCESS_TYPE::debug);
-            Word tile_address = this->bus_ptr->ppu.get_tile_address_from_number(tilenumber, PPU::background);
-            TILE tile(this->bus_ptr, tile_address);
-            FRAMEBUFFER_PIXEL tile_pixels_scanline_worth[8];
+            Byte tilenumber = this->bus_ptr->getMemory(tile_map_cell_pointer, eMemoryAccessType::debug);
+            Word tile_address = this->bus_ptr->ppu.getTileAddressFromNumber(tilenumber, PPU::background);
+            Tile tile(this->bus_ptr, tile_address);
+            FramebufferPixel tile_pixels_scanline_worth[8];
 
             for (int tile_y = 0; tile_y < 8; tile_y++)
             {
                 for (int tile_x = 0; tile_x < 8; tile_x++)
                 {
-                    temp_pixel_buffer = (FIFO_pixel(tile.getPixelColour(tile_x, tile_y), 0, 0, 0));
-                    tile_pixels_scanline_worth[tile_x] = this->bus_ptr->ppu.dmg_framebuffer_pixel_to_rgb(temp_pixel_buffer);
+                    temp_pixel_buffer = (FIFOPixel(tile.getPixelColour(tile_x, tile_y), 0, 0, 0));
+                    tile_pixels_scanline_worth[tile_x] = this->bus_ptr->ppu.dmgFramebufferPixelToRGB(temp_pixel_buffer);
                 }
                 int offset = (8 * x) + ((width * 8) * ((8 * y) + tile_y));
-                memcpy(this->framebuffer.get() + offset, tile_pixels_scanline_worth, sizeof(FRAMEBUFFER_PIXEL) * 8);
+                memcpy(this->framebuffer.get() + offset, tile_pixels_scanline_worth, sizeof(FramebufferPixel) * 8);
             }
         }
     }

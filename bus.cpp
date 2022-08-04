@@ -5,23 +5,24 @@
 #include <iostream>
 #include <bitset>
 #include <sstream>
+#include <fstream>
 
 
-void BUS::cycle_system_one_frame()
+void BUS::cycleSystemOneFrame()
 {
-    int currentCycles = 0;
+    int current_cycles = 0;
 
-    while (currentCycles <= CYCLES_PER_FRAME)
+    while (current_cycles <= CYCLES_PER_FRAME)
     {
 
         this->cpu.mStepCPU();
-        this->cpu.update_timers();
+        this->cpu.updateTimers();
         
-        this->dma_controller.update_dma(4);
+        this->dma_controller.updateDMA(4);
 
-        this->ppu.update_graphics(4);
+        this->ppu.updateGraphics(4);
 
-        currentCycles++;
+        current_cycles++;
 
         // Serial monitoring
         if ((this->io[0xFF02 - IOOFFSET] & ~0x7E) == 0x81)
@@ -44,7 +45,7 @@ void BUS::cycle_system_one_frame()
 
 
 
-void BUS::set_joypadState(const enum JoypadButtons button, bool value)
+void BUS::setJoypadState(const enum eJoypadButtons button, bool value)
 {
     // joypadstate
     // 0000 0000
@@ -53,17 +54,17 @@ void BUS::set_joypadState(const enum JoypadButtons button, bool value)
     Byte bit = 0;
     switch (button)
     {
-    case dRight:    {bit = 0b00000001; break;}
-    case dLeft:     {bit = 0b00000010; break;}
-    case dUp:       {bit = 0b00000100; break;}
-    case dDown:     {bit = 0b00001000; break;}
-    case bA:        {bit = 0b00010000; break;}
-    case bB:        {bit = 0b00100000; break;}
-    case bSelect:   {bit = 0b01000000; break;}
-    case bStart:    {bit = 0b10000000; break;}
+    case d_right:    {bit = 0b00000001; break;}
+    case d_left:     {bit = 0b00000010; break;}
+    case d_up:       {bit = 0b00000100; break;}
+    case d_down:     {bit = 0b00001000; break;}
+    case b_a:        {bit = 0b00010000; break;}
+    case b_b:        {bit = 0b00100000; break;}
+    case b_select:   {bit = 0b01000000; break;}
+    case b_start:    {bit = 0b10000000; break;}
     default: throw "Unreachable button press"; break;
     }
-    this->joypadState = (value) ? (this->joypadState | bit) : (this->joypadState & ~bit);
+    this->joypad_state = (value) ? (this->joypad_state | bit) : (this->joypad_state & ~bit);
 }
 
 
@@ -124,7 +125,7 @@ void BUS::DEBUG_opcode_program(Word address, std::string byteString)
     int i = 0;
     for (Byte byte : byteArray)
     {
-        this->set_memory(address + i, byte, MEMORY_ACCESS_TYPE::debug);
+        this->setMemory(address + i, byte, eMemoryAccessType::debug);
         i++;
     }
 
@@ -163,7 +164,7 @@ void BUS::DEBUG_fill_ram(Word address, std::string byteString)
     int i = 0;
     for (Byte byte : byteArray)
     {
-        this->set_memory(address + i, byte,MEMORY_ACCESS_TYPE::debug);
+        this->setMemory(address + i, byte,eMemoryAccessType::debug);
         i++;
     }
 }
@@ -228,17 +229,17 @@ void BUS::DEBUG_nintendo_logo()
     this->DEBUG_fill_ram(0x9910, "19 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00");
     this->DEBUG_fill_ram(0x9920, "00 00 00 00 0D 0E 0F 10 11 12 13 14 15 16 17 18");
 
-    this->set_memory(LY, 0, MEMORY_ACCESS_TYPE::debug);
-    this->set_memory(SCY, 0x40, MEMORY_ACCESS_TYPE::debug);
-    this->set_memory(SCX, 0x20, MEMORY_ACCESS_TYPE::debug);
+    this->setMemory(LY, 0, eMemoryAccessType::debug);
+    this->setMemory(SCY, 0x40, eMemoryAccessType::debug);
+    this->setMemory(SCX, 0x20, eMemoryAccessType::debug);
     
-    //this->set_memory(SCY, 0x0);
-    //this->set_memory(SCX, 0x0);
+    //this->setMemory(SCY, 0x0);
+    //this->setMemory(SCX, 0x0);
 
 
-    this->set_memory(LCDC, 0x91, MEMORY_ACCESS_TYPE::debug);
-    this->set_memory(STAT, 0b00000011, MEMORY_ACCESS_TYPE::debug);
-    this->set_memory(0xFF47, 0xE4, MEMORY_ACCESS_TYPE::debug);
+    this->setMemory(LCDC, 0x91, eMemoryAccessType::debug);
+    this->setMemory(STAT, 0b00000011, eMemoryAccessType::debug);
+    this->setMemory(0xFF47, 0xE4, eMemoryAccessType::debug);
 
 
 
@@ -246,51 +247,51 @@ void BUS::DEBUG_nintendo_logo()
 
 BUS::BUS(const std::string rom_path, const std::string bios_path)
 {
-    this->cpu.connect_to_bus(this);
-    this->ppu.connect_to_bus(this);
-    this->dma_controller.connect_to_bus(this);
+    this->cpu.connectToBus(this);
+    this->ppu.connectToBus(this);
+    this->dma_controller.connectToBus(this);
     this->init();
 
-    this->gamepak = GAMEPAK(rom_path);
-    this->load_bios(bios_path);
+    this->gamepak = GamePak(rom_path);
+    this->loadBios(bios_path);
 
     //fill framebuffer
     for (int i = 0; i < XRES * YRES; i++)
     {
-        this->framebuffer[i] = FRAMEBUFFER_PIXEL(GB_PALLETE_00_r, GB_PALLETE_00_g, GB_PALLETE_00_b);
+        this->framebuffer[i] = FramebufferPixel(GB_PALLETE_00_r, GB_PALLETE_00_g, GB_PALLETE_00_b);
     }
 }
 
 
 
-void BUS::depressButton(const enum JoypadButtons button)
+void BUS::depressButton(const enum eJoypadButtons button)
 {
-    this->set_joypadState(button, 1);
+    this->setJoypadState(button, 1);
 }
 
 
-void BUS::pressButton(const enum JoypadButtons button)
+void BUS::pressButton(const enum eJoypadButtons button)
 {
-    this->set_joypadState(button, 0);
-    this->cpu.request_interrupt(joypad);
+    this->setJoypadState(button, 0);
+    this->cpu.requestInterrupt(joypad);
 }
 
 
 Byte BUS::getActionButtonNibble()
 {
-    return this->joypadState >> 4;
+    return this->joypad_state >> 4;
 }
 
 Byte BUS::getDirectionButtonNibble()
 {
-    return this->joypadState & 0xF;
+    return this->joypad_state & 0xF;
 }
 
 
 // The gameboy is a memory mapped system, components are mapped
 // to indiviudial parts of the addressable memory, we can specify
 // what hardware we are reading from using if guards
-Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
+Byte BUS::getMemory(const Word address, enum eMemoryAccessType access_type)
 {
     switch (access_type)
     {
@@ -302,11 +303,11 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
                     return 0x0; //read blocked for non HRAM addresses
 
             if  (0xFE00 <= address && address <= 0xFE9F) // OAM
-                if ((this->ppu.lcd_enabled() && (this->ppu.get_ppu_state() == 0x3 || this->ppu.get_ppu_state() == 0x2)))
+                if ((this->ppu.lcdEnabled() && (this->ppu.getPPUState() == 0x3 || this->ppu.getPPUState() == 0x2)))
                     return 0xFF;
 
             if  (0x8000 <= address && address <= 0x9FFF) // VIDEO RAM
-                if ((this->ppu.lcd_enabled() && this->ppu.get_ppu_state() == 0x3))
+                if ((this->ppu.lcdEnabled() && this->ppu.getPPUState() == 0x3))
                     return 0xFF;
 
         } break;
@@ -323,7 +324,7 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
     if (address <= 0x00FF) //from 0x0000
     {
         // if the bios has never been loaded or if the register at 0xFF50 is set 1 (which is done by the bios program) we need to access the cartridge bank
-        if (this->io[(0xFF50) - IOOFFSET] == 0x1|| !this->biosLoaded)
+        if (this->io[(0xFF50) - IOOFFSET] == 0x1|| !this->bios_loaded)
             return this->gamepak.rom[address];
         
         return this->bios[address];
@@ -371,7 +372,7 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
     if (address <= 0xFDFF) // from 0xE000
     {
         // echo ram, it is a copy of the ram above, we will just read memory 2000 addresses above instead
-        return this->get_memory(address - 0x2000,access_type);
+        return this->getMemory(address - 0x2000,access_type);
     }
 
     if (address <= 0xFE9F) // from 0xFE00
@@ -431,10 +432,10 @@ Byte BUS::get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type)
     }
     
     // temp return
-    throw "get_memory no return";
+    throw "getMemory no return";
 };
 
-void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYPE access_type)
+void BUS::setMemory(const Word address, const Byte data, enum eMemoryAccessType access_type)
 {
      /*
     switch (access_type)
@@ -446,13 +447,13 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
                 return; //read blocked for non HRAM addresses
 
         if (0xFE00 <= address && address <= 0xFE9F) // OAM
-            if ((this->ppu.lcd_enabled() && (this->ppu.get_ppu_state() == 0x3 || this->ppu.get_ppu_state() == 0x2)))
+            if ((this->ppu.lcdEnabled() && (this->ppu.getPPUState() == 0x3 || this->ppu.getPPUState() == 0x2)))
                 return;
 
         //this breaks the tests
         
         //if (0x8000 <= address && address <= 0x9FFF) // VIDEO RAM
-        //    if ((this->ppu.lcd_enabled() && this->ppu.get_ppu_state() == 0x3))
+        //    if ((this->ppu.lcdEnabled() && this->ppu.getPPUState() == 0x3))
         //        return;
          
     } break;
@@ -521,7 +522,7 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
     if (address <= 0xFDFF)
     {
         // echo ram, it is a copy of the ram above, any calls to this address space will be redirected to address - 2000 spaces above
-        return this->set_memory(address - 0x2000, data, access_type);
+        return this->setMemory(address - 0x2000, data, access_type);
     }
 
     if (address <= 0xFE9F) // from 0xFE00
@@ -597,7 +598,7 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
         case 0xFF44: // LY
             break;
         case 0xFF46: // dma
-           this->dma_controller.request_dma(data);
+           this->dma_controller.requestDMA(data);
            break;
         case 0xFF50:
             this->io[0xFF50 - IOOFFSET] = 0x1; // disable bootrom
@@ -629,7 +630,7 @@ void BUS::set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYP
 /// however we can allow users to supply their own bios file, named bios.bin, this function will set the program counter of the CPU to execute the bios program if it exists.  
 /// </summary>
 /// <param name="bios_name"></param>
-void BUS::load_bios(const std::string bios_name)
+void BUS::loadBios(const std::string bios_name)
 {
     std::ifstream file(bios_name, std::ios::binary | std::ios::ate);
     if (file.is_open())
@@ -640,10 +641,10 @@ void BUS::load_bios(const std::string bios_name)
         file.read((char*)this->bios.get(), pos);
 
         //set the program counter of the cpu to execute the bios program
-        this->cpu.bios_init();
-        this->bios_init();
+        this->cpu.biosInit();
+        this->biosInit();
 
-        this->biosLoaded = true;
+        this->bios_loaded = true;
     }
     file.close();
 
@@ -712,7 +713,7 @@ void BUS::init()
     this->interrupt_enable_register = 0;
 }
 
-void BUS::bios_init()
+void BUS::biosInit()
 {
     this->io[0xFF00 - IOOFFSET ] = 0xCF; // P1
     this->io[0xFF01 - IOOFFSET ] = 0x00; // SB
