@@ -1,14 +1,14 @@
 #pragma once
 #include "config.hpp"
 
-struct FIFO_pixel
+struct FIFOPixel
 {
 	Byte colour : 2;
 	Byte palette : 3;
 	bool sprite_priority;
 	bool bg_priority;
 
-	FIFO_pixel()
+	FIFOPixel()
 	{
 		this->bg_priority = 0;
 		this->sprite_priority = 0;
@@ -16,7 +16,7 @@ struct FIFO_pixel
 		this->palette = 0;
 	};
 
-	FIFO_pixel(Byte colour, Byte palette, bool sprite_priority, bool bg_priority) : FIFO_pixel()
+	FIFOPixel(Byte colour, Byte palette, bool sprite_priority, bool bg_priority) : FIFOPixel()
 	{
 		this->colour = colour;
 		this->palette = palette;

@@ -1,14 +1,14 @@
 #pragma once
-#include <fstream>
 #include <vector>
+#include <string>
 
 #include "config.hpp"
 
-class GAMEPAK
+class GamePak
 {
 public:
-	GAMEPAK(const std::string filename);
-	GAMEPAK();
+	GamePak(const std::string filename);
+	GamePak();
 
 	std::vector<Byte> rom;
 	bool gamepakLoaded = false;

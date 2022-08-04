@@ -10,5 +10,5 @@ public:
     void updateState();
     void updateRender();
 
-    EmulatorWindow(const std::string rom_path, const std::string bios_path, int width, int height, int scaling, const char* title, bool shownOnStart) : BUS(rom_path, bios_path), Window(width, height, scaling, title, shownOnStart){};
+    EmulatorWindow(const std::string rom_path, const std::string bios_path, int width, int height, int scaling, const char* title, bool shown_on_start) : BUS(rom_path, bios_path), Window(width, height, scaling, title, shown_on_start){};
 };

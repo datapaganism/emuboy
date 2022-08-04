@@ -1,32 +1,31 @@
 #include "gamepak.hpp"
 #include <iostream>
+#include <fstream>
 
-GAMEPAK::GAMEPAK(const std::string filename) : GAMEPAK::GAMEPAK()
+GamePak::GamePak(const std::string filename) : GamePak::GamePak()
 {
 	this->filename = filename;
 	std::ifstream file(this->filename, std::ios::binary | std::ios::ate);
 	if(file.is_open())
 	{
 		std::ifstream::pos_type pos = file.tellg();
-
-		//reallocate memory space to fit entire rom
-		this->rom.resize(pos);
-
+		this->rom.resize(pos); //reallocate memory space to fit entire rom
 		file.seekg(0, std::ios::beg);
+
 		file.read((char*)this->rom.data(), pos);		
 
-		this->gamepakLoaded = true;
+		this->gamepak_loaded = true;
 
 		file.close();
 		return;
 	}
-	std::cout << "GAMEPAK NOT LOADED\n";
+	std::cout << "GamePak NOT LOADED\n";
 	file.close();
 
 	this->allocate_ram();
 }
 
-GAMEPAK::GAMEPAK()
+GamePak::GamePak()
 {
 }
 

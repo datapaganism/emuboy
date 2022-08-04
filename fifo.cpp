@@ -3,7 +3,7 @@
 #include "bus.hpp"
 
 
-void FIFO::push(FIFO_pixel pixel)
+void FIFO::push(FIFOPixel pixel)
 {
 	if (tail_pos <= 15)
 	{
@@ -12,16 +12,16 @@ void FIFO::push(FIFO_pixel pixel)
 }
 
 
-FIFO_pixel FIFO::pop()
+FIFOPixel FIFO::pop()
 {
 	if (tail_pos > -1)
 	{
-		FIFO_pixel temp = this->queue[0];
+		FIFOPixel temp = this->queue[0];
 		for (int i = 0; i < this->tail_pos; i++)
 		{
 			this->queue[i] = this->queue[i + 1];
 		}
-		memset(&this->queue[this->tail_pos], 0, sizeof(FIFO_pixel));
+		memset(&this->queue[this->tail_pos], 0, sizeof(FIFOPixel));
 		this->tail_pos--;
 
 		return temp;
@@ -29,22 +29,19 @@ FIFO_pixel FIFO::pop()
 	throw "unreachable pop";
 }
 
-void FIFO::update_fifo(int cyclesUsed)
+void FIFO::updateFIFO(int cycles_used)
 {
-
-	this->fifo_cycle_counter += cyclesUsed;
-
+	this->fifo_cycle_counter += cycles_used;
 
 	while (this->fifo_cycle_counter >= (4/4))
 	{
 		this->fifo_cycle_counter -= (4/4);
 
-
 		// while fifo not empty
 		if (this->tail_pos > -1)
 		{
-			BUS* pBus = this->ppu_parent->bus;
-			Byte ly = pBus->io[LY - IOOFFSET];
+			BUS* bus = this->ppu_parent->bus;
+			Byte ly = bus->io[LY - IOOFFSET];
 			
 			// between 0 and 159 pixels portion of the scanline
 			if ( this->ppu_parent->scanline_x < 160)
@@ -52,7 +49,7 @@ void FIFO::update_fifo(int cyclesUsed)
 				/*
 					Check scx register, % 8 gives the amount of pixels we are within a tile, if not 0, pop the fifo by the result
 				*/
-				Byte scx_pop = pBus->io[SCX - IOOFFSET] % 8;
+				Byte scx_pop = bus->io[SCX - IOOFFSET] % 8;
 				if ((this->ppu_parent->scanline_x == 0) && (scx_pop != 0))
 				{
 					for (int i = 0; i < (scx_pop); i++)
@@ -67,7 +64,7 @@ void FIFO::update_fifo(int cyclesUsed)
 					All models before the CGB - D read the Y coordinate once for each bitplane(so a very precisely timed SCY write allows �desyncing� them), but CGB - D and later use the same Y coordinate for both no matter what.
 					*/
 				if (ly < 144 && this->ppu_parent->scanline_x < 160)
-					this->ppu_parent->add_to_framebuffer(this->ppu_parent->scanline_x, ly, this->pop());
+					this->ppu_parent->addToFramebuffer(this->ppu_parent->scanline_x, ly, this->pop());
 
 
 				this->ppu_parent->scanline_x++;
@@ -81,17 +78,17 @@ void FIFO::update_fifo(int cyclesUsed)
 void FIFO::reset()
 {
 	this->tail_pos = -1;
-	this->queue.fill(FIFO_pixel(NULL, NULL, NULL, NULL));
+	this->queue.fill(FIFOPixel(NULL, NULL, NULL, NULL));
 	this->fifo_cycle_counter = 0;
 	this->fetcher.reset();
 }
 
 FIFO::FIFO()
 {
-	this->fetcher.connect_to_fifo(this);
+	this->fetcher.connectToFIFO(this);
 }
 
-void FIFO::connect_to_ppu(PPU* pPPU)
+void FIFO::connectToPPU(PPU* pPPU)
 {
 	this->ppu_parent = pPPU;
 }

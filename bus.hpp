@@ -11,7 +11,7 @@
 
 
 
-enum MEMORY_ACCESS_TYPE
+enum eMemoryAccessType
 {
     dma_controller,
     ppu,
@@ -27,10 +27,10 @@ public:
 
     PPU ppu;
     CPU cpu;
-    GAMEPAK gamepak;
-    DMA_CONTROLLER dma_controller;
+    GamePak gamepak;
+    DMA_Controller dma_controller;
 
-    bool biosLoaded = false;
+    bool bios_loaded = false;
     std::unique_ptr<Byte[]> work_ram  = std::make_unique<Byte[]>(0x2000);
     std::unique_ptr<Byte[]> bios      = std::make_unique<Byte[]>(0x100);
     std::unique_ptr<Byte[]> io        = std::make_unique<Byte[]>(0x80);
@@ -39,20 +39,20 @@ public:
     std::unique_ptr<Byte[]> oam_ram   = std::make_unique<Byte[]>(0x100);
     Byte interrupt_enable_register = 0;
 
-    std::unique_ptr<FRAMEBUFFER_PIXEL[]> framebuffer = std::make_unique<FRAMEBUFFER_PIXEL[]>(XRES * YRES);
+    std::unique_ptr<FramebufferPixel[]> framebuffer = std::make_unique<FramebufferPixel[]>(XRES * YRES);
    
     void init();
-    void bios_init();
-    void load_bios(const std::string bios_name);
-    void cycle_system_one_frame();
+    void biosInit();
+    void loadBios(const std::string bios_name);
+    void cycleSystemOneFrame();
 
-    Byte get_memory(const Word address, enum MEMORY_ACCESS_TYPE access_type);
-    void set_memory(const Word address, const Byte data, enum MEMORY_ACCESS_TYPE access_type);
+    Byte getMemory(const Word address, enum eMemoryAccessType access_type);
+    void setMemory(const Word address, const Byte data, enum eMemoryAccessType access_type);
     
-    Byte joypadState = 0xFF;
-    void set_joypadState(const enum JoypadButtons button, bool value);
-    void pressButton(const enum JoypadButtons button);
-    void depressButton(const enum JoypadButtons button);
+    Byte joypad_state = 0xFF;
+    void setJoypadState(const enum eJoypadButtons button, bool value);
+    void pressButton(const enum eJoypadButtons button);
+    void depressButton(const enum eJoypadButtons button);
     Byte getActionButtonNibble();
     Byte getDirectionButtonNibble();
     
