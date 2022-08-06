@@ -49,9 +49,7 @@ struct Tile
 {
 	Tile();
 	Tile(BUS* bus, Word address);
-
 	std::array<Byte, 16> bytes_per_tile = { 0, };
-
 	void consolePrint();
 	Byte getPixelColour(int x, int y);	
 };
@@ -78,11 +76,9 @@ public:
 	enum eTileType { background, window, sprite };
 	Byte scanline_x = 0;
 	Tile tile;
-	FIFO fifo_bg;
-	FIFO fifo_sprite;
+	
 	BUS* bus = nullptr;
 	PPURegisters registers;
-	const Byte* ly_ptr = nullptr;
 	int cycle_counter = 0;
 	bool window_wy_triggered = false;
 
@@ -105,13 +101,12 @@ public:
 	void updateState(Byte new_state);
 	Byte getMemory(const Word address);
 	void setMemory(const Word address, const Byte data);
-	Byte getLY();
-	void setLY(const Byte data);
 	
 private:
 
 	void setRegisters();
-	
+	FIFO fifo_bg;
+	FIFO fifo_sprite;
 
 
 };

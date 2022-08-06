@@ -205,7 +205,6 @@ void CPU::DEBUG_printCurrentState(Word pc)
 		printf("%s:0x%.4X  ", "SP", this->registers.sp);
 		printf("%s:0x%.4X  ", "STAT", this->getMemory(STAT));
 		printf("%s:%i  ", "IME", this->interrupt_master_enable);
-		printf("%s:%x  ", "LY", *this->bus->ppu.ly_ptr);
 		/*printf("%s:%x  ", "DIV", this->bus->io[4]);
 		printf("%s:%x  ", "TIMA", this->bus->io[5]);
 		printf("%s:%x  ", "TMA", this->bus->io[6]);

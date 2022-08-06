@@ -16,7 +16,7 @@ public:
 	std::array<FIFOPixel, 16> queue;
 	bool can_fetch = true;
 	int fifo_cycle_counter = 0;
-	PPU* ppu_parent = nullptr;
+	PPU* ppu = nullptr;
 	Byte_s tail_pos = -1;
 
 	void connectToPPU(PPU* pPPU);

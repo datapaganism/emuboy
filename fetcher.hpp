@@ -5,6 +5,7 @@
 #include "FIFO_pixel.hpp"
 
 class FIFO;
+class PPU;
 
 
 class Fetcher
@@ -24,10 +25,12 @@ public:
 	Byte state = 0;
 	std::array<FIFOPixel, 8> temp_buffer;
 	int cycle_counter = 0;
-	FIFO* fifo_parent = nullptr;
+	FIFO* fifo = nullptr;
+	PPU* ppu = nullptr;
 	
 	void connectToFIFO(FIFO* fifo_ptr);
-	Word SCRegistersToTopLeftBGMapAddress();
+	void connectToPPU(PPU* ppu_ptr);
+	Word scRegistersToTopLeftBGMapAddress();
 	Byte getTileNumber(Word address);
 	void updateFetcher(const int cycles);
 	void reset();

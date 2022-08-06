@@ -6,9 +6,7 @@
 void FIFO::push(FIFOPixel pixel)
 {
 	if (tail_pos <= 15)
-	{
 		this->queue[++tail_pos] = pixel;
-	}
 }
 
 
@@ -18,12 +16,9 @@ FIFOPixel FIFO::pop()
 	{
 		FIFOPixel temp = this->queue[0];
 		for (int i = 0; i < this->tail_pos; i++)
-		{
 			this->queue[i] = this->queue[i + 1];
-		}
 		memset(&this->queue[this->tail_pos], 0, sizeof(FIFOPixel));
 		this->tail_pos--;
-
 		return temp;
 	}
 	throw "unreachable pop";
@@ -40,37 +35,29 @@ void FIFO::updateFIFO(int cycles_used)
 		// while fifo not empty
 		if (this->tail_pos > -1)
 		{
-			BUS* bus = this->ppu_parent->bus;
-			Byte ly = bus->io[LY - IOOFFSET];
+			Byte ly = *ppu->registers.ly;
 			
 			// between 0 and 159 pixels portion of the scanline
-			if ( this->ppu_parent->scanline_x < 160)
+			if ( ppu->scanline_x < 160)
 			{
 				/*
 					Check scx register, % 8 gives the amount of pixels we are within a tile, if not 0, pop the fifo by the result
 				*/
-				Byte scx_pop = bus->io[SCX - IOOFFSET] % 8;
-				if ((this->ppu_parent->scanline_x == 0) && (scx_pop != 0))
-				{
+				Byte scx_pop = *ppu->registers.scx % 8;
+				if ((this->ppu->scanline_x == 0) && (scx_pop != 0))
 					for (int i = 0; i < (scx_pop); i++)
-					{
 						this->pop();
-					}
-				}
 
 				/*
 				The scroll registers are re - read on each tile fetch, except for the low 3 bits of SCX, which are only read at the beginning of the scanline(for the initial shifting of pixels).
 
 					All models before the CGB - D read the Y coordinate once for each bitplane(so a very precisely timed SCY write allows �desyncing� them), but CGB - D and later use the same Y coordinate for both no matter what.
 					*/
-				if (ly < 144 && this->ppu_parent->scanline_x < 160)
-					this->ppu_parent->addToFramebuffer(this->ppu_parent->scanline_x, ly, this->pop());
+				if (ly < 144 && this->ppu->scanline_x < 160)
+					this->ppu->addToFramebuffer(this->ppu->scanline_x, ly, this->pop());
 
-
-				this->ppu_parent->scanline_x++;
+				this->ppu->scanline_x++;
 			}
-
-
 		}
 	}
 }
@@ -90,6 +77,6 @@ FIFO::FIFO()
 
 void FIFO::connectToPPU(PPU* pPPU)
 {
-	this->ppu_parent = pPPU;
+	this->ppu = pPPU;
 }
 

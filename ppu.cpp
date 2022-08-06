@@ -9,15 +9,17 @@
 PPU::PPU()
 {
 	this->fifo_bg.connectToPPU(this);
+	this->fifo_bg.fetcher.connectToPPU(this);
 	this->fifo_sprite.connectToPPU(this);
+	this->fifo_sprite.fetcher.connectToPPU(this);
+
 }
 
-
+// called during BUS consturctor 
 void PPU::connectToBus(BUS* pBus)
 {
 	this->bus = pBus;
 	this->setRegisters();
-	this->ly_ptr = &this->bus->io[LY - IOOFFSET];
 }
 
 Byte PPU::getMemory(const Word address)
@@ -28,16 +30,6 @@ Byte PPU::getMemory(const Word address)
 void PPU::setMemory(const Word address, const Byte data)
 {
 	this->bus->setMemory(address, data, eMemoryAccessType::ppu);
-}
-
-Byte PPU::getLY()
-{
-	return *this->ly_ptr;
-}
-
-void PPU::setLY(const Byte data)
-{
-	this->bus->io[LY - IOOFFSET] = data;
 }
 
 void PPU::setRegisters()
@@ -110,7 +102,7 @@ void PPU::updateGraphics(const int cycles)
 		case 2: // oam search
 		{
 			// do stuff
-			if (*registers.wy == *ly_ptr)
+			if (*registers.wy == *registers.ly)
 				this->window_wy_triggered = true;
 
 			if (this->cycle_counter >= (80 / 4))
@@ -125,12 +117,8 @@ void PPU::updateGraphics(const int cycles)
 			this->fifo_bg.fetcher.updateFetcher(cycles);
 			this->fifo_bg.updateFIFO(cycles);
 
-
 			if (this->scanline_x >= 160)
 				this->updateState(0);
-
-
-
 
 			//if (this->scanline_x >= 8)
 				//this->newScanline();
@@ -404,7 +392,6 @@ FramebufferPixel PPU::dmgFramebufferPixelToRGB(const FIFOPixel fifo_pixel)
 
 void PPU::newScanline()
 {
-	//this->bus->io[LY - IOOFFSET]++;
 	(*registers.ly)++;
 	this->updateState(2);
 
@@ -426,37 +413,28 @@ void PPU::newScanline()
 
 void PPU::updateState(Byte new_state)
 {
-	//Byte* lcdstat_register_ptr = &this->bus->io[STAT - IOOFFSET];
 	Byte original_mode = (*registers.stat & 0x3);
 	bool irq_needed = false;
 
 	switch (new_state)
 	{
 	case 0: {
-		//*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000000);
-		//this->setMemory(STAT, ((this->getMemory(STAT) & 0xFC) | 0x0));
 		*registers.stat = (*registers.stat & 0xFC) | 0x0;
 		irq_needed = (*registers.stat & 0b00001000);
 	}break;
 
 	case 1: {
-		//*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000001);
-		//this->setMemory(STAT, ((this->getMemory(STAT) & 0xFC) | 0x1));
 		*registers.stat = (*registers.stat & 0xFC) | 0x1;
 		if (this->lcdEnabled())
 			irq_needed = (*registers.stat & 0b00010000);
 	}break;
 
 	case 2: {
-		//*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000010);
-		//this->setMemory(STAT, ((this->getMemory(STAT) & 0xFC) | 0x2));
 		*registers.stat = (*registers.stat & 0xFC) | 0x2;
 		irq_needed = (*registers.stat & 0b00100000);
 	}break;
 
 	case 3: {
-		//*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000011);
-		//this->setMemory(STAT, ((this->getMemory(STAT) & 0xFC) | 0x3));
 		*registers.stat = (*registers.stat & 0xFC) | 0x3;
 	}break;
 
@@ -471,17 +449,15 @@ void PPU::updateState(Byte new_state)
 	//time to check LYC = LY
 
 //set register for equality
-	if (this->bus->io[LY - IOOFFSET] == this->bus->io[LYC - IOOFFSET])
+	if (*registers.ly == *registers.lyc)
 	{
-		//*lcdstat_register_ptr |= 0b00000100;
-		this->setMemory(STAT, (this->getMemory(STAT) | 0b00000100));
+		*registers.stat |= 0b00000100;
 		// if interrupt is enabled
-		if ((this->getMemory(STAT) & 0b01000000))
+		if (*registers.stat & 0b01000000)
 			this->bus->cpu.requestInterrupt(lcdstat);
 	}
 	else
-		this->setMemory(STAT, (this->getMemory(STAT) & ~0b00000100));
-		//*lcdstat_register_ptr &= ~0b00000100;
+		*registers.stat &=  ~0b00000100;
 }
 
 Byte PPU::getPPUState()
