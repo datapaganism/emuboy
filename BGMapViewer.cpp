@@ -13,12 +13,9 @@ void BGMapViewer::handleEvent(SDL_Event& e) {}
 void BGMapViewer::updateState() {}
 void BGMapViewer::updateRender()
 {
-    if (isShown())
-    {
         this->generateBGMapFramebuffer();
         SDL_UpdateTexture(this->texture, NULL, this->framebuffer.get(), 8 * 32 * sizeof(FramebufferPixel));
         SDL_RenderCopy(this->renderer, this->texture, NULL, NULL);
-    }
 }
 
 void BGMapViewer::generateBGMapFramebuffer()

@@ -13,12 +13,9 @@ void VRAMViewer::handleEvent(SDL_Event& e) {}
 void VRAMViewer::updateState() {}
 void VRAMViewer::updateRender()
 {
-    if (isShown())
-    {
-        this->generateVRAMFramebuffer();
-        SDL_UpdateTexture(this->texture, NULL, this->framebuffer.get(), 8 * 16 * sizeof(FramebufferPixel));
-        SDL_RenderCopy(this->renderer, this->texture, NULL, NULL);
-    }
+    this->generateVRAMFramebuffer();
+    SDL_UpdateTexture(this->texture, NULL, this->framebuffer.get(), 8 * 16 * sizeof(FramebufferPixel));
+    SDL_RenderCopy(this->renderer, this->texture, NULL, NULL);
 }
 
 void VRAMViewer::generateVRAMFramebuffer()

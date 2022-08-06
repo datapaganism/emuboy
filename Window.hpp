@@ -56,9 +56,9 @@ protected:
 	int height = 0;
 	int scaling = 0;
 
-	bool mouse_focus = 0;
-	bool keyboard_focus = 0;
-	bool fullscreen = 0;
-	bool minimized = 0;
-	bool shown = 0;
+	bool mouse_focus = false;
+	bool keyboard_focus = false;
+	bool fullscreen = false;
+	bool minimized = false;
+	bool shown = false;
 };

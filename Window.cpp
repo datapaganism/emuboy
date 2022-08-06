@@ -26,9 +26,7 @@ Window::Window(int width, int height, int scaling, const char* title, bool shown
 		else
 		{
 			SDL_SetRenderDrawColor(this->renderer, GB_PALLETE_BG_r, GB_PALLETE_BG_g, GB_PALLETE_BG_b, 0xFF);
-
 			this->window_id = SDL_GetWindowID(this->window);
-
 			this->shown = shown_on_start;
 		}
 
@@ -143,7 +141,7 @@ void  Window::focus()
 
 void  Window::render()
 {
-	if (!this->minimized)
+	if (!this->minimized && this->shown)
 	{
 		SDL_SetRenderDrawColor(this->renderer, GB_PALLETE_BG_r, GB_PALLETE_BG_g, GB_PALLETE_BG_b, 0xFF);
 		SDL_RenderClear(this->renderer);
