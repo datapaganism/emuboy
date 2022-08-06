@@ -26,30 +26,30 @@ Yes! Not implementing the HALT instruction will cause your timings to be wildly 
 
 void CPU::mStepCPU()
 {	
-	if (this->isExecutingInstruction)
+	if (this->is_executing_instruction)
 	{
 		//decode and execute instruction // takes a cycle
-		this->instruction_handler();
+		this->instructionHandler();
 			
 		//if finished instruction after this execution, prefetch
-		if (!this->isExecutingInstruction)
+		if (!this->is_executing_instruction)
 		{
 			if (!this->is_halted)
 			{
-				if (this->EI_triggered && this->currentRunningOpcode != 0xFB)
+				if (this->ei_triggered && this->current_running_opcode != 0xFB)
 				{
 					this->interrupt_master_enable = true;
-					this->EI_triggered = false;
+					this->ei_triggered = false;
 				}
 
-				this->check_for_interrupts();
+				this->checkForInterrupts();
 				if (this->interrupt_vector != 0)
 				{
-					this->setup_for_next_instruction();
+					this->setupForNextInstruction();
 					return;
 				}
 
-				this->prefetch_instruction();
+				this->prefetchInstruction();
 			}
 		}
 
@@ -63,22 +63,22 @@ void CPU::mStepCPU()
 
 	if (this->is_halted)
 	{
-		this->halt_handler();
+		this->haltHandler();
 		return;
 	}
 
 	// if we havent prefetched anything, fetch instruction // takes a cycle
-	this->currentRunningOpcode = this->get_byte_from_pc();
-	this->setup_for_next_instruction();
+	this->current_running_opcode = this->getByteFromPC();
+	this->setupForNextInstruction();
 	return;
 
 };
 
-void CPU::halt_handler()
+void CPU::haltHandler()
 {
 
-	Byte interrupt_request_register = this->get_memory(IF_REGISTER);
-	Byte interrupt_types_enabled_register = this->get_memory(IE_REGISTER);
+	Byte interrupt_request_register = this->getMemory(IF_REGISTER);
+	Byte interrupt_types_enabled_register = this->getMemory(IE_REGISTER);
 	bool any_pending_interrupts = ((interrupt_request_register & interrupt_types_enabled_register) & 0x1F) != 0;
 	bool ime = this->interrupt_master_enable;
 
@@ -90,8 +90,8 @@ void CPU::halt_handler()
 		if (any_pending_interrupts)
 		{
 			this->is_halted = false;
-			prefetch_instruction();
-			this->check_for_interrupts();
+			prefetchInstruction();
+			this->checkForInterrupts();
 			return;
 		}
 	}
@@ -99,13 +99,13 @@ void CPU::halt_handler()
 	{
 		this->is_halted = false;
 		this->halt_bug = false;
-		prefetch_instruction();
+		prefetchInstruction();
 		return;
 	}
 	if (any_pending_interrupts)
 	{
 		this->is_halted = false;
-		prefetch_instruction();
+		prefetchInstruction();
 		this->registers.pc--;		
 		return;
 	}	
@@ -123,29 +123,29 @@ void CPU::halt_handler()
 	// 14
 	// to emulate it we need to make sure that post fetch we decrement the pc by one
 
-void CPU::check_for_interrupts()
+void CPU::checkForInterrupts()
 {
 	//check master to see if interrupts are enabled
 	if (this->interrupt_master_enable == true)
 	{
 		// iterate through all types, this allows us to check each interrupt and also service them in order of priority
-		for (const auto type : InterruptTypes_all)
+		for (const auto type : eInterruptTypes_all)
 		{
 			// if it has been requested and its corresponding flag is enabled, due to priority
-			if (this->get_interrupt_flag(type, IF_REGISTER) && this->get_interrupt_flag(type, IE_REGISTER))
+			if (this->getInterruptFlag(type, IF_REGISTER) && this->getInterruptFlag(type, IE_REGISTER))
 			{
 				//disable interrupts in general and for this type
-				this->set_interrupt_flag(type, 0, IF_REGISTER);
+				this->setInterruptFlag(type, 0, IF_REGISTER);
 				this->interrupt_master_enable = false;
 
 				// set jump vector
 				switch (type)
 				{
-				case InterruptTypes::vblank:  { this->interrupt_vector = 0x0040; } break;
-				case InterruptTypes::lcdstat: { this->interrupt_vector = 0x0048; } break;
-				case InterruptTypes::timer:   { this->interrupt_vector = 0x0050; } break;
-				case InterruptTypes::serial:  { this->interrupt_vector = 0x0058; } break;
-				case InterruptTypes::joypad:  { this->interrupt_vector = 0x0060; } break;
+				case eInterruptTypes::vblank:  { this->interrupt_vector = 0x0040; } break;
+				case eInterruptTypes::lcdstat: { this->interrupt_vector = 0x0048; } break;
+				case eInterruptTypes::timer:   { this->interrupt_vector = 0x0050; } break;
+				case eInterruptTypes::serial:  { this->interrupt_vector = 0x0058; } break;
+				case eInterruptTypes::joypad:  { this->interrupt_vector = 0x0060; } break;
 				default: throw "Unreachable interrupt type"; break;
 				}
 				return;
@@ -156,26 +156,26 @@ void CPU::check_for_interrupts()
 
 // https://gbdev.io/pandocs/Interrupts.html
 // source on length
-void CPU::setup_interrupt_handler()
+void CPU::setupInterruptHandler()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
 	case 0:
-		this->mCyclesUsed++;
+		this->mcycles_used++;
 		// undocumented_internal_operation
 		break;
 	case 1:
-		this->mCyclesUsed++;
+		this->mcycles_used++;
 		// undocumented_internal_operation
 		break;
 	case 2:
-		this->set_memory(--this->registers.sp, (this->registers.pc >> 8));
-		this->mCyclesUsed++;
+		this->setMemory(--this->registers.sp, (this->registers.pc >> 8));
+		this->mcycles_used++;
 		break;
 
 	case 3:
-		this->set_memory(--this->registers.sp, (this->registers.pc & 0xff));
-		this->mCyclesUsed++;
+		this->setMemory(--this->registers.sp, (this->registers.pc & 0xff));
+		this->mcycles_used++;
 		break;
 
 	case 4:
@@ -183,7 +183,7 @@ void CPU::setup_interrupt_handler()
 		this->registers.pc = this->interrupt_vector;
 
 		this->interrupt_vector = 0;
-		this->isExecutingInstruction = false;
+		this->is_executing_instruction = false;
 		break;
 	}
 }
@@ -196,16 +196,16 @@ void CPU::DEBUG_printCurrentState(Word pc)
 	if (this->debug_toggle)
 	{
 		printf("%s:0x%.4X  ", "pc", this->registers.pc);
-		//printf("%s:0x%.2X  ", "cyclesused", this->mCyclesUsed);
-		printf("op:0x%.2X | ", this->get_memory(this->registers.pc));
+		//printf("%s:0x%.2X  ", "cyclesused", this->mcycles_used);
+		printf("op:0x%.2X | ", this->getMemory(this->registers.pc));
 		printf("%s:0x%.2X%.2X  ", "AF", this->registers.a, this->registers.f);
 		printf("%s:0x%.2X%.2X  ", "BC", this->registers.b, this->registers.c);
 		printf("%s:0x%.2X%.2X  ", "DE", this->registers.d, this->registers.e);
 		printf("%s:0x%.2X%.2X  ", "HL", this->registers.h, this->registers.l);
 		printf("%s:0x%.4X  ", "SP", this->registers.sp);
-		printf("%s:0x%.4X  ", "STAT", this->get_memory(STAT));
+		printf("%s:0x%.4X  ", "STAT", this->getMemory(STAT));
 		printf("%s:%i  ", "IME", this->interrupt_master_enable);
-		printf("%s:%x  ", "LY", *this->bus->ppu.LYptr);
+		printf("%s:%x  ", "LY", *this->bus->ppu.ly_ptr);
 		/*printf("%s:%x  ", "DIV", this->bus->io[4]);
 		printf("%s:%x  ", "TIMA", this->bus->io[5]);
 		printf("%s:%x  ", "TMA", this->bus->io[6]);
@@ -244,7 +244,7 @@ void CPU::init()
 	this->registers.sp = 0xFFFE;
 }
 
-void CPU::bios_init()
+void CPU::biosInit()
 {
 	this->registers.pc = 0;
 	this->registers.a = 0;
@@ -265,37 +265,37 @@ CPU::CPU()
 }
 
 
-const Byte CPU::get_byte_from_pc()
+const Byte CPU::getByteFromPC()
 {
-	return this->get_memory(this->registers.pc++);
+	return this->getMemory(this->registers.pc++);
 }
 
 void CPU::DEBUG_print_IO()
 {
-	std::cout << "\t0xFF00  [JOYP]: ";  printf("%.2X\n", this->get_memory(0xFF00));
-	std::cout << "\t0xFF01    [SB]: ";  printf("%.2X\n", this->get_memory(0xFF01));
-	std::cout << "\t0xFF02    [SC]: ";  printf("%.2X\n", this->get_memory(0xFF02));
-	std::cout << "\t0xFF04   [DIV]: ";  printf("%.2X\n", this->get_memory(0xFF04));
-	std::cout << "\t0xFF05  [TIMA]: ";  printf("%.2X\n", this->get_memory(0xFF05));
-	std::cout << "\t0xFF06   [TMA]: ";  printf("%.2X\n", this->get_memory(0xFF06));
-	std::cout << "\t0xFF07   [TAC]: ";  printf("%.2X\n", this->get_memory(0xFF07));
-	std::cout << "\t0xFF0F    [IF]: ";  printf("%.2X\n", this->get_memory(0xFF0F));
-	std::cout << "\t0xFF40  [LCDC]: ";  printf("%.2X\n", this->get_memory(0xFF40));
-	std::cout << "\t0xFF41  [STAT]: ";  printf("%.2X\n", this->get_memory(0xFF41));
-	std::cout << "\t0xFF42   [SCY]: ";  printf("%.2X\n", this->get_memory(0xFF42));
-	std::cout << "\t0xFF43   [SCX]: ";  printf("%.2X\n", this->get_memory(0xFF43));
-	std::cout << "\t0xFF44    [LY]: ";  printf("%.2X\n", this->get_memory(0xFF44));
-	std::cout << "\t0xFF45   [LYC]: ";  printf("%.2X\n", this->get_memory(0xFF45));
-	std::cout << "\t0xFF47   [BGP]: ";  printf("%.2X\n", this->get_memory(0xFF47));
-	std::cout << "\t0xFF48  [OPB0]: ";  printf("%.2X\n", this->get_memory(0xFF48));
-	std::cout << "\t0xFF49  [OPB1]: ";  printf("%.2X\n", this->get_memory(0xFF49));
-	std::cout << "\t0xFF4A    [WY]: ";  printf("%.2X\n", this->get_memory(0xFF4A));
-	std::cout << "\t0xFF4B    [WX]: ";  printf("%.2X\n", this->get_memory(0xFF4B));
-	std::cout << "\t0xFFFF    [IE]: ";  printf("%.2X\n", this->get_memory(0xFFFF));
+	std::cout << "\t0xFF00  [JOYP]: ";  printf("%.2X\n", this->getMemory(0xFF00));
+	std::cout << "\t0xFF01    [SB]: ";  printf("%.2X\n", this->getMemory(0xFF01));
+	std::cout << "\t0xFF02    [SC]: ";  printf("%.2X\n", this->getMemory(0xFF02));
+	std::cout << "\t0xFF04   [DIV]: ";  printf("%.2X\n", this->getMemory(0xFF04));
+	std::cout << "\t0xFF05  [TIMA]: ";  printf("%.2X\n", this->getMemory(0xFF05));
+	std::cout << "\t0xFF06   [TMA]: ";  printf("%.2X\n", this->getMemory(0xFF06));
+	std::cout << "\t0xFF07   [TAC]: ";  printf("%.2X\n", this->getMemory(0xFF07));
+	std::cout << "\t0xFF0F    [IF]: ";  printf("%.2X\n", this->getMemory(0xFF0F));
+	std::cout << "\t0xFF40  [LCDC]: ";  printf("%.2X\n", this->getMemory(0xFF40));
+	std::cout << "\t0xFF41  [STAT]: ";  printf("%.2X\n", this->getMemory(0xFF41));
+	std::cout << "\t0xFF42   [SCY]: ";  printf("%.2X\n", this->getMemory(0xFF42));
+	std::cout << "\t0xFF43   [SCX]: ";  printf("%.2X\n", this->getMemory(0xFF43));
+	std::cout << "\t0xFF44    [LY]: ";  printf("%.2X\n", this->getMemory(0xFF44));
+	std::cout << "\t0xFF45   [LYC]: ";  printf("%.2X\n", this->getMemory(0xFF45));
+	std::cout << "\t0xFF47   [BGP]: ";  printf("%.2X\n", this->getMemory(0xFF47));
+	std::cout << "\t0xFF48  [OPB0]: ";  printf("%.2X\n", this->getMemory(0xFF48));
+	std::cout << "\t0xFF49  [OPB1]: ";  printf("%.2X\n", this->getMemory(0xFF49));
+	std::cout << "\t0xFF4A    [WY]: ";  printf("%.2X\n", this->getMemory(0xFF4A));
+	std::cout << "\t0xFF4B    [WX]: ";  printf("%.2X\n", this->getMemory(0xFF4B));
+	std::cout << "\t0xFFFF    [IE]: ";  printf("%.2X\n", this->getMemory(0xFFFF));
 	std::cout << "\t         [IME]: ";  printf("%.2X\n", this->bus->interrupt_enable_register);
 }
 
-void CPU::connect_to_bus(BUS* pBus)
+void CPU::connectToBus(BUS* pBus)
 {
 	this->bus = pBus;
 }
@@ -312,7 +312,7 @@ bool CPU::checkBorrow(const int a, const int b, const int shift, const int c)
 	return borrows & (1 << shift);
 }
 
-bool CPU::checkJumpCondition(enum JumpCondition condition)
+bool CPU::checkJumpCondition(enum eJumpCondition condition)
 {
 	switch (condition)
 	{
@@ -320,19 +320,19 @@ bool CPU::checkJumpCondition(enum JumpCondition condition)
 		return true;
 		break;
 	case NZ:
-		if (!this->registers.get_flag(z))
+		if (!this->registers.getFlag(z))
 			return true;
 		break;
 	case Z:
-		if (this->registers.get_flag(z))
+		if (this->registers.getFlag(z))
 			return true;
 		break;
 	case NC:
-		if (!this->registers.get_flag(c))
+		if (!this->registers.getFlag(c))
 			return true;
 		break;
 	case C:
-		if (this->registers.get_flag(c))
+		if (this->registers.getFlag(c))
 			return true;
 		break;
 	default: throw "Unreachable Jump condition"; break;
@@ -340,53 +340,53 @@ bool CPU::checkJumpCondition(enum JumpCondition condition)
 	return false;
 }
 
-Byte CPU::get_memory(const Word address)
+Byte CPU::getMemory(const Word address)
 {
-	return this->bus->get_memory(address, MEMORY_ACCESS_TYPE::cpu);
+	return this->bus->getMemory(address, eMemoryAccessType::cpu);
 }
 
-void CPU::set_memory(const Word address, const Byte data)
+void CPU::setMemory(const Word address, const Byte data)
 {
-	this->bus->set_memory(address, data, MEMORY_ACCESS_TYPE::cpu);
+	this->bus->setMemory(address, data, eMemoryAccessType::cpu);
 }
 
-Byte CPU::get_nibble(const Byte input, const bool getHi)
+Byte CPU::getNibble(const Byte input, const bool getHi)
 {
 	Byte result = 0;
 	(getHi) ? result = (input & 0xF0) >> 4 : result = input & 0x0F;
 	return result;
 }
 
-void CPU::set_nibble(Byte* registerOne, const Byte value, const bool setHi)
+void CPU::setNibble(Byte* reigster_one, const Byte value, const bool setHi)
 {
-	(setHi) ? *registerOne = ((*registerOne & 0x0F) | (value << 4)) : *registerOne = ((*registerOne & 0xF0) | value);
+	(setHi) ? *reigster_one = ((*reigster_one & 0x0F) | (value << 4)) : *reigster_one = ((*reigster_one & 0xF0) | value);
 }
 
 
-void CPU::update_timers()
+void CPU::updateTimers()
 
 {
 	// DIV updates at 16384hz, the CPU in mCycles is = 1048576hz
 	// 1048576 / 163384 = 64
 	// every 64 mCycles, div increments by 1
 	
-	if (++this->divtimerCounter >= DIV_INC_RATE)
+	if (++this->divtimer_counter >= DIV_INC_RATE)
 	{
-		this->divtimerCounter = 0;
+		this->divtimer_counter = 0;
 		this->bus->io[DIV - IOOFFSET]++;
 	}
 		// if TMC bit 2 is set, this means that the timer is enabled
 	if (this->bus->io[TAC - IOOFFSET] & (0b00000100))
 	{
-		if (++this->timerCounter >= this->get_TAC_freq())
+		if (++this->timer_counter >= this->getTACFrequency())
 		{
-			this->timerCounter = 0;
+			this->timer_counter = 0;
 			this->bus->io[TIMA - IOOFFSET]++;
 
 			if (this->bus->io[TIMA - IOOFFSET] == 0xFF)
 			{
 				this->bus->io[TIMA - IOOFFSET] = this->bus->io[TMA - IOOFFSET]; //TIMA gets reset to TMA on overflow
-				this->request_interrupt(timer);
+				this->requestInterrupt(timer);
 			}		
 		}
 	}
@@ -406,14 +406,14 @@ void CPU::update_timers()
 /// </summary>
 /// <param name="cycles"></param>
 
-Byte CPU::get_TMC_frequency()
+Byte CPU::getTMCFrequency()
 {
-	return this->get_memory(TAC) & 0x3;
+	return this->getMemory(TAC) & 0x3;
 }
 
-int CPU::get_TAC_freq()
+int CPU::getTACFrequency()
 {
-	switch (this->get_TMC_frequency())
+	switch (this->getTMCFrequency())
 	{
 	case 0: { return GB_CPU_MCYCLE_CLOCKSPEED / 4096; } break;
 	case 1: { return GB_CPU_MCYCLE_CLOCKSPEED / 262144; } break;
@@ -425,24 +425,24 @@ int CPU::get_TAC_freq()
 }
 
 
-void CPU::request_interrupt(const InterruptTypes type)
+void CPU::requestInterrupt(const eInterruptTypes type)
 {
-	this->set_interrupt_flag(type, 1, IF_REGISTER);
+	this->setInterruptFlag(type, 1, IF_REGISTER);
 }
 
 
 
-Byte CPU::get_interrupt_flag(const enum InterruptTypes type, Word address)
+Byte CPU::getInterruptFlag(const enum eInterruptTypes type, Word address)
 {
-	return this->bus->get_memory(address, MEMORY_ACCESS_TYPE::interrupt_handler) & type;
+	return this->bus->getMemory(address, eMemoryAccessType::interrupt_handler) & type;
 }
 
-void CPU::set_interrupt_flag(const enum InterruptTypes type, const bool value, Word address)
+void CPU::setInterruptFlag(const enum eInterruptTypes type, const bool value, Word address)
 {
-	auto mem_type = MEMORY_ACCESS_TYPE::interrupt_handler;
-	auto original_value = this->bus->get_memory(address, mem_type);
+	auto mem_type = eMemoryAccessType::interrupt_handler;
+	auto original_value = this->bus->getMemory(address, mem_type);
 	auto new_value = (value) ? (original_value | type) : (original_value & ~type);
-	this->bus->set_memory(address, new_value, mem_type);
+	this->bus->setMemory(address, new_value, mem_type);
 }
 
 // some instructions only take a single cycle, peforming the fetch decode and execute in one mCycle
@@ -455,30 +455,30 @@ void CPU::set_interrupt_flag(const enum InterruptTypes type, const bool value, W
 
 
 
-void CPU::setup_for_next_instruction()
+void CPU::setupForNextInstruction()
 {
-	this->mCyclesUsed = 0;
-	this->isExecutingInstruction = true;
+	this->mcycles_used = 0;
+	this->is_executing_instruction = true;
 }
 
-void CPU::prefetch_instruction()
+void CPU::prefetchInstruction()
 {
-	this->setup_for_next_instruction();
-	this->currentRunningOpcode = this->get_byte_from_pc();
+	this->setupForNextInstruction();
+	this->current_running_opcode = this->getByteFromPC();
 }
 
-void CPU::instruction_handler()
+void CPU::instructionHandler()
 {
 	if (this->interrupt_vector != 0)
 	{
-		this->setup_interrupt_handler();
+		this->setupInterruptHandler();
 		return;
 	}
-	switch (this->currentRunningOpcode)
+	switch (this->current_running_opcode)
 	{
-	case 0x00: { this->isExecutingInstruction = false; } break; //NOP
+	case 0x00: { this->is_executing_instruction = false; } break; //NOP
 	case 0x01: { this->ins_LD_XX_u16(&this->registers.b, &this->registers.c); } break;
-	case 0x02: { this->ins_LD_bXXb_Y(this->registers.get_BC(), &this->registers.a); } break;
+	case 0x02: { this->ins_LD_bXXb_Y(this->registers.getBC(), &this->registers.a); } break;
 	case 0x03: { this->ins_INC_XX(&this->registers.b, &this->registers.c); } break;
 	case 0x04: { this->ins_INC_X(&this->registers.b); } break;
 	case 0x05: { this->ins_DEC_X(&this->registers.b); } break;
@@ -494,9 +494,9 @@ void CPU::instruction_handler()
 	case 0x0E: { this->ins_LD_X_u8(&this->registers.c); } break;
 	case 0x0F: { this->ins_RRCA(); } break;
 
-	case 0x10: { this->STOP_instruction_handler(); } break;
+	case 0x10: { this->instructionHandlerSTOP(); } break;
 	case 0x11: { this->ins_LD_XX_u16(&this->registers.d, &this->registers.e); } break;
-	case 0x12: { this->ins_LD_bXXb_Y(this->registers.get_DE(), &this->registers.a); } break;
+	case 0x12: { this->ins_LD_bXXb_Y(this->registers.getDE(), &this->registers.a); } break;
 	case 0x13: { this->ins_INC_XX(&this->registers.d, &this->registers.e); } break;
 	case 0x14: { this->ins_INC_X(&this->registers.d); } break;
 	case 0x15: { this->ins_DEC_X(&this->registers.d); } break;
@@ -602,14 +602,14 @@ void CPU::instruction_handler()
 	case 0x6E: { this->ins_LD_X_bYYb(&this->registers.l, &this->registers.h, &this->registers.l); } break;
 	case 0x6F: { this->ins_LD_X_Y(&this->registers.l, &this->registers.a); } break;
 
-	case 0x70: { this->ins_LD_bXXb_Y(this->registers.get_HL(), &this->registers.b); } break;
-	case 0x71: { this->ins_LD_bXXb_Y(this->registers.get_HL(), &this->registers.c); } break;
-	case 0x72: { this->ins_LD_bXXb_Y(this->registers.get_HL(), &this->registers.d); } break;
-	case 0x73: { this->ins_LD_bXXb_Y(this->registers.get_HL(), &this->registers.e); } break;
-	case 0x74: { this->ins_LD_bXXb_Y(this->registers.get_HL(), &this->registers.h); } break;
-	case 0x75: { this->ins_LD_bXXb_Y(this->registers.get_HL(), &this->registers.l); } break;
-	case 0x76: { this->is_halted = true; this->isExecutingInstruction = false; } break; //HALT
-	case 0x77: { this->ins_LD_bXXb_Y(this->registers.get_HL(), &this->registers.a); } break;
+	case 0x70: { this->ins_LD_bXXb_Y(this->registers.getHL(), &this->registers.b); } break;
+	case 0x71: { this->ins_LD_bXXb_Y(this->registers.getHL(), &this->registers.c); } break;
+	case 0x72: { this->ins_LD_bXXb_Y(this->registers.getHL(), &this->registers.d); } break;
+	case 0x73: { this->ins_LD_bXXb_Y(this->registers.getHL(), &this->registers.e); } break;
+	case 0x74: { this->ins_LD_bXXb_Y(this->registers.getHL(), &this->registers.h); } break;
+	case 0x75: { this->ins_LD_bXXb_Y(this->registers.getHL(), &this->registers.l); } break;
+	case 0x76: { this->is_halted = true; this->is_executing_instruction = false; } break; //HALT
+	case 0x77: { this->ins_LD_bXXb_Y(this->registers.getHL(), &this->registers.a); } break;
 
 	case 0x78: { this->ins_LD_X_Y(&this->registers.a, &this->registers.b); } break;
 	case 0x79: { this->ins_LD_X_Y(&this->registers.a, &this->registers.c); } break;
@@ -697,14 +697,14 @@ void CPU::instruction_handler()
 	case 0xC2: { this->ins_JP_u16(NZ); } break;
 	case 0xC3: { this->ins_JP_u16(); } break;
 	case 0xC4: { this->ins_CALL_u16(NZ); } break;
-	case 0xC5: { this->ins_PUSH_XX(this->registers.get_BC()); } break;
+	case 0xC5: { this->ins_PUSH_XX(this->registers.getBC()); } break;
 	case 0xC6: { this->ins_ADD_A_u8(); } break;
 	case 0xC7: { this->ins_RST(0x00); } break;
 
 	case 0xC8: { this->ins_RET_CC(Z); } break;
 	case 0xC9: { this->ins_RET(); } break;
 	case 0xCA: { this->ins_JP_u16(Z); } break;
-	case 0xCB: { this->CB_instruction_handler(); } break;
+	case 0xCB: { this->instructionHandlerCB(); } break;
 	case 0xCC: { this->ins_CALL_u16(Z); } break;
 	case 0xCD: { this->ins_CALL_u16(); } break;
 	case 0xCE: { this->ins_ADC_A_u8(); } break;
@@ -715,7 +715,7 @@ void CPU::instruction_handler()
 	case 0xD2: { this->ins_JP_u16(NC); } break;
 		//case 0xD3: { this->ins_SBC_A_n(nullptr, this->get_byte_from_pc()); } break;
 	case 0xD4: { this->ins_CALL_u16(NC); } break;
-	case 0xD5: { this->ins_PUSH_XX(this->registers.get_DE()); } break;
+	case 0xD5: { this->ins_PUSH_XX(this->registers.getDE()); } break;
 	case 0xD6: { this->ins_SUB_A_u8();  } break;
 	case 0xD7: { this->ins_RST(0x10); } break;
 
@@ -733,7 +733,7 @@ void CPU::instruction_handler()
 	case 0xE2: { this->ins_LD_bXXb_Y(0xFF00 + this->registers.c, &this->registers.a); } break;
 		//case 0xE3: { } break;
 		//case 0xE4: { } break;
-	case 0xE5: { this->ins_PUSH_XX(this->registers.get_HL()); } break;
+	case 0xE5: { this->ins_PUSH_XX(this->registers.getHL()); } break;
 	case 0xE6: { this->ins_AND_A_u8(); } break;
 	case 0xE7: { this->ins_RST(0x20); } break;
 
@@ -749,34 +749,34 @@ void CPU::instruction_handler()
 	case 0xF0: { ins_LD_A_bFF00_u8b(); } break;
 	case 0xF1: { this->ins_POP_XX(&this->registers.a, &this->registers.f); } break;
 	case 0xF2: { this->ins_LD_A_bFF00_Cb(); } break;
-	case 0xF3: { this->interrupt_master_enable = 0; this->EI_triggered = false; this->isExecutingInstruction = false; } break; //DIsable interrupts immediately, if EI is set to trigger, we can disable it so we can keep the behaviour of EI then DI never enabling interrupts
+	case 0xF3: { this->interrupt_master_enable = 0; this->ei_triggered = false; this->is_executing_instruction = false; } break; //DIsable interrupts immediately, if EI is set to trigger, we can disable it so we can keep the behaviour of EI then DI never enabling interrupts
 	//case 0xF4: { } break;
-	case 0xF5: { this->ins_PUSH_XX(this->registers.get_AF()); } break;
+	case 0xF5: { this->ins_PUSH_XX(this->registers.getAF()); } break;
 	case 0xF6: { this->ins_OR_A_u8(); } break;
 	case 0xF7: { this->ins_RST(0x30); } break;
 
 	case 0xF8: { this->ins_LD_HL_SP_i8(); } break;
 	case 0xF9: { this->ins_LD_SP_HL(); } break;
 	case 0xFA: { this->ins_LD_A_bu16b(); } break;
-	case 0xFB: { this->EI_triggered = true; this->isExecutingInstruction = false; return; } break; // EI is set to trigger, only activates after next instruction finishes note the early return
+	case 0xFB: { this->ei_triggered = true; this->is_executing_instruction = false; return; } break; // EI is set to trigger, only activates after next instruction finishes note the early return
 	//case 0xFC: { } break;
 	//case 0xFD: { } break;
 	case 0xFE: { this->ins_CP_A_u8(); } break;
 	case 0xFF: { this->ins_RST(0x38); } break;
-	default: { printf("ILLEGAL OPCODE CALL %0.2X \n", this->currentRunningOpcode); }
+	default: { printf("ILLEGAL OPCODE CALL %0.2X \n", this->current_running_opcode); }
 	}
 }
-void CPU::CB_instruction_handler()
+void CPU::instructionHandlerCB()
 {
 	//fetch cb instruction
-	if (!this->isExecutingCB)
+	if (!this->is_executing_cb)
 	{
-		this->currentRunningCB = this->get_byte_from_pc();
-		this->isExecutingCB = true;
+		this->current_running_cb = this->getByteFromPC();
+		this->is_executing_cb = true;
 		//return;
 	}
 
-	switch (this->currentRunningCB)
+	switch (this->current_running_cb)
 	{
 	case 0x00: { this->ins_RLC(&this->registers.b); } break;
 	case 0x01: { this->ins_RLC(&this->registers.c); } break;
@@ -1067,10 +1067,10 @@ void CPU::CB_instruction_handler()
 	case 0xFF: { this->ins_SET_b_r(7, &this->registers.a); } break;
 	}
 }
-void CPU::STOP_instruction_handler()
+void CPU::instructionHandlerSTOP()
 {
 
-	switch (this->get_byte_from_pc())
+	switch (this->getByteFromPC())
 	{
 	case 0x00: {  4; } // STOP ins but there might be something more important needed to be done here
 	}
@@ -1088,13 +1088,13 @@ void CPU::STOP_instruction_handler()
 /* template
 void X(const Byte* register_val, const Word data)
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
 	case 0:
 	{
 		//logic
 
-		this->mCyclesUsed++;
+		this->mcycles_used++;
 		break;
 	}
 
@@ -1102,7 +1102,7 @@ void X(const Byte* register_val, const Word data)
 	{
 		//logic
 
-		this->mCyclesUsed++;
+		this->mcycles_used++;
 		break;
 	}
 
@@ -1110,7 +1110,7 @@ void X(const Byte* register_val, const Word data)
 	{
 		//logic
 
-		this->isExecutingInstruction = false;
+		this->is_executing_instruction = false;
 		break;
 	}
 
@@ -1142,34 +1142,34 @@ void X(const Byte* register_val, const Word data)
 
 
 // 0x01,0x11,0x21
-void CPU::ins_LD_XX_u16(Byte* const registerOne, Byte* const registerTwo)
+void CPU::ins_LD_XX_u16(Byte* const reigster_one, Byte* const reigster_two)
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: *registerTwo = this->get_byte_from_pc(); this->mCyclesUsed++; break;
-	case 2: *registerOne = this->get_byte_from_pc(); this->isExecutingInstruction = false;
+	case 0: this->mcycles_used++; break;
+	case 1: *reigster_two = this->getByteFromPC(); this->mcycles_used++; break;
+	case 2: *reigster_one = this->getByteFromPC(); this->is_executing_instruction = false;
 	}
 }
 
 // 0x031
-void CPU::ins_LD_SP_u16(Word* const registerWord)
+void CPU::ins_LD_SP_u16(Word* const register_word)
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: *registerWord = (*registerWord & 0xFF00) | this->get_byte_from_pc(); this->mCyclesUsed++; break;
-	case 2: *registerWord = (*registerWord & 0x00FF) | (this->get_byte_from_pc() << 0x8); this->isExecutingInstruction = false;
+	case 0: this->mcycles_used++; break;
+	case 1: *register_word = (*register_word & 0xFF00) | this->getByteFromPC(); this->mcycles_used++; break;
+	case 2: *register_word = (*register_word & 0x00FF) | (this->getByteFromPC() << 0x8); this->is_executing_instruction = false;
 	}
 }
 
 // 0x02, 0x12, 0x70 - 0x75, 0x77, 0xE2
-void CPU::ins_LD_bXXb_Y(const Word registerWordvalue, Byte* const registerByte)
+void CPU::ins_LD_bXXb_Y(const Word register_wordvalue, Byte* const register_byte)
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->set_memory(registerWordvalue, *registerByte); this->isExecutingInstruction = false;
+	case 0: this->mcycles_used++; break;
+	case 1: this->setMemory(register_wordvalue, *register_byte); this->is_executing_instruction = false;
 	}
 }
 
@@ -1177,127 +1177,127 @@ void CPU::ins_LD_bXXb_Y(const Word registerWordvalue, Byte* const registerByte)
 void CPU::ins_LD_bHLb_Apm(bool add)
 {
 
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
+	case 0: this->mcycles_used++; break;
 	case 1:
 	{
-		Word hl = this->registers.get_HL();
-		this->set_memory(hl, this->registers.a);
-		add ? this->registers.set_HL(hl + 1) : this->registers.set_HL(hl - 1);
-		this->isExecutingInstruction = false;
+		Word hl = this->registers.getHL();
+		this->setMemory(hl, this->registers.a);
+		add ? this->registers.setHL(hl + 1) : this->registers.setHL(hl - 1);
+		this->is_executing_instruction = false;
 	}
 	}
 }
 
-void CPU::ins_INC_XX(Byte* registerOne, Byte* registerTwo)
+void CPU::ins_INC_XX(Byte* reigster_one, Byte* reigster_two)
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
 	case 0:
 	{
-		Word newValue = this->registers.get_word(registerOne, registerTwo) + 1;
-		this->instructionCache[0] = (newValue & 0xFF00) >> 8;
-		*registerTwo = newValue & 0x00FF;
-		this->mCyclesUsed++;
+		Word newValue = this->registers.getWord(reigster_one, reigster_two) + 1;
+		this->instruction_cache[0] = (newValue & 0xFF00) >> 8;
+		*reigster_two = newValue & 0x00FF;
+		this->mcycles_used++;
 		break;
 	}
 	case 1:
-		*registerOne = (this->instructionCache[0]);
-		this->isExecutingInstruction = false;
+		*reigster_one = (this->instruction_cache[0]);
+		this->is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_INC_SP()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->registers.sp++; this->isExecutingInstruction = false;
+	case 0: this->mcycles_used++; break;
+	case 1: this->registers.sp++; this->is_executing_instruction = false;
 	}
 }
 
-void CPU::ins_INC_X(Byte* registerByte)
+void CPU::ins_INC_X(Byte* register_byte)
 {
-	this->registers.set_flag(h, this->checkCarry(*registerByte, 1, 4));
+	this->registers.setFlag(h, this->checkCarry(*register_byte, 1, 4));
 
-	(*registerByte)++;
+	(*register_byte)++;
 
-	(*registerByte == 0x0) ? this->registers.set_flag(z, 1) : this->registers.set_flag(z, 0);
-	this->registers.set_flag(n, 0);
+	(*register_byte == 0x0) ? this->registers.setFlag(z, 1) : this->registers.setFlag(z, 0);
+	this->registers.setFlag(n, 0);
 
-	this->isExecutingInstruction = false;
+	this->is_executing_instruction = false;
 }
 
 void CPU::ins_INC_bHLb()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->instructionCache[0] = this->get_memory(this->registers.get_HL()); this->mCyclesUsed++; break;
+	case 0: this->mcycles_used++; break;
+	case 1: this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
 	case 2:
-		Word address = this->registers.get_HL();
-		Byte temp = this->instructionCache[0];
+		Word address = this->registers.getHL();
+		Byte temp = this->instruction_cache[0];
 
-		this->set_memory(address, (temp + 1));
+		this->setMemory(address, (temp + 1));
 
-		this->registers.set_flag(h, this->checkCarry(temp, 1, 4));
-		this->registers.set_flag(z, (this->get_memory(address) == 0x0));
-		this->registers.set_flag(n, 0);
+		this->registers.setFlag(h, this->checkCarry(temp, 1, 4));
+		this->registers.setFlag(z, (this->getMemory(address) == 0x0));
+		this->registers.setFlag(n, 0);
 
-		this->isExecutingInstruction = false;
+		this->is_executing_instruction = false;
 	}
 }
 
-void CPU::ins_DEC_X(Byte* registerByte)
+void CPU::ins_DEC_X(Byte* register_byte)
 {
-	this->registers.set_flag(h, this->checkBorrow(*registerByte, 1, 4));
-	(*registerByte)--;
+	this->registers.setFlag(h, this->checkBorrow(*register_byte, 1, 4));
+	(*register_byte)--;
 
-	this->registers.set_flag(z, (*registerByte == 0x0));
-	this->registers.set_flag(n, 1);
+	this->registers.setFlag(z, (*register_byte == 0x0));
+	this->registers.setFlag(n, 1);
 
-	this->isExecutingInstruction = false;
+	this->is_executing_instruction = false;
 }
 
 void CPU::ins_DEC_bHLb()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0:  this->mCyclesUsed++; break;
-	case 1:  this->mCyclesUsed++; break;
+	case 0:  this->mcycles_used++; break;
+	case 1:  this->mcycles_used++; break;
 	case 2:
-		Word address = this->registers.get_HL();
-		Byte temp = this->get_memory(address);
+		Word address = this->registers.getHL();
+		Byte temp = this->getMemory(address);
 
-		this->registers.set_flag(h, this->checkBorrow(temp, 1, 4));
-		this->set_memory(address, (temp - 1));
-		this->registers.set_flag(z, (this->get_memory(address) == 0x0));
-		this->registers.set_flag(n, 1);
+		this->registers.setFlag(h, this->checkBorrow(temp, 1, 4));
+		this->setMemory(address, (temp - 1));
+		this->registers.setFlag(z, (this->getMemory(address) == 0x0));
+		this->registers.setFlag(n, 1);
 
-		this->isExecutingInstruction = false;
+		this->is_executing_instruction = false;
 	}
 }
 
-void CPU::ins_LD_X_u8(Byte* const registerByte)
+void CPU::ins_LD_X_u8(Byte* const register_byte)
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0:  this->mCyclesUsed++; break;
-	case 1: *registerByte = this->get_byte_from_pc(); this->isExecutingInstruction = false;
+	case 0:  this->mcycles_used++; break;
+	case 1: *register_byte = this->getByteFromPC(); this->is_executing_instruction = false;
 	}
 }
 
 // 0x36
 void CPU::ins_LD_bHLb_u8()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->mCyclesUsed++; break;
+	case 0: this->mcycles_used++; break;
+	case 1: this->mcycles_used++; break;
 	case 2:
-		this->set_memory(this->registers.get_HL(), this->get_byte_from_pc());
-		this->isExecutingInstruction = false;
+		this->setMemory(this->registers.getHL(), this->getByteFromPC());
+		this->is_executing_instruction = false;
 	}
 }
 
@@ -1305,753 +1305,753 @@ void CPU::ins_LD_bHLb_u8()
 void CPU::ins_CPL()
 {
 	this->registers.a = ~this->registers.a;
-	this->registers.set_flag(n, true);
-	this->registers.set_flag(h, true);
-	this->isExecutingInstruction = false;
+	this->registers.setFlag(n, true);
+	this->registers.setFlag(h, true);
+	this->is_executing_instruction = false;
 }
 
 void CPU::ins_CCF()
 {
-	this->registers.set_flag(n, 0);
-	this->registers.set_flag(h, 0);
-	this->registers.set_flag(c, !this->registers.get_flag(c));
-	this->isExecutingInstruction = false;
+	this->registers.setFlag(n, 0);
+	this->registers.setFlag(h, 0);
+	this->registers.setFlag(c, !this->registers.getFlag(c));
+	this->is_executing_instruction = false;
 }
 
 void CPU::ins_SCF()
 {
-	this->registers.set_flag(n, 0);
-	this->registers.set_flag(h, 0);
-	this->registers.set_flag(c, 1);
-	this->isExecutingInstruction = false;
+	this->registers.setFlag(n, 0);
+	this->registers.setFlag(h, 0);
+	this->registers.setFlag(c, 1);
+	this->is_executing_instruction = false;
 }
 
 void CPU::ins_RLCA()
 {
 	//set c flag to whatever is the value of the leftest bit from register a
-	this->registers.set_flag(c, (this->registers.a & 0x80));
-	this->registers.set_flag(n, 0);
-	this->registers.set_flag(h, 0);
+	this->registers.setFlag(c, (this->registers.a & 0x80));
+	this->registers.setFlag(n, 0);
+	this->registers.setFlag(h, 0);
 
 	// move everything to the left by one, toggle bit 0 with bit 7 shifted right 7 places
 	this->registers.a = (this->registers.a << 1) | (this->registers.a >> (7));
 
 	// z is reset
-	this->registers.set_flag(z, 0);
+	this->registers.setFlag(z, 0);
 
-	this->isExecutingInstruction = false;
+	this->is_executing_instruction = false;
 }
 
 void CPU::ins_RLA()
 {
 	// swap leftest most bit with the carry flag, then rotate to the left
 
-	Byte flagCarry = this->registers.get_flag(c);
+	Byte flagCarry = this->registers.getFlag(c);
 	bool registerCarry = ((this->registers.a & 0x80) >> 7);
 
 	this->registers.a = (this->registers.a << 1) | (flagCarry);
 
-	this->registers.set_flag(c, registerCarry);
-	this->registers.set_flag(n, 0);
-	this->registers.set_flag(h, 0);
-	this->registers.set_flag(z, 0);
+	this->registers.setFlag(c, registerCarry);
+	this->registers.setFlag(n, 0);
+	this->registers.setFlag(h, 0);
+	this->registers.setFlag(z, 0);
 
 
-	this->isExecutingInstruction = false;
+	this->is_executing_instruction = false;
 }
 
 void CPU::ins_RRCA()
 {
-	this->registers.set_flag(c, this->registers.a & 0x1);
+	this->registers.setFlag(c, this->registers.a & 0x1);
 
 	this->registers.a = (this->registers.a >> 1) | (this->registers.a << (7));
 
-	this->registers.set_flag(n, 0);
-	this->registers.set_flag(h, 0);
-	this->registers.set_flag(z, 0);
+	this->registers.setFlag(n, 0);
+	this->registers.setFlag(h, 0);
+	this->registers.setFlag(z, 0);
 
 
-	this->isExecutingInstruction = false;
+	this->is_executing_instruction = false;
 }
 
 void CPU::ins_RRA()
 {
-	Byte flagCarry = this->registers.get_flag(c);
+	Byte flagCarry = this->registers.getFlag(c);
 	bool registerCarry = (this->registers.a & 0x1);
 
 	this->registers.a = (this->registers.a >> 1) | (flagCarry << (7));
 
-	this->registers.set_flag(c, registerCarry);
-	this->registers.set_flag(n, 0);
-	this->registers.set_flag(h, 0);
-	this->registers.set_flag(z, 0);
+	this->registers.setFlag(c, registerCarry);
+	this->registers.setFlag(n, 0);
+	this->registers.setFlag(h, 0);
+	this->registers.setFlag(z, 0);
 
 
-	this->isExecutingInstruction = false;
+	this->is_executing_instruction = false;
 }
 
 //0x08
 void CPU::ins_LD_bu16b_SP()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->instructionCache[0] = this->get_byte_from_pc(); this->mCyclesUsed++; break;
-	case 2: this->instructionCache[1] = this->get_byte_from_pc(); this->mCyclesUsed++; break;
+	case 0: this->mcycles_used++; break;
+	case 1: this->instruction_cache[0] = this->getByteFromPC(); this->mcycles_used++; break;
+	case 2: this->instruction_cache[1] = this->getByteFromPC(); this->mcycles_used++; break;
 	case 3:
 	{
-		Word address = (this->instructionCache[1] << 8) | this->instructionCache[0];
-		if (this->instructionCache[1] == 0x91 || this->instructionCache[1] == 0xFF)
+		Word address = (this->instruction_cache[1] << 8) | this->instruction_cache[0];
+		if (this->instruction_cache[1] == 0x91 || this->instruction_cache[1] == 0xFF)
 		{
 			printf("");
 		}
-		this->set_memory(address, (this->registers.sp & 0xFF));
-		this->mCyclesUsed++; break;
+		this->setMemory(address, (this->registers.sp & 0xFF));
+		this->mcycles_used++; break;
 	}
 	case 4:
 	{
-		Word address = (this->instructionCache[1] << 8) | this->instructionCache[0];
+		Word address = (this->instruction_cache[1] << 8) | this->instruction_cache[0];
 	
-		this->set_memory(address + 1, (this->registers.sp >> 8));
-		this->isExecutingInstruction = false;
+		this->setMemory(address + 1, (this->registers.sp >> 8));
+		this->is_executing_instruction = false;
 	}
 	}
 }
 
 // 0x18
-void CPU::ins_JR_i8(const enum JumpCondition condition)
+void CPU::ins_JR_i8(const enum eJumpCondition condition)
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0:  this->mcycles_used++; break;
 	case 1:
-		this->instructionCache[0] = this->get_byte_from_pc();
-		checkJumpCondition(condition) ? this->mCyclesUsed++ : this->isExecutingInstruction = false;
+		this->instruction_cache[0] = this->getByteFromPC();
+		checkJumpCondition(condition) ? this->mcycles_used++ : this->is_executing_instruction = false;
 		break;
 	case 2:
-		this->registers.pc += (Byte_s)this->instructionCache[0];
-		this->isExecutingInstruction = false;
+		this->registers.pc += (Byte_s)this->instruction_cache[0];
+		this->is_executing_instruction = false;
 	}
 }
 
-void CPU::ins_ADD_HL_XX(Byte* const registerOne, Byte* const registerTwo)
+void CPU::ins_ADD_HL_XX(Byte* const reigster_one, Byte* const reigster_two)
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
 	case 0:
 	{
-		Word HLvalue = this->registers.get_HL();
-		Word registerWord = (*registerOne << 8) | *registerTwo;
-		Word sum = HLvalue + registerWord;
-		this->instructionCache[0] = sum >> 8;
+		Word HLvalue = this->registers.getHL();
+		Word register_word = (*reigster_one << 8) | *reigster_two;
+		Word sum = HLvalue + register_word;
+		this->instruction_cache[0] = sum >> 8;
 
-		this->registers.set_flag(c, this->checkCarry(HLvalue, registerWord, 16));
-		this->registers.set_flag(h, this->checkCarry(HLvalue, registerWord, 12));
-		this->registers.set_flag(n, 0);
+		this->registers.setFlag(c, this->checkCarry(HLvalue, register_word, 16));
+		this->registers.setFlag(h, this->checkCarry(HLvalue, register_word, 12));
+		this->registers.setFlag(n, 0);
 		this->registers.l = sum & 0xFF;
 
-		this->mCyclesUsed++;
+		this->mcycles_used++;
 		break;
 	}
 	case 1:
-		this->registers.h = this->instructionCache[0];
-		this->isExecutingInstruction = false;
+		this->registers.h = this->instruction_cache[0];
+		this->is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_ADD_HL_SP()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
 	case 0:
 	{
-		Word HLvalue = this->registers.get_HL();
+		Word HLvalue = this->registers.getHL();
 		Word sum = HLvalue + this->registers.sp;
-		this->instructionCache[0] = sum >> 8;
+		this->instruction_cache[0] = sum >> 8;
 
-		this->registers.set_flag(c, this->checkCarry(HLvalue, this->registers.sp, 16));
-		this->registers.set_flag(h, this->checkCarry(HLvalue, this->registers.sp, 12));
-		this->registers.set_flag(n, 0);
+		this->registers.setFlag(c, this->checkCarry(HLvalue, this->registers.sp, 16));
+		this->registers.setFlag(h, this->checkCarry(HLvalue, this->registers.sp, 12));
+		this->registers.setFlag(n, 0);
 		this->registers.l = sum & 0xFF;
 
-		this->mCyclesUsed++; break;
+		this->mcycles_used++; break;
 	}
 	case 1:
-		this->registers.h = this->instructionCache[0];
-		this->isExecutingInstruction = false;
+		this->registers.h = this->instruction_cache[0];
+		this->is_executing_instruction = false;
 	}
 }
 
-void CPU::ins_ADD_A_X(Byte* const registerByte)
+void CPU::ins_ADD_A_X(Byte* const register_byte)
 {
-	this->registers.set_flag(c, this->checkCarry(this->registers.a, *registerByte, 8));
-	this->registers.set_flag(h, this->checkCarry(this->registers.a, *registerByte, 4));
+	this->registers.setFlag(c, this->checkCarry(this->registers.a, *register_byte, 8));
+	this->registers.setFlag(h, this->checkCarry(this->registers.a, *register_byte, 4));
 
 	// perform addition
-	this->registers.a += *registerByte;
+	this->registers.a += *register_byte;
 
 	//evaluate z flag an clear the n flag
-	this->registers.set_flag(z, (this->registers.a == 0x0));
-	this->registers.set_flag(n, 0);
+	this->registers.setFlag(z, (this->registers.a == 0x0));
+	this->registers.setFlag(n, 0);
 
-	this->isExecutingInstruction = false;
+	this->is_executing_instruction = false;
 }
 
 void CPU::ins_ADD_A_bHLb()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0:  this->mcycles_used++; break;
 	case 1:
-		Byte immediateValue = this->get_memory(this->registers.get_HL());
-		this->registers.set_flag(c, this->checkCarry(this->registers.a, immediateValue, 8));
-		this->registers.set_flag(h, this->checkCarry(this->registers.a, immediateValue, 4));
+		Byte immediateValue = this->getMemory(this->registers.getHL());
+		this->registers.setFlag(c, this->checkCarry(this->registers.a, immediateValue, 8));
+		this->registers.setFlag(h, this->checkCarry(this->registers.a, immediateValue, 4));
 
 		// perform addition
 		this->registers.a += immediateValue;
 
 		//evaluate z flag an clear the n flag
-		this->registers.set_flag(z, (this->registers.a == 0x0));
-		this->registers.set_flag(n, 0);
+		this->registers.setFlag(z, (this->registers.a == 0x0));
+		this->registers.setFlag(n, 0);
 
-		this->isExecutingInstruction = false;
+		this->is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_ADD_A_u8()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0:	this->mCyclesUsed++; break;
+	case 0:	this->mcycles_used++; break;
 	case 1:
-		Byte immediateValue = this->get_byte_from_pc();
-		this->registers.set_flag(c, this->checkCarry(this->registers.a, immediateValue, 8));
-		this->registers.set_flag(h, this->checkCarry(this->registers.a, immediateValue, 4));
+		Byte immediateValue = this->getByteFromPC();
+		this->registers.setFlag(c, this->checkCarry(this->registers.a, immediateValue, 8));
+		this->registers.setFlag(h, this->checkCarry(this->registers.a, immediateValue, 4));
 
 		// perform addition
 		this->registers.a += immediateValue;
 
 		//evaluate z flag an clear the n flag
-		this->registers.set_flag(z, (this->registers.a == 0x0));
-		this->registers.set_flag(n, 0);
+		this->registers.setFlag(z, (this->registers.a == 0x0));
+		this->registers.setFlag(n, 0);
 
-		this->isExecutingInstruction = false;
+		this->is_executing_instruction = false;
 	}
 }
 
-void CPU::ins_LD_X_Y(Byte* const registerOne, Byte* const registerTwo)
+void CPU::ins_LD_X_Y(Byte* const reigster_one, Byte* const reigster_two)
 {
-	*registerOne = *registerTwo;
-	this->isExecutingInstruction = false;
+	*reigster_one = *reigster_two;
+	this->is_executing_instruction = false;
 }
 
-void CPU::ins_LD_X_bYYb(Byte* const leftRegister, Byte* const rightRegisterOne, Byte* const rightRegisterTwo, const Byte_s addToHL)
+void CPU::ins_LD_X_bYYb(Byte* const left_register, Byte* const rightreigster_one, Byte* const rightreigster_two, const Byte_s add_to_hl)
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0:  this->mcycles_used++; break;
 	case 1:
-		*leftRegister = this->get_memory((*rightRegisterOne << 8) | *rightRegisterTwo);
-		if (addToHL != NULL)
-			this->registers.set_HL(this->registers.get_HL() + addToHL);
-		this->isExecutingInstruction = false;
+		*left_register = this->getMemory((*rightreigster_one << 8) | *rightreigster_two);
+		if (add_to_hl != NULL)
+			this->registers.setHL(this->registers.getHL() + add_to_hl);
+		this->is_executing_instruction = false;
 	}
 }
 
-void CPU::ins_DEC_XX(Byte* registerOne, Byte* registerTwo)
+void CPU::ins_DEC_XX(Byte* reigster_one, Byte* reigster_two)
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
 	case 0:
 	{
-		Word sum = this->registers.get_word(registerOne, registerTwo) - 1;
-		this->instructionCache[0] = sum >> 8;
-		*registerTwo = (sum & 0xFF);
-		this->mCyclesUsed++; break;
+		Word sum = this->registers.getWord(reigster_one, reigster_two) - 1;
+		this->instruction_cache[0] = sum >> 8;
+		*reigster_two = (sum & 0xFF);
+		this->mcycles_used++; break;
 	}
 	case 1:
-		*registerOne = this->instructionCache[0];
-		this->isExecutingInstruction = false;
+		*reigster_one = this->instruction_cache[0];
+		this->is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_DEC_SP()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->registers.sp--; this->isExecutingInstruction = false;
+	case 0: this->mcycles_used++; break;
+	case 1: this->registers.sp--; this->is_executing_instruction = false;
 	}
 }
 
-void CPU::ins_ADC_A_X(const Byte* registerByte)
+void CPU::ins_ADC_A_X(const Byte* register_byte)
 {
 	Byte a = this->registers.a;
-	Byte b = *registerByte;
-	Byte C = (int)this->registers.get_flag(c);
+	Byte b = *register_byte;
+	Byte C = (int)this->registers.getFlag(c);
 
 	this->registers.a = a + b + C;
 
-	this->registers.set_flag(z, (this->registers.a == 0x0));
-	this->registers.set_flag(n, 0);
-	this->registers.set_flag(c, this->checkCarry(a, b, 8, C));
-	this->registers.set_flag(h, this->checkCarry(a, b, 4, C));
+	this->registers.setFlag(z, (this->registers.a == 0x0));
+	this->registers.setFlag(n, 0);
+	this->registers.setFlag(c, this->checkCarry(a, b, 8, C));
+	this->registers.setFlag(h, this->checkCarry(a, b, 4, C));
 
-	this->isExecutingInstruction = false;
+	this->is_executing_instruction = false;
 }
 
 void CPU::ins_ADC_A_bHLb()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0:  this->mcycles_used++; break;
 	case 1:
 		Byte a = this->registers.a;
-		Byte b = this->get_memory(this->registers.get_HL());
-		Byte C = (int)this->registers.get_flag(c);
+		Byte b = this->getMemory(this->registers.getHL());
+		Byte C = (int)this->registers.getFlag(c);
 
 		this->registers.a = a + b + C;
 
-		this->registers.set_flag(z, (this->registers.a == 0x0));
-		this->registers.set_flag(n, 0);
-		this->registers.set_flag(c, this->checkCarry(a, b, 8, C));
-		this->registers.set_flag(h, this->checkCarry(a, b, 4, C));
+		this->registers.setFlag(z, (this->registers.a == 0x0));
+		this->registers.setFlag(n, 0);
+		this->registers.setFlag(c, this->checkCarry(a, b, 8, C));
+		this->registers.setFlag(h, this->checkCarry(a, b, 4, C));
 
-		this->isExecutingInstruction = false;
+		this->is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_ADC_A_u8()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0:  this->mcycles_used++; break;
 	case 1:
 		Byte a = this->registers.a;
-		Byte b = this->get_byte_from_pc();
-		Byte C = (int)this->registers.get_flag(c);
+		Byte b = this->getByteFromPC();
+		Byte C = (int)this->registers.getFlag(c);
 
 		this->registers.a = a + b + C;
 
-		this->registers.set_flag(z, (this->registers.a == 0x0));
-		this->registers.set_flag(n, 0);
-		this->registers.set_flag(c, this->checkCarry(a, b, 8, C));
-		this->registers.set_flag(h, this->checkCarry(a, b, 4, C));
+		this->registers.setFlag(z, (this->registers.a == 0x0));
+		this->registers.setFlag(n, 0);
+		this->registers.setFlag(c, this->checkCarry(a, b, 8, C));
+		this->registers.setFlag(h, this->checkCarry(a, b, 4, C));
 
-		this->isExecutingInstruction = false;
+		this->is_executing_instruction = false;
 	}
 }
 
 
-void CPU::ins_SUB_A_X(Byte* const registerByte)
+void CPU::ins_SUB_A_X(Byte* const register_byte)
 {
-	this->registers.set_flag(c, this->checkBorrow(this->registers.a, *registerByte, 8));
-	this->registers.set_flag(h, this->checkBorrow(this->registers.a, *registerByte, 4));
+	this->registers.setFlag(c, this->checkBorrow(this->registers.a, *register_byte, 8));
+	this->registers.setFlag(h, this->checkBorrow(this->registers.a, *register_byte, 4));
 
 	// perform addition
-	this->registers.a -= *registerByte;
+	this->registers.a -= *register_byte;
 
 	//evaluate z flag an clear the n flag
-	this->registers.set_flag(z, (this->registers.a == 0x0));
-	this->registers.set_flag(n, 1);
+	this->registers.setFlag(z, (this->registers.a == 0x0));
+	this->registers.setFlag(n, 1);
 
-	this->isExecutingInstruction = false;
+	this->is_executing_instruction = false;
 }
 
 void CPU::ins_SUB_A_u8()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0:  this->mcycles_used++; break;
 	case 1:
 
-		Byte immediateByte = this->get_byte_from_pc();
+		Byte immediateByte = this->getByteFromPC();
 
-		this->registers.set_flag(c, this->checkBorrow(this->registers.a, immediateByte, 8));
-		this->registers.set_flag(h, this->checkBorrow(this->registers.a, immediateByte, 4));
+		this->registers.setFlag(c, this->checkBorrow(this->registers.a, immediateByte, 8));
+		this->registers.setFlag(h, this->checkBorrow(this->registers.a, immediateByte, 4));
 
 		// perform addition
 		this->registers.a -= immediateByte;
 
 		//evaluate z flag an clear the n flag
-		this->registers.set_flag(z, (this->registers.a == 0x0));
-		this->registers.set_flag(n, 1);
+		this->registers.setFlag(z, (this->registers.a == 0x0));
+		this->registers.setFlag(n, 1);
 
-		this->isExecutingInstruction = false;
+		this->is_executing_instruction = false;
 	}
 }
 
 
 void CPU::ins_SUB_A_bHLb()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0:  this->mcycles_used++; break;
 	case 1:
 
-		Byte immediateByte = this->get_memory(this->registers.get_HL());
+		Byte immediateByte = this->getMemory(this->registers.getHL());
 
-		this->registers.set_flag(c, this->checkBorrow(this->registers.a, immediateByte, 8));
-		this->registers.set_flag(h, this->checkBorrow(this->registers.a, immediateByte, 4));
+		this->registers.setFlag(c, this->checkBorrow(this->registers.a, immediateByte, 8));
+		this->registers.setFlag(h, this->checkBorrow(this->registers.a, immediateByte, 4));
 
 		// perform addition
 		this->registers.a -= immediateByte;
 
 		//evaluate z flag an clear the n flag
-		this->registers.set_flag(z, (this->registers.a == 0x0));
-		this->registers.set_flag(n, 1);
-		this->isExecutingInstruction = false;
+		this->registers.setFlag(z, (this->registers.a == 0x0));
+		this->registers.setFlag(n, 1);
+		this->is_executing_instruction = false;
 	}
 }
 
 
-void CPU::ins_SBC_A_X(Byte* const registerByte)
+void CPU::ins_SBC_A_X(Byte* const register_byte)
 {
 	Byte a = this->registers.a;
-	Byte b = *registerByte;
-	Byte C = (int)this->registers.get_flag(c);
+	Byte b = *register_byte;
+	Byte C = (int)this->registers.getFlag(c);
 
 	this->registers.a = a - b - C;
 
-	this->registers.set_flag(z, (this->registers.a == 0x0));
-	this->registers.set_flag(n, 1);
-	this->registers.set_flag(c, this->checkBorrow(a, b, 8, C));
-	this->registers.set_flag(h, this->checkBorrow(a, b, 4, C));
+	this->registers.setFlag(z, (this->registers.a == 0x0));
+	this->registers.setFlag(n, 1);
+	this->registers.setFlag(c, this->checkBorrow(a, b, 8, C));
+	this->registers.setFlag(h, this->checkBorrow(a, b, 4, C));
 
 
-	this->isExecutingInstruction = false;
+	this->is_executing_instruction = false;
 }
 
 void CPU::ins_SBC_A_u8()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0:  this->mcycles_used++; break;
 	case 1:
 		Byte a = this->registers.a;
-		Byte b = this->get_byte_from_pc();
-		Byte C = (int)this->registers.get_flag(c);
+		Byte b = this->getByteFromPC();
+		Byte C = (int)this->registers.getFlag(c);
 
 		this->registers.a = a - b - C;
 
-		this->registers.set_flag(z, (this->registers.a == 0x0));
-		this->registers.set_flag(n, 1);
-		this->registers.set_flag(c, this->checkBorrow(a, b, 8, C));
-		this->registers.set_flag(h, this->checkBorrow(a, b, 4, C));
-		this->isExecutingInstruction = false;
+		this->registers.setFlag(z, (this->registers.a == 0x0));
+		this->registers.setFlag(n, 1);
+		this->registers.setFlag(c, this->checkBorrow(a, b, 8, C));
+		this->registers.setFlag(h, this->checkBorrow(a, b, 4, C));
+		this->is_executing_instruction = false;
 	}
 }
 
 
 void CPU::ins_SBC_A_bHLb()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0:  this->mcycles_used++; break;
 	case 1:
 		Byte a = this->registers.a;
-		Byte b = this->get_memory(this->registers.get_HL());
-		Byte C = (int)this->registers.get_flag(c);
+		Byte b = this->getMemory(this->registers.getHL());
+		Byte C = (int)this->registers.getFlag(c);
 
 		this->registers.a = a - b - C;
 
-		this->registers.set_flag(z, (this->registers.a == 0x0));
-		this->registers.set_flag(n, 1);
-		this->registers.set_flag(c, this->checkBorrow(a, b, 8, C));
-		this->registers.set_flag(h, this->checkBorrow(a, b, 4, C));
+		this->registers.setFlag(z, (this->registers.a == 0x0));
+		this->registers.setFlag(n, 1);
+		this->registers.setFlag(c, this->checkBorrow(a, b, 8, C));
+		this->registers.setFlag(h, this->checkBorrow(a, b, 4, C));
 
-		this->isExecutingInstruction = false;
+		this->is_executing_instruction = false;
 	}
 }
 
-void CPU::ins_AND_A_X(Byte* const registerByte)
+void CPU::ins_AND_A_X(Byte* const register_byte)
 {
-	this->registers.a &= *registerByte;
+	this->registers.a &= *register_byte;
 
 	//evaluate z flag an clear the n flag
-	this->registers.set_flag(z, (this->registers.a == 0x0));
-	this->registers.set_flag(h, 1);
-	this->registers.set_flag(n, 0);
-	this->registers.set_flag(c, 0);
+	this->registers.setFlag(z, (this->registers.a == 0x0));
+	this->registers.setFlag(h, 1);
+	this->registers.setFlag(n, 0);
+	this->registers.setFlag(c, 0);
 
-	this->isExecutingInstruction = false;
+	this->is_executing_instruction = false;
 }
 
 void CPU::ins_AND_A_u8()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0:  this->mcycles_used++; break;
 	case 1:
-		this->registers.a &= this->get_byte_from_pc();
+		this->registers.a &= this->getByteFromPC();
 
 		//evaluate z flag an clear the n flag
-		this->registers.set_flag(z, (this->registers.a == 0x0));
-		this->registers.set_flag(h, 1);
-		this->registers.set_flag(n, 0);
-		this->registers.set_flag(c, 0);
+		this->registers.setFlag(z, (this->registers.a == 0x0));
+		this->registers.setFlag(h, 1);
+		this->registers.setFlag(n, 0);
+		this->registers.setFlag(c, 0);
 
-		this->isExecutingInstruction = false;
+		this->is_executing_instruction = false;
 	}
 }
 
 
 void CPU::ins_AND_A_bHLb()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0:  this->mcycles_used++; break;
 	case 1:
-		this->registers.a &= this->get_memory(this->registers.get_HL());
+		this->registers.a &= this->getMemory(this->registers.getHL());
 
 		//evaluate z flag an clear the n flag
-		this->registers.set_flag(z, (this->registers.a == 0x0));
-		this->registers.set_flag(h, 1);
-		this->registers.set_flag(n, 0);
-		this->registers.set_flag(c, 0);
+		this->registers.setFlag(z, (this->registers.a == 0x0));
+		this->registers.setFlag(h, 1);
+		this->registers.setFlag(n, 0);
+		this->registers.setFlag(c, 0);
 
-		this->isExecutingInstruction = false;
+		this->is_executing_instruction = false;
 	}
 }
 
-void CPU::ins_XOR_A_X(Byte* const registerByte)
+void CPU::ins_XOR_A_X(Byte* const register_byte)
 {
-	this->registers.a ^= *registerByte;
+	this->registers.a ^= *register_byte;
 
 	//evaluate z flag an clear the n flag
-	this->registers.set_flag(z, (this->registers.a == 0x0));
-	this->registers.set_flag(h, 0);
-	this->registers.set_flag(n, 0);
-	this->registers.set_flag(c, 0);
+	this->registers.setFlag(z, (this->registers.a == 0x0));
+	this->registers.setFlag(h, 0);
+	this->registers.setFlag(n, 0);
+	this->registers.setFlag(c, 0);
 
-	this->isExecutingInstruction = false;
+	this->is_executing_instruction = false;
 }
 
 void CPU::ins_XOR_A_u8()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0:  this->mcycles_used++; break;
 	case 1:
-		this->registers.a ^= this->get_byte_from_pc();
+		this->registers.a ^= this->getByteFromPC();
 
 		//evaluate z flag an clear the n flag
-		this->registers.set_flag(z, (this->registers.a == 0x0));
-		this->registers.set_flag(h, 0);
-		this->registers.set_flag(n, 0);
-		this->registers.set_flag(c, 0);
+		this->registers.setFlag(z, (this->registers.a == 0x0));
+		this->registers.setFlag(h, 0);
+		this->registers.setFlag(n, 0);
+		this->registers.setFlag(c, 0);
 
-		this->isExecutingInstruction = false;
+		this->is_executing_instruction = false;
 	}
 }
 
 
 void CPU::ins_XOR_A_bHLb()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0:  this->mcycles_used++; break;
 	case 1:
-		this->registers.a ^= this->get_memory(this->registers.get_HL());
+		this->registers.a ^= this->getMemory(this->registers.getHL());
 
 		//evaluate z flag an clear the n flag
-		this->registers.set_flag(z, (this->registers.a == 0x0));
-		this->registers.set_flag(h, 0);
-		this->registers.set_flag(n, 0);
-		this->registers.set_flag(c, 0);
+		this->registers.setFlag(z, (this->registers.a == 0x0));
+		this->registers.setFlag(h, 0);
+		this->registers.setFlag(n, 0);
+		this->registers.setFlag(c, 0);
 
-		this->isExecutingInstruction = false;
+		this->is_executing_instruction = false;
 	}
 }
 
-void CPU::ins_OR_A_X(Byte* const registerByte)
+void CPU::ins_OR_A_X(Byte* const register_byte)
 {
-	this->registers.a |= *registerByte;
+	this->registers.a |= *register_byte;
 
 	//evaluate z flag an clear the n flag
-	this->registers.set_flag(z, (this->registers.a == 0x0));
-	this->registers.set_flag(h, 0);
-	this->registers.set_flag(n, 0);
-	this->registers.set_flag(c, 0);
+	this->registers.setFlag(z, (this->registers.a == 0x0));
+	this->registers.setFlag(h, 0);
+	this->registers.setFlag(n, 0);
+	this->registers.setFlag(c, 0);
 
 
-	this->isExecutingInstruction = false;
+	this->is_executing_instruction = false;
 }
 
 void CPU::ins_OR_A_u8()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0:  this->mcycles_used++; break;
 	case 1:
-		this->registers.a |= this->get_byte_from_pc();
+		this->registers.a |= this->getByteFromPC();
 
 		//evaluate z flag an clear the n flag
-		this->registers.set_flag(z, (this->registers.a == 0x0));
-		this->registers.set_flag(h, 0);
-		this->registers.set_flag(n, 0);
-		this->registers.set_flag(c, 0);
+		this->registers.setFlag(z, (this->registers.a == 0x0));
+		this->registers.setFlag(h, 0);
+		this->registers.setFlag(n, 0);
+		this->registers.setFlag(c, 0);
 
-		this->isExecutingInstruction = false;
+		this->is_executing_instruction = false;
 	}
 }
 
 
 void CPU::ins_OR_A_bHLb()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0:  this->mcycles_used++; break;
 	case 1:
-		this->registers.a |= this->get_memory(this->registers.get_HL());
+		this->registers.a |= this->getMemory(this->registers.getHL());
 
 		//evaluate z flag an clear the n flag
-		this->registers.set_flag(z, (this->registers.a == 0x0));
-		this->registers.set_flag(h, 0);
-		this->registers.set_flag(n, 0);
-		this->registers.set_flag(c, 0);
+		this->registers.setFlag(z, (this->registers.a == 0x0));
+		this->registers.setFlag(h, 0);
+		this->registers.setFlag(n, 0);
+		this->registers.setFlag(c, 0);
 
-		this->isExecutingInstruction = false;
+		this->is_executing_instruction = false;
 	}
 }
 
-void CPU::ins_CP_A_X(Byte* const registerByte)
+void CPU::ins_CP_A_X(Byte* const register_byte)
 {
-	this->registers.set_flag(c, this->checkBorrow(this->registers.a, *registerByte, 8));
-	this->registers.set_flag(h, this->checkBorrow(this->registers.a, *registerByte, 4));
+	this->registers.setFlag(c, this->checkBorrow(this->registers.a, *register_byte, 8));
+	this->registers.setFlag(h, this->checkBorrow(this->registers.a, *register_byte, 4));
 
 	//evaluate z flag an clear the n flag
-	this->registers.set_flag(z, (this->registers.a == *registerByte));
-	this->registers.set_flag(n, 1);
+	this->registers.setFlag(z, (this->registers.a == *register_byte));
+	this->registers.setFlag(n, 1);
 
 
-	this->isExecutingInstruction = false;
+	this->is_executing_instruction = false;
 }
 
 void CPU::ins_CP_A_u8()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0:  this->mcycles_used++; break;
 	case 1:
-		Byte immediateValue = this->get_byte_from_pc();
-		this->registers.set_flag(c, this->checkBorrow(this->registers.a, immediateValue, 8));
-		this->registers.set_flag(h, this->checkBorrow(this->registers.a, immediateValue, 4));
-		this->registers.set_flag(z, (this->registers.a == immediateValue));
-		this->registers.set_flag(n, 1);
+		Byte immediateValue = this->getByteFromPC();
+		this->registers.setFlag(c, this->checkBorrow(this->registers.a, immediateValue, 8));
+		this->registers.setFlag(h, this->checkBorrow(this->registers.a, immediateValue, 4));
+		this->registers.setFlag(z, (this->registers.a == immediateValue));
+		this->registers.setFlag(n, 1);
 
-		this->isExecutingInstruction = false;
+		this->is_executing_instruction = false;
 	}
 }
 
 
 void CPU::ins_CP_A_bHLb()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0:  this->mcycles_used++; break;
 	case 1:
-		Byte immediateValue = this->get_memory(this->registers.get_HL());
-		this->registers.set_flag(c, this->checkBorrow(this->registers.a, immediateValue, 8));
-		this->registers.set_flag(h, this->checkBorrow(this->registers.a, immediateValue, 4));
-		this->registers.set_flag(z, (this->registers.a == immediateValue));
-		this->registers.set_flag(n, 1);
+		Byte immediateValue = this->getMemory(this->registers.getHL());
+		this->registers.setFlag(c, this->checkBorrow(this->registers.a, immediateValue, 8));
+		this->registers.setFlag(h, this->checkBorrow(this->registers.a, immediateValue, 4));
+		this->registers.setFlag(z, (this->registers.a == immediateValue));
+		this->registers.setFlag(n, 1);
 
-		this->isExecutingInstruction = false;
+		this->is_executing_instruction = false;
 	}
 }
 
 
-void CPU::ins_POP_XX(Byte* registerOne, Byte* registerTwo)
+void CPU::ins_POP_XX(Byte* reigster_one, Byte* reigster_two)
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0:  this->mCyclesUsed++; break;
+	case 0:  this->mcycles_used++; break;
 	case 1:
-		*registerTwo = this->get_memory(this->registers.sp++);
-		if (registerTwo == &this->registers.f)
-			*registerTwo &= 0xF0;
+		*reigster_two = this->getMemory(this->registers.sp++);
+		if (reigster_two == &this->registers.f)
+			*reigster_two &= 0xF0;
 
 
-		this->mCyclesUsed++; break;
+		this->mcycles_used++; break;
 	case 2:
-		*registerOne = this->get_memory(this->registers.sp++);
-		if (registerOne == &this->registers.f)
-			*registerOne &= 0xF0;
+		*reigster_one = this->getMemory(this->registers.sp++);
+		if (reigster_one == &this->registers.f)
+			*reigster_one &= 0xF0;
 
-		this->isExecutingInstruction = false;
+		this->is_executing_instruction = false;
 	}
 }
 
 
-void CPU::ins_PUSH_XX(const Word wordRegisterValue)
+void CPU::ins_PUSH_XX(const Word reigster_word_value)
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->mCyclesUsed++; break;
+	case 0: this->mcycles_used++; break;
+	case 1: this->mcycles_used++; break;
 	case 2:
 		// move low byte to higher (sp)
-		this->set_memory(--this->registers.sp, (wordRegisterValue >> 8));
+		this->setMemory(--this->registers.sp, (reigster_word_value >> 8));
 
-		this->mCyclesUsed++; break;
+		this->mcycles_used++; break;
 	case 3:
 		// move high byte to lower (sp)
-		this->set_memory(--this->registers.sp, (wordRegisterValue & 0xff));
+		this->setMemory(--this->registers.sp, (reigster_word_value & 0xff));
 
-		this->isExecutingInstruction = false;
+		this->is_executing_instruction = false;
 	}
 }
 
 
 
-void CPU::ins_JP_u16(const enum JumpCondition condition)
+void CPU::ins_JP_u16(const enum eJumpCondition condition)
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->instructionCache[0] = this->get_byte_from_pc(); this->mCyclesUsed++; break;
+	case 0: this->mcycles_used++; break;
+	case 1: this->instruction_cache[0] = this->getByteFromPC(); this->mcycles_used++; break;
 	case 2: 
-		this->instructionCache[1] = this->get_byte_from_pc();
-		checkJumpCondition(condition) ? this->mCyclesUsed++ : this->isExecutingInstruction = false; break;
+		this->instruction_cache[1] = this->getByteFromPC();
+		checkJumpCondition(condition) ? this->mcycles_used++ : this->is_executing_instruction = false; break;
 	case 3:
-		this->registers.pc = (instructionCache[1] << 8) | instructionCache[0];
-		this->isExecutingInstruction = false;
+		this->registers.pc = (instruction_cache[1] << 8) | instruction_cache[0];
+		this->is_executing_instruction = false;
 	}
 }
 
 //this and standard RET (and by extension RETI) are completely different, one would expect it to be 3m-4m but instead it is 2m-5m, which is longer than RET's 4m, for this reason I will have to treat it as a different instruction.
-void CPU::ins_RET_CC(const enum JumpCondition condition)
+void CPU::ins_RET_CC(const enum eJumpCondition condition)
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: checkJumpCondition(condition) ? this->mCyclesUsed++ : this->isExecutingInstruction = false; break;
-	case 2: this->instructionCache[0] = this->get_memory(this->registers.sp++); this->mCyclesUsed++; break;
-	case 3: this->instructionCache[1] = this->get_memory(this->registers.sp++); this->mCyclesUsed++; break;
-	case 4: this->registers.pc = (instructionCache[1] << 8) | instructionCache[0]; this->isExecutingInstruction = false;
+	case 0: this->mcycles_used++; break;
+	case 1: checkJumpCondition(condition) ? this->mcycles_used++ : this->is_executing_instruction = false; break;
+	case 2: this->instruction_cache[0] = this->getMemory(this->registers.sp++); this->mcycles_used++; break;
+	case 3: this->instruction_cache[1] = this->getMemory(this->registers.sp++); this->mcycles_used++; break;
+	case 4: this->registers.pc = (instruction_cache[1] << 8) | instruction_cache[0]; this->is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_RET()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->instructionCache[0] = this->get_memory(this->registers.sp++); this->mCyclesUsed++; break;
-	case 2: this->instructionCache[1] = this->get_memory(this->registers.sp++); this->mCyclesUsed++; break;
-	case 3: this->registers.pc = (instructionCache[1] << 8) | instructionCache[0]; this->isExecutingInstruction = false;
+	case 0: this->mcycles_used++; break;
+	case 1: this->instruction_cache[0] = this->getMemory(this->registers.sp++); this->mcycles_used++; break;
+	case 2: this->instruction_cache[1] = this->getMemory(this->registers.sp++); this->mcycles_used++; break;
+	case 3: this->registers.pc = (instruction_cache[1] << 8) | instruction_cache[0]; this->is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_RETI()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->instructionCache[0] = this->get_memory(this->registers.sp++); this->mCyclesUsed++; break;
-	case 2: this->instructionCache[1] = this->get_memory(this->registers.sp++); this->mCyclesUsed++; break;
-	case 3: this->registers.pc = (instructionCache[1] << 8) | instructionCache[0]; this->interrupt_master_enable = true; this->isExecutingInstruction = false;
+	case 0: this->mcycles_used++; break;
+	case 1: this->instruction_cache[0] = this->getMemory(this->registers.sp++); this->mcycles_used++; break;
+	case 2: this->instruction_cache[1] = this->getMemory(this->registers.sp++); this->mcycles_used++; break;
+	case 3: this->registers.pc = (instruction_cache[1] << 8) | instruction_cache[0]; this->interrupt_master_enable = true; this->is_executing_instruction = false;
 	}
 }
 
@@ -2059,566 +2059,566 @@ void CPU::ins_RETI()
 
 void CPU::ins_JP_HL()
 {
-	this->registers.pc = this->registers.get_HL();
-	this->isExecutingInstruction = false;
+	this->registers.pc = this->registers.getHL();
+	this->is_executing_instruction = false;
 }
 
 // call is correct
-void CPU::ins_CALL_u16(const enum JumpCondition condition)
+void CPU::ins_CALL_u16(const enum eJumpCondition condition)
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->instructionCache[0] = this->get_byte_from_pc(); this->mCyclesUsed++; break;
+	case 0: this->mcycles_used++; break;
+	case 1: this->instruction_cache[0] = this->getByteFromPC(); this->mcycles_used++; break;
 	case 2: 
-		this->instructionCache[1] = this->get_byte_from_pc();
-		checkJumpCondition(condition) ? this->mCyclesUsed++ : this->isExecutingInstruction = false; break;
-	case 3: this->mCyclesUsed++; break; // strange behaviour since a short call is only 3m long
+		this->instruction_cache[1] = this->getByteFromPC();
+		checkJumpCondition(condition) ? this->mcycles_used++ : this->is_executing_instruction = false; break;
+	case 3: this->mcycles_used++; break; // strange behaviour since a short call is only 3m long
 	case 4:
-		this->set_memory(--this->registers.sp, this->registers.get_lowByte(&this->registers.pc));
-		this->mCyclesUsed++; break;
+		this->setMemory(--this->registers.sp, this->registers.getLowByte(&this->registers.pc));
+		this->mcycles_used++; break;
 	case 5:
-		this->set_memory(--this->registers.sp, this->registers.get_highByte(&this->registers.pc));
-		this->registers.pc = (instructionCache[1] << 8) | instructionCache[0];
-		this->isExecutingInstruction = false;
+		this->setMemory(--this->registers.sp, this->registers.getHighByte(&this->registers.pc));
+		this->registers.pc = (instruction_cache[1] << 8) | instruction_cache[0];
+		this->is_executing_instruction = false;
 	}
 }
 
 
 void CPU::ins_RST(Byte jumpVector)
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->mCyclesUsed++; break;
+	case 0: this->mcycles_used++; break;
+	case 1: this->mcycles_used++; break;
 	case 2:
-		this->set_memory(--this->registers.sp, this->registers.get_lowByte(&this->registers.pc));
-		this->mCyclesUsed++; break;
+		this->setMemory(--this->registers.sp, this->registers.getLowByte(&this->registers.pc));
+		this->mcycles_used++; break;
 	case 3:
-		this->set_memory(--this->registers.sp, this->registers.get_highByte(&this->registers.pc));
+		this->setMemory(--this->registers.sp, this->registers.getHighByte(&this->registers.pc));
 		this->registers.pc = 0x0000 + jumpVector;
-		this->isExecutingInstruction = false;
+		this->is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_LD_bFF00_u8b_A()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->instructionCache[0] = this->get_byte_from_pc(); this->mCyclesUsed++; break;
+	case 0: this->mcycles_used++; break;
+	case 1: this->instruction_cache[0] = this->getByteFromPC(); this->mcycles_used++; break;
 	case 2:
-		this->set_memory(0xFF00 + this->instructionCache[0], this->registers.a);
-		this->isExecutingInstruction = false;
+		this->setMemory(0xFF00 + this->instruction_cache[0], this->registers.a);
+		this->is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_LD_A_bFF00_u8b()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->instructionCache[0] = this->get_byte_from_pc(); this->mCyclesUsed++; break;
+	case 0: this->mcycles_used++; break;
+	case 1: this->instruction_cache[0] = this->getByteFromPC(); this->mcycles_used++; break;
 	case 2:
-		this->registers.a = this->get_memory(0xFF00 + this->instructionCache[0]);
-		this->isExecutingInstruction = false;
+		this->registers.a = this->getMemory(0xFF00 + this->instruction_cache[0]);
+		this->is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_LD_A_bFF00_Cb()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->registers.a = this->get_memory(0xFF00 + this->registers.c); this->isExecutingInstruction = false;
+	case 0: this->mcycles_used++; break;
+	case 1: this->registers.a = this->getMemory(0xFF00 + this->registers.c); this->is_executing_instruction = false;
 	}
 }
 
 
 void CPU::ins_ADD_SP_i8()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0:  this->mCyclesUsed++; break;
-	case 1: this->instructionCache[0] = this->get_byte_from_pc(); this->mCyclesUsed++; break;
+	case 0:  this->mcycles_used++; break;
+	case 1: this->instruction_cache[0] = this->getByteFromPC(); this->mcycles_used++; break;
 	case 2:
 	{
-		Byte_s value = (Byte_s)this->instructionCache[0];
+		Byte_s value = (Byte_s)this->instruction_cache[0];
 		if (value < 0)
 		{
-			this->registers.set_flag(c, ((this->registers.sp + value) & 0xFF) <= (this->registers.sp & 0xFF));
-			this->registers.set_flag(h, ((this->registers.sp + value) & 0xF) <= (this->registers.sp & 0xF));
+			this->registers.setFlag(c, ((this->registers.sp + value) & 0xFF) <= (this->registers.sp & 0xFF));
+			this->registers.setFlag(h, ((this->registers.sp + value) & 0xF) <= (this->registers.sp & 0xF));
 		}
 		else
 		{
-			this->registers.set_flag(c, ((this->registers.sp & 0xFF) + value) > 0xFF);
-			this->registers.set_flag(h, ((this->registers.sp & 0xF) + (value & 0xF)) > 0xF);
+			this->registers.setFlag(c, ((this->registers.sp & 0xFF) + value) > 0xFF);
+			this->registers.setFlag(h, ((this->registers.sp & 0xF) + (value & 0xF)) > 0xF);
 		}
-		this->registers.set_flag(z, 0);
-		this->registers.set_flag(n, 0);
+		this->registers.setFlag(z, 0);
+		this->registers.setFlag(n, 0);
 
 		Word sum = (this->registers.sp + value);
-		instructionCache[1] = sum >> 8;
-		this->registers.set_lowByte(&this->registers.sp, sum & 0xFF);
+		instruction_cache[1] = sum >> 8;
+		this->registers.setLowByte(&this->registers.sp, sum & 0xFF);
 
-		this->mCyclesUsed++; break;
+		this->mcycles_used++; break;
 	}
 	case 3:
-		this->registers.set_highByte(&this->registers.sp, instructionCache[1]);
-		this->isExecutingInstruction = false;
+		this->registers.setHighByte(&this->registers.sp, instruction_cache[1]);
+		this->is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_LD_HL_SP_i8()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0:  this->mCyclesUsed++; break;
-	case 1: this->instructionCache[0] = this->get_byte_from_pc(); this->mCyclesUsed++; break;
+	case 0:  this->mcycles_used++; break;
+	case 1: this->instruction_cache[0] = this->getByteFromPC(); this->mcycles_used++; break;
 	case 2:
-		Byte_s value = (Byte_s)this->instructionCache[0];
+		Byte_s value = (Byte_s)this->instruction_cache[0];
 		Word sum = this->registers.sp + value;
-		this->registers.set_flag(z, 0);
-		this->registers.set_flag(n, 0);
+		this->registers.setFlag(z, 0);
+		this->registers.setFlag(n, 0);
 		if (value < 0)
 		{
-			this->registers.set_flag(c, (sum & 0xFF) <= (this->registers.sp & 0xFF));
-			this->registers.set_flag(h, (sum & 0xF) <= (this->registers.sp & 0xF));
+			this->registers.setFlag(c, (sum & 0xFF) <= (this->registers.sp & 0xFF));
+			this->registers.setFlag(h, (sum & 0xF) <= (this->registers.sp & 0xF));
 		}
 		else
 		{
-			this->registers.set_flag(c, ((this->registers.sp & 0xFF) + value) > 0xFF);
-			this->registers.set_flag(h, ((this->registers.sp & 0xF) + (value & 0xF)) > 0xF);
+			this->registers.setFlag(c, ((this->registers.sp & 0xFF) + value) > 0xFF);
+			this->registers.setFlag(h, ((this->registers.sp & 0xF) + (value & 0xF)) > 0xF);
 		}
-		this->registers.set_HL(sum);
+		this->registers.setHL(sum);
 
-		this->isExecutingInstruction = false;
+		this->is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_LD_SP_HL()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->registers.sp = this->registers.get_HL(); this->isExecutingInstruction = false;
+	case 0: this->mcycles_used++; break;
+	case 1: this->registers.sp = this->registers.getHL(); this->is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_LD_bu16b_A()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->instructionCache[0] = this->get_byte_from_pc(); this->mCyclesUsed++; break;
-	case 2: this->instructionCache[1] = this->get_byte_from_pc(); this->mCyclesUsed++; break;
+	case 0: this->mcycles_used++; break;
+	case 1: this->instruction_cache[0] = this->getByteFromPC(); this->mcycles_used++; break;
+	case 2: this->instruction_cache[1] = this->getByteFromPC(); this->mcycles_used++; break;
 	case 3:
-		this->set_memory((this->instructionCache[1] << 8) | this->instructionCache[0], this->registers.a);
-		this->isExecutingInstruction = false;
+		this->setMemory((this->instruction_cache[1] << 8) | this->instruction_cache[0], this->registers.a);
+		this->is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_LD_A_bu16b()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->instructionCache[0] = this->get_byte_from_pc(); this->mCyclesUsed++; break;
-	case 2: this->instructionCache[1] = this->get_byte_from_pc(); this->mCyclesUsed++; break;
+	case 0: this->mcycles_used++; break;
+	case 1: this->instruction_cache[0] = this->getByteFromPC(); this->mcycles_used++; break;
+	case 2: this->instruction_cache[1] = this->getByteFromPC(); this->mcycles_used++; break;
 	case 3:
 	{
-		Word address = (this->instructionCache[1] << 8) | this->instructionCache[0];
-		this->registers.a = this->get_memory(address);
-		this->isExecutingInstruction = false;
+		Word address = (this->instruction_cache[1] << 8) | this->instruction_cache[0];
+		this->registers.a = this->getMemory(address);
+		this->is_executing_instruction = false;
 	}
 	}
 }
 
 
-void CPU::ins_RLC(Byte* registerOne)
+void CPU::ins_RLC(Byte* reigster_one)
 {
-	this->registers.set_flag(n, 0);
-	this->registers.set_flag(h, 0);
-	this->registers.set_flag(c, ((*registerOne & 0x80) >> 7));
-	*registerOne = ((*registerOne << 1) | (*registerOne >> 7));
+	this->registers.setFlag(n, 0);
+	this->registers.setFlag(h, 0);
+	this->registers.setFlag(c, ((*reigster_one & 0x80) >> 7));
+	*reigster_one = ((*reigster_one << 1) | (*reigster_one >> 7));
 
-	this->registers.set_flag(z, (*registerOne == 0));
+	this->registers.setFlag(z, (*reigster_one == 0));
 
-	this->isExecutingCB = false;
-	this->isExecutingInstruction = false;
+	this->is_executing_cb = false;
+	this->is_executing_instruction = false;
 
 }
 
 void CPU::ins_RLC_bHLb()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->mCyclesUsed++; break;
-	case 2: this->instructionCache[0] = this->get_memory(this->registers.get_HL()); this->mCyclesUsed++; break;
+	case 0: this->mcycles_used++; break;
+	case 1: this->mcycles_used++; break;
+	case 2: this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
 	case 3:
 
-		this->registers.set_flag(n, 0);
-		this->registers.set_flag(h, 0);
-		Byte temp = this->instructionCache[0];
+		this->registers.setFlag(n, 0);
+		this->registers.setFlag(h, 0);
+		Byte temp = this->instruction_cache[0];
 		Byte result = ((temp << 1) | (temp >> 7));
-		this->registers.set_flag(c, ((temp & 0x80) >> 7));
-		this->set_memory(this->registers.get_HL(), result);
-		this->registers.set_flag(z, (result == 0));
+		this->registers.setFlag(c, ((temp & 0x80) >> 7));
+		this->setMemory(this->registers.getHL(), result);
+		this->registers.setFlag(z, (result == 0));
 
-		this->isExecutingCB = false;
-		this->isExecutingInstruction = false;
+		this->is_executing_cb = false;
+		this->is_executing_instruction = false;
 	}
 }
 
-void CPU::ins_RL(Byte* registerOne)
+void CPU::ins_RL(Byte* reigster_one)
 {
-	Byte flagCarry = this->registers.get_flag(c);
+	Byte flagCarry = this->registers.getFlag(c);
 	bool newCarry = 0;
 
-	this->registers.set_flag(n, 0);
-	this->registers.set_flag(h, 0);
+	this->registers.setFlag(n, 0);
+	this->registers.setFlag(h, 0);
 
-	newCarry = ((*registerOne & 0x80) >> 7);
-	*registerOne = ((*registerOne << 1) | (flagCarry));
+	newCarry = ((*reigster_one & 0x80) >> 7);
+	*reigster_one = ((*reigster_one << 1) | (flagCarry));
 
-	this->registers.set_flag(c, newCarry);
-	this->registers.set_flag(z, (*registerOne == 0));
+	this->registers.setFlag(c, newCarry);
+	this->registers.setFlag(z, (*reigster_one == 0));
 
-	this->isExecutingCB = false;
-	this->isExecutingInstruction = false;
+	this->is_executing_cb = false;
+	this->is_executing_instruction = false;
 
 }
 
 void CPU::ins_RL_bHLb()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->instructionCache[0] = this->get_memory(this->registers.get_HL()); this->mCyclesUsed++; break;
+	case 0: this->mcycles_used++; break;
+	case 1: this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
 	case 2:
 
-		Byte flagCarry = this->registers.get_flag(c);
+		Byte flagCarry = this->registers.getFlag(c);
 		bool newCarry = 0;
 
-		this->registers.set_flag(n, 0);
-		this->registers.set_flag(h, 0);
+		this->registers.setFlag(n, 0);
+		this->registers.setFlag(h, 0);
 
-		Byte temp = this->instructionCache[0];
+		Byte temp = this->instruction_cache[0];
 		Byte result = ((temp << 1) | (flagCarry));
 		newCarry = ((temp & 0x80) >> 7);
-		this->set_memory(this->registers.get_HL(), result);
+		this->setMemory(this->registers.getHL(), result);
 
-		this->registers.set_flag(c, newCarry);
-		this->registers.set_flag(z, (result == 0));
+		this->registers.setFlag(c, newCarry);
+		this->registers.setFlag(z, (result == 0));
 
-		this->isExecutingCB = false;
-		this->isExecutingInstruction = false;
+		this->is_executing_cb = false;
+		this->is_executing_instruction = false;
 	}
 }
 
 
-void CPU::ins_RRC(Byte* registerOne)
+void CPU::ins_RRC(Byte* reigster_one)
 {
-	this->registers.set_flag(n, 0);
-	this->registers.set_flag(h, 0);
-	this->registers.set_flag(c, (*registerOne & 0x1));
-	*registerOne = ((*registerOne >> 1) | (*registerOne << 7));
+	this->registers.setFlag(n, 0);
+	this->registers.setFlag(h, 0);
+	this->registers.setFlag(c, (*reigster_one & 0x1));
+	*reigster_one = ((*reigster_one >> 1) | (*reigster_one << 7));
 
-	this->registers.set_flag(z, (*registerOne == 0));
+	this->registers.setFlag(z, (*reigster_one == 0));
 
-	this->isExecutingCB = false;
-	this->isExecutingInstruction = false;
+	this->is_executing_cb = false;
+	this->is_executing_instruction = false;
 
 }
 
 void CPU::ins_RRC_bHLb()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->instructionCache[0] = this->get_memory(this->registers.get_HL()); this->mCyclesUsed++; break;
+	case 0: this->mcycles_used++; break;
+	case 1: this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
 	case 2:
 
-		this->registers.set_flag(n, 0);
-		this->registers.set_flag(h, 0);
-		Byte temp = this->instructionCache[0];
+		this->registers.setFlag(n, 0);
+		this->registers.setFlag(h, 0);
+		Byte temp = this->instruction_cache[0];
 		Byte result = ((temp >> 1) | (temp << 7));
-		this->registers.set_flag(c, (temp & 0x1));
-		this->set_memory(this->registers.get_HL(), result);
-		this->registers.set_flag(z, (result == 0));
+		this->registers.setFlag(c, (temp & 0x1));
+		this->setMemory(this->registers.getHL(), result);
+		this->registers.setFlag(z, (result == 0));
 
-		this->isExecutingCB = false;
-		this->isExecutingInstruction = false;
+		this->is_executing_cb = false;
+		this->is_executing_instruction = false;
 	}
 }
 
-void CPU::ins_RR(Byte* registerOne)
+void CPU::ins_RR(Byte* reigster_one)
 {
-	Byte flagCarry = this->registers.get_flag(c);
+	Byte flagCarry = this->registers.getFlag(c);
 	bool newCarry = 0;
 
-	this->registers.set_flag(n, 0);
-	this->registers.set_flag(h, 0);
+	this->registers.setFlag(n, 0);
+	this->registers.setFlag(h, 0);
 
-	newCarry = (*registerOne & 0x1);
-	*registerOne = ((*registerOne >> 1) | (flagCarry << 7));
+	newCarry = (*reigster_one & 0x1);
+	*reigster_one = ((*reigster_one >> 1) | (flagCarry << 7));
 
-	this->registers.set_flag(c, newCarry);
-	this->registers.set_flag(z, (*registerOne == 0));
+	this->registers.setFlag(c, newCarry);
+	this->registers.setFlag(z, (*reigster_one == 0));
 
-	this->isExecutingCB = false;
-	this->isExecutingInstruction = false;
+	this->is_executing_cb = false;
+	this->is_executing_instruction = false;
 
 }
 
 void CPU::ins_RR_bHLb()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->instructionCache[0] = this->get_memory(this->registers.get_HL()); this->mCyclesUsed++; break;
+	case 0: this->mcycles_used++; break;
+	case 1: this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
 	case 2:
 
-		Byte flagCarry = this->registers.get_flag(c);
+		Byte flagCarry = this->registers.getFlag(c);
 		bool newCarry = 0;
 
-		this->registers.set_flag(n, 0);
-		this->registers.set_flag(h, 0);
+		this->registers.setFlag(n, 0);
+		this->registers.setFlag(h, 0);
 
-		Byte temp = this->instructionCache[0];
+		Byte temp = this->instruction_cache[0];
 		Byte result = ((temp >> 1) | (flagCarry << 7));
 		newCarry = (temp & 0x01);
-		this->set_memory(this->registers.get_HL(), result);
+		this->setMemory(this->registers.getHL(), result);
 
-		this->registers.set_flag(c, newCarry);
-		this->registers.set_flag(z, (result == 0));
+		this->registers.setFlag(c, newCarry);
+		this->registers.setFlag(z, (result == 0));
 
-		this->isExecutingCB = false;
-		this->isExecutingInstruction = false;
+		this->is_executing_cb = false;
+		this->is_executing_instruction = false;
 	}
 }
 
-void CPU::ins_SLA(Byte* registerOne)
+void CPU::ins_SLA(Byte* reigster_one)
 {
-	this->registers.set_flag(n, 0);
-	this->registers.set_flag(h, 0);
+	this->registers.setFlag(n, 0);
+	this->registers.setFlag(h, 0);
 
-	this->registers.set_flag(c, (*registerOne & 0x80) >> 7);
-	*registerOne = *registerOne << 1;
-	this->registers.set_flag(z, (*registerOne == 0));
+	this->registers.setFlag(c, (*reigster_one & 0x80) >> 7);
+	*reigster_one = *reigster_one << 1;
+	this->registers.setFlag(z, (*reigster_one == 0));
 
-	this->isExecutingCB = false;
-	this->isExecutingInstruction = false;
+	this->is_executing_cb = false;
+	this->is_executing_instruction = false;
 
 }
 
 void CPU::ins_SLA_bHLb()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->instructionCache[0] = this->get_memory(this->registers.get_HL()); this->mCyclesUsed++; break;
+	case 0: this->mcycles_used++; break;
+	case 1: this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
 	case 2:
 
-		this->registers.set_flag(n, 0);
-		this->registers.set_flag(h, 0);
+		this->registers.setFlag(n, 0);
+		this->registers.setFlag(h, 0);
 
-		Byte temp = this->instructionCache[0];
+		Byte temp = this->instruction_cache[0];
 		Byte result = temp << 1;
 
-		this->registers.set_flag(c, (temp & 0x80) >> 7);
-		this->set_memory(this->registers.get_HL(), result);
+		this->registers.setFlag(c, (temp & 0x80) >> 7);
+		this->setMemory(this->registers.getHL(), result);
 
-		this->registers.set_flag(z, (result == 0));
+		this->registers.setFlag(z, (result == 0));
 
-		this->isExecutingCB = false;
-		this->isExecutingInstruction = false;
+		this->is_executing_cb = false;
+		this->is_executing_instruction = false;
 	}
 }
 
-void CPU::ins_SRA(Byte* registerOne)
+void CPU::ins_SRA(Byte* reigster_one)
 {
-	this->registers.set_flag(n, 0);
-	this->registers.set_flag(h, 0);
-	this->registers.set_flag(c, *registerOne & 0x1);
-	Byte bit7 = *registerOne >> 7;
+	this->registers.setFlag(n, 0);
+	this->registers.setFlag(h, 0);
+	this->registers.setFlag(c, *reigster_one & 0x1);
+	Byte bit7 = *reigster_one >> 7;
 
-	*registerOne = (*registerOne >> 1) | (bit7 << 7);
-	this->registers.set_flag(z, (*registerOne == 0));
+	*reigster_one = (*reigster_one >> 1) | (bit7 << 7);
+	this->registers.setFlag(z, (*reigster_one == 0));
 
-	this->isExecutingCB = false;
-	this->isExecutingInstruction = false;
+	this->is_executing_cb = false;
+	this->is_executing_instruction = false;
 
 }
 
 void CPU::ins_SRA_bHLb()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->instructionCache[0] = this->get_memory(this->registers.get_HL()); this->mCyclesUsed++; break;
+	case 0: this->mcycles_used++; break;
+	case 1: this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
 	case 2:
 
-		this->registers.set_flag(n, 0);
-		this->registers.set_flag(h, 0);
+		this->registers.setFlag(n, 0);
+		this->registers.setFlag(h, 0);
 
-		Byte temp = this->instructionCache[0];
-		this->registers.set_flag(c, temp & 0x1);
+		Byte temp = this->instruction_cache[0];
+		this->registers.setFlag(c, temp & 0x1);
 		Byte bit7 = temp >> 7;
 
 		Byte result = (temp >> 1) | (bit7 << 7);
-		this->set_memory(this->registers.get_HL(), result);
+		this->setMemory(this->registers.getHL(), result);
 
-		this->registers.set_flag(z, (result == 0));
+		this->registers.setFlag(z, (result == 0));
 
-		this->isExecutingCB = false;
-		this->isExecutingInstruction = false;
+		this->is_executing_cb = false;
+		this->is_executing_instruction = false;
 	}
 }
 
-void CPU::ins_SRL(Byte* registerOne)
+void CPU::ins_SRL(Byte* reigster_one)
 {
-	this->registers.set_flag(n, 0);
-	this->registers.set_flag(h, 0);
-	this->registers.set_flag(c, *registerOne & 0x1);
-	*registerOne = *registerOne >> 1;
-	this->registers.set_flag(z, (*registerOne == 0));
+	this->registers.setFlag(n, 0);
+	this->registers.setFlag(h, 0);
+	this->registers.setFlag(c, *reigster_one & 0x1);
+	*reigster_one = *reigster_one >> 1;
+	this->registers.setFlag(z, (*reigster_one == 0));
 
-	this->isExecutingCB = false;
-	this->isExecutingInstruction = false;
+	this->is_executing_cb = false;
+	this->is_executing_instruction = false;
 
 }
 
 void CPU::ins_SRL_bHLb()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->instructionCache[0] = this->get_memory(this->registers.get_HL()); this->mCyclesUsed++; break;
+	case 0: this->mcycles_used++; break;
+	case 1: this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
 	case 2:
 
-		this->registers.set_flag(n, 0);
-		this->registers.set_flag(h, 0);
-		Byte temp = this->instructionCache[0];
+		this->registers.setFlag(n, 0);
+		this->registers.setFlag(h, 0);
+		Byte temp = this->instruction_cache[0];
 		Byte result = temp >> 1;
-		this->registers.set_flag(c, temp & 0x1);
-		this->set_memory(this->registers.get_HL(), result);
-		this->registers.set_flag(z, (result == 0));
+		this->registers.setFlag(c, temp & 0x1);
+		this->setMemory(this->registers.getHL(), result);
+		this->registers.setFlag(z, (result == 0));
 
-		this->isExecutingCB = false;
-		this->isExecutingInstruction = false;
+		this->is_executing_cb = false;
+		this->is_executing_instruction = false;
 	}
 }
 
-void CPU::ins_SWAP(Byte* registerOne)
+void CPU::ins_SWAP(Byte* reigster_one)
 {
-	*registerOne = (this->get_nibble(*registerOne, false) << 4) + this->get_nibble(*registerOne, true);
-	this->registers.set_flag(z, (*registerOne == 0x0));
-	this->registers.set_flag(n, false);
-	this->registers.set_flag(h, false);
-	this->registers.set_flag(c, false);
+	*reigster_one = (this->getNibble(*reigster_one, false) << 4) + this->getNibble(*reigster_one, true);
+	this->registers.setFlag(z, (*reigster_one == 0x0));
+	this->registers.setFlag(n, false);
+	this->registers.setFlag(h, false);
+	this->registers.setFlag(c, false);
 
-	this->isExecutingCB = false;
-	this->isExecutingInstruction = false;
+	this->is_executing_cb = false;
+	this->is_executing_instruction = false;
 
 }
 
 void CPU::ins_SWAP_bHLb()
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1: this->instructionCache[0] = this->get_memory(this->registers.get_HL()); this->mCyclesUsed++; break;
+	case 0: this->mcycles_used++; break;
+	case 1: this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
 	case 2:
 
-		Byte temp = this->instructionCache[0];
-		Byte swappedTemp = (this->get_nibble(temp, false) << 4) + this->get_nibble(temp, true);
-		this->set_memory(this->registers.get_HL(), swappedTemp);
-		this->registers.set_flag(z, (swappedTemp == 0x0));
-		this->registers.set_flag(n, false);
-		this->registers.set_flag(h, false);
-		this->registers.set_flag(c, false);
+		Byte temp = this->instruction_cache[0];
+		Byte swappedTemp = (this->getNibble(temp, false) << 4) + this->getNibble(temp, true);
+		this->setMemory(this->registers.getHL(), swappedTemp);
+		this->registers.setFlag(z, (swappedTemp == 0x0));
+		this->registers.setFlag(n, false);
+		this->registers.setFlag(h, false);
+		this->registers.setFlag(c, false);
 
-		this->isExecutingCB = false;
-		this->isExecutingInstruction = false;
+		this->is_executing_cb = false;
+		this->is_executing_instruction = false;
 	}
 }
 
-void CPU::ins_BIT_b_r(Byte bit, Byte* registerOne)
+void CPU::ins_BIT_b_r(Byte bit, Byte* reigster_one)
 {
-	this->registers.set_flag(n, 0);
-	this->registers.set_flag(h, 1);
-	this->registers.set_flag(z, ((*registerOne & (1 << bit)) == 0));
+	this->registers.setFlag(n, 0);
+	this->registers.setFlag(h, 1);
+	this->registers.setFlag(z, ((*reigster_one & (1 << bit)) == 0));
 
-	this->isExecutingCB = false;
-	this->isExecutingInstruction = false;
+	this->is_executing_cb = false;
+	this->is_executing_instruction = false;
 }
 
 void CPU::ins_BIT_b_r_bHLb(Byte bit)
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
+	case 0: this->mcycles_used++; break;
 	case 1:
 
-		this->instructionCache[0] = this->get_memory(this->registers.get_HL());
-		this->registers.set_flag(n, 0);
-		this->registers.set_flag(h, 1);
-		this->registers.set_flag(z, ((this->instructionCache[0] & (1 << bit)) == 0));
+		this->instruction_cache[0] = this->getMemory(this->registers.getHL());
+		this->registers.setFlag(n, 0);
+		this->registers.setFlag(h, 1);
+		this->registers.setFlag(z, ((this->instruction_cache[0] & (1 << bit)) == 0));
 
-		this->isExecutingCB = false;
-		this->isExecutingInstruction = false;
+		this->is_executing_cb = false;
+		this->is_executing_instruction = false;
 	}
 }
 
-void CPU::ins_RES_b_r(Byte bit, Byte* registerOne)
+void CPU::ins_RES_b_r(Byte bit, Byte* reigster_one)
 {
-	*registerOne &= ~(1 << bit);
+	*reigster_one &= ~(1 << bit);
 
-	this->isExecutingCB = false;
-	this->isExecutingInstruction = false;
+	this->is_executing_cb = false;
+	this->is_executing_instruction = false;
 }
 
 void CPU::ins_RES_b_r_bHLb(Byte bit)
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1:	this->instructionCache[0] = this->get_memory(this->registers.get_HL()); this->mCyclesUsed++; break;
+	case 0: this->mcycles_used++; break;
+	case 1:	this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
 	case 2:
 
-		Byte temp = this->instructionCache[0];
+		Byte temp = this->instruction_cache[0];
 		temp &= ~(1 << bit);
-		this->set_memory(this->registers.get_HL(), temp);
+		this->setMemory(this->registers.getHL(), temp);
 
-		this->isExecutingCB = false;
-		this->isExecutingInstruction = false;
+		this->is_executing_cb = false;
+		this->is_executing_instruction = false;
 	}
 }
 
-void CPU::ins_SET_b_r(Byte bit, Byte* registerOne)
+void CPU::ins_SET_b_r(Byte bit, Byte* reigster_one)
 {
-	*registerOne |= (1 << bit);
+	*reigster_one |= (1 << bit);
 
-	this->isExecutingCB = false;
-	this->isExecutingInstruction = false;
+	this->is_executing_cb = false;
+	this->is_executing_instruction = false;
 }
 
 void CPU::ins_SET_b_r_bHLb(Byte bit)
 {
-	switch (this->mCyclesUsed)
+	switch (this->mcycles_used)
 	{
-	case 0: this->mCyclesUsed++; break;
-	case 1:	this->instructionCache[0] = this->get_memory(this->registers.get_HL()); this->mCyclesUsed++; break;
+	case 0: this->mcycles_used++; break;
+	case 1:	this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
 	case 2:
 
-		Byte temp = this->instructionCache[0];
+		Byte temp = this->instruction_cache[0];
 		temp |= (1 << bit);
-		this->set_memory(this->registers.get_HL(), temp);
+		this->setMemory(this->registers.getHL(), temp);
 
-		this->isExecutingCB = false;
-		this->isExecutingInstruction = false;
+		this->is_executing_cb = false;
+		this->is_executing_instruction = false;
 	}
 }
 
@@ -2646,22 +2646,22 @@ void CPU::ins_DAA()
 	Byte adjust = 0;
 	bool setFlagC = false;
 
-	if (this->registers.get_flag(h) || (!this->registers.get_flag(n) && (this->registers.a & 0xF) > 9))
+	if (this->registers.getFlag(h) || (!this->registers.getFlag(n) && (this->registers.a & 0xF) > 9))
 		adjust |= 0x6;
 
-	if (this->registers.get_flag(c) || (!this->registers.get_flag(n) && this->registers.a > 0x99))
+	if (this->registers.getFlag(c) || (!this->registers.getFlag(n) && this->registers.a > 0x99))
 	{
 		adjust |= 0x60;
 		setFlagC = true;
 	}
 	
-	this->registers.a += (this->registers.get_flag(n)) ? -adjust : adjust;
+	this->registers.a += (this->registers.getFlag(n)) ? -adjust : adjust;
 
-	this->registers.set_flag(z, (this->registers.a == 0));
-	this->registers.set_flag(c, setFlagC);
-	this->registers.set_flag(h, 0);
+	this->registers.setFlag(z, (this->registers.a == 0));
+	this->registers.setFlag(c, setFlagC);
+	this->registers.setFlag(h, 0);
 
-	this->isExecutingInstruction = false;
+	this->is_executing_instruction = false;
 }
 
 

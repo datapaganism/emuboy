@@ -3,7 +3,7 @@
 
 const int DEFAULT_SCREEN_WIDTH = 640;
 const int DEFAULT_SCREEN_HEIGHT = 480;
-const bool shownOnStart = false;
+const bool SHOW_ON_START = false;
 
 
 #define GB_CLOCKSPEED  4194304 // Hz

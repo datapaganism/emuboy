@@ -14,7 +14,7 @@ public:
     
     void run();
 
-    bool initSuccess();
+    bool getInitSuccess();
 private:
-    bool mInitSuccess = false;
+    bool init_success = false;
 };

@@ -23,16 +23,16 @@ class BUS;
 
 
 //ARGB8888 pixel, byte order reversed to argb, due to endianess?
-struct FRAMEBUFFER_PIXEL
+struct FramebufferPixel
 {
-	FRAMEBUFFER_PIXEL(Byte red, Byte green, Byte blue)
+	FramebufferPixel(Byte red, Byte green, Byte blue)
 	{
 		this->red = red;
 		this->green = green;
 		this->blue = blue;
 	}
 
-	FRAMEBUFFER_PIXEL()
+	FramebufferPixel()
 	{
 		this->red = 0x0;
 		this->green = 0x0;
@@ -45,16 +45,27 @@ struct FRAMEBUFFER_PIXEL
 	Byte alpha = 0xFF;
 };
 
-struct TILE
+struct Tile
 {
+	Tile();
+	Tile(BUS* bus, Word address);
+
 	std::array<Byte, 16> bytes_per_tile = { 0, };
 
 	void consolePrint();
-	Byte getPixelColour(int x, int y);
-	TILE(BUS *bus, Word address);
+	Byte getPixelColour(int x, int y);	
+};
 
-	TILE();
-
+struct PPURegisters
+{
+	Byte* ly = nullptr;
+	Byte* wx = nullptr;
+	Byte* wy = nullptr;
+	Byte* lyc = nullptr;
+	Byte* scx = nullptr;
+	Byte* scy = nullptr;
+	Byte* stat = nullptr;
+	Byte* lcdc = nullptr;
 };
 
 
@@ -62,50 +73,44 @@ class PPU
 {
 public:
 
-	Byte scanline_x = 0;
-
-	enum tile_type { background, window, sprite };
 	PPU();
-	void connect_to_bus(BUS* pBus);
 
-	
-	TILE tile;
+	enum eTileType { background, window, sprite };
+	Byte scanline_x = 0;
+	Tile tile;
 	FIFO fifo_bg;
 	FIFO fifo_sprite;
+	BUS* bus = nullptr;
+	PPURegisters registers;
+	const Byte* ly_ptr = nullptr;
+	int cycle_counter = 0;
+	bool window_wy_triggered = false;
 
-	void update_graphics(const int cycles);
-	
+
+	void connectToBus(BUS* pBus);
+	void updateGraphics(const int cycles);
 	/// <summary>
 	/// polls the state of FF40 register's 7th bit, if 1 then the LCD and PPU is enabled for processing/rendering else not.
 	/// </summary>
 	/// <returns>if it is enabled</returns>
-	bool lcd_enabled();
-
+	bool lcdEnabled();
 	/// <summary>
 	/// Converts tile id to address in video ram
 	/// </summary>
-	Word get_tile_address_from_number(const Byte tile_number, const enum tile_type tile_type);
-
+	Word getTileAddressFromNumber(const Byte tile_number, const enum eTileType eTileType);
+	void addToFramebuffer(const int x, const int y, const FIFOPixel fifo_pixel);
+	FramebufferPixel dmgFramebufferPixelToRGB(const FIFOPixel fifo_pixel);
+	Byte getPPUState();
+	void newScanline();
+	void updateState(Byte new_state);
+	Byte getMemory(const Word address);
+	void setMemory(const Word address, const Byte data);
+	Byte getLY();
+	void setLY(const Byte data);
 	
-	BUS* bus = nullptr;
-	Byte* LYptr = nullptr;
-	int cycle_counter = 0;
-	bool window_wy_triggered = false;
-
-	void add_to_framebuffer(const int x, const int y, const FIFO_pixel fifo_pixel);
-	FRAMEBUFFER_PIXEL dmg_framebuffer_pixel_to_rgb(const FIFO_pixel fifo_pixel);
-
-	Byte get_ppu_state();
-	void new_scanline();
-
-	void update_state(Byte new_state);
-	
-	Byte get_memory(const Word address);
-	void set_memory(const Word address, const Byte data);
-
-
 private:
 
+	void setRegisters();
 	
 
 

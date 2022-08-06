@@ -10,7 +10,7 @@ class VRAMViewer : public Window
 {
 public:
 	VRAMViewer(BUS* bus_ptr,int width, int height, int scaling, const char* title, bool shownOnStart);
-	std::unique_ptr<FRAMEBUFFER_PIXEL[]> framebuffer;
+	std::unique_ptr<FramebufferPixel[]> framebuffer;
 
 	void handleEvent(SDL_Event& e);
 	void updateState();
@@ -18,7 +18,7 @@ public:
 
 	BUS* bus_ptr = nullptr;
 
-	void generate_vram_framebuffer();
+	void generateVRAMFramebuffer();
 private:
 
 };
