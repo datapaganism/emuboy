@@ -51,7 +51,8 @@ int main(int argc, char* argv[])
     std::string bios_path = "..\\..\\..\\bios\\bios.bin";
     
     WindowManager application(rom_path, bios_path);
+
     application.run();
-  
+
     return 0;
 }

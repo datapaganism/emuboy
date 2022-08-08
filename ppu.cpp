@@ -124,7 +124,7 @@ void PPU::updateGraphics(const int cycles)
 				//this->newScanline();
 		} break;
 
-		default: throw "Unreachable PPU STAT"; break;
+		default: fprintf(stderr, "Unreachable PPU STAT");  exit(-1); break;
 		}
 
 		return;
@@ -298,7 +298,7 @@ Word PPU::getTileAddressFromNumber(const Byte tile_number, const enum eTileType 
 		break;
 	}
 
-	default: throw "Unreachable eTileType"; break;
+	default: fprintf(stderr, "Unreachable eTileType");  exit(-1); break;
 	}
 }
 
@@ -386,7 +386,7 @@ FramebufferPixel PPU::dmgFramebufferPixelToRGB(const FIFOPixel fifo_pixel)
 		return FramebufferPixel(GB_PALLETE_10_r, GB_PALLETE_10_g, GB_PALLETE_10_b); // dark gray
 	case 3:
 		return FramebufferPixel(GB_PALLETE_11_r, GB_PALLETE_11_g, GB_PALLETE_11_b); // black
-	default: throw "Unreachable id_to_palette_id"; break;
+	default: fprintf(stderr, "Unreachable id_to_palette_id");  exit(-1); break;
 	}
 }
 
@@ -438,7 +438,7 @@ void PPU::updateState(Byte new_state)
 		*registers.stat = (*registers.stat & 0xFC) | 0x3;
 	}break;
 
-	default: throw "Unreachable PPU new state"; break;
+	default: fprintf(stderr, "Unreachable PPU new state"); exit(-1); break;
 	}
 
 	//if mode has changed

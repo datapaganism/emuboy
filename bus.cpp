@@ -62,7 +62,7 @@ void BUS::setJoypadState(const enum eJoypadButtons button, bool value)
     case b_b:        {bit = 0b00100000; break;}
     case b_select:   {bit = 0b01000000; break;}
     case b_start:    {bit = 0b10000000; break;}
-    default: throw "Unreachable button press"; break;
+    default: fprintf(stderr, "Unreachable button press");  exit(-1); break;
     }
     this->joypad_state = (value) ? (this->joypad_state | bit) : (this->joypad_state & ~bit);
 }
@@ -256,10 +256,9 @@ BUS::BUS(const std::string rom_path, const std::string bios_path)
     this->loadBios(bios_path);
 
     //fill framebuffer
+    FramebufferPixel blank(GB_PALLETE_00_r, GB_PALLETE_00_g, GB_PALLETE_00_b);
     for (int i = 0; i < XRES * YRES; i++)
-    {
-        this->framebuffer[i] = FramebufferPixel(GB_PALLETE_00_r, GB_PALLETE_00_g, GB_PALLETE_00_b);
-    }
+        this->framebuffer[i] = blank;
 }
 
 
@@ -405,7 +404,7 @@ Byte BUS::getMemory(const Word address, enum eMemoryAccessType access_type)
             
            
 
-            throw "cannot return input";
+            fprintf(stderr, "cannot return input");  exit(-1);
         }
         case 0xFF26:// NR52
         {
@@ -432,7 +431,7 @@ Byte BUS::getMemory(const Word address, enum eMemoryAccessType access_type)
     }
     
     // temp return
-    throw "getMemory no return";
+    fprintf(stderr, "getMemory no return");  exit(-1);
 };
 
 void BUS::setMemory(const Word address, const Byte data, enum eMemoryAccessType access_type)
@@ -622,7 +621,7 @@ void BUS::setMemory(const Word address, const Byte data, enum eMemoryAccessType 
         return;
     }
 
-    throw "set memory fail";
+    fprintf(stderr, "set memory fail");  exit(-1);
 }
 
 /// <summary>

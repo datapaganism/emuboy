@@ -4,6 +4,7 @@
 #include <iostream>
 #include <bitset>
 #include <sstream>
+#include <cstdio>
 
 //#define BREAKPOINT 0xCb15
 #define BREAKPOINT 0x00EB
@@ -146,7 +147,7 @@ void CPU::checkForInterrupts()
 				case eInterruptTypes::timer:   { this->interrupt_vector = 0x0050; } break;
 				case eInterruptTypes::serial:  { this->interrupt_vector = 0x0058; } break;
 				case eInterruptTypes::joypad:  { this->interrupt_vector = 0x0060; } break;
-				default: throw "Unreachable interrupt type"; break;
+				default: fprintf(stderr, "Unreachable interrupt type"); exit(-1); break;
 				}
 				return;
 			}
@@ -334,7 +335,7 @@ bool CPU::checkJumpCondition(enum eJumpCondition condition)
 		if (this->registers.getFlag(c))
 			return true;
 		break;
-	default: throw "Unreachable Jump condition"; break;
+	default: fprintf(stderr, "Unreachable Jump condition");  exit(-1); break;
 	}
 	return false;
 }
@@ -418,7 +419,7 @@ int CPU::getTACFrequency()
 	case 1: { return GB_CPU_MCYCLE_CLOCKSPEED / 262144; } break;
 	case 2: { return GB_CPU_MCYCLE_CLOCKSPEED / 65536; } break;
 	case 3: { return GB_CPU_MCYCLE_CLOCKSPEED / 16384; } break;
-	default: throw "Unreachable timer frequency"; break;
+	default: fprintf(stderr, "Unreachable timer frequency");  exit(-1); break;
 	}
 
 }

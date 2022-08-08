@@ -5,6 +5,10 @@
 #include "config.hpp"
 #include "fifo.hpp"
 
+
+#define TEST 1
+
+
 class BUS;
 
 // gameboy graphics use a tiling system, instead of a frame buffer like modern systems.
