@@ -11,18 +11,19 @@ GamePak::GamePak(const std::string filename) : GamePak::GamePak()
 		std::ifstream::pos_type pos = file.tellg();
 		this->rom.resize(pos); //reallocate memory space to fit entire rom
 		file.seekg(0, std::ios::beg);
-
 		file.read((char*)this->rom.data(), pos);		
-
-		this->gamepak_loaded = true;
-
 		file.close();
+
+		gamepak_loaded = true;
+		cartridge_type = getCartridgeType();
+		rom_size = getRomSize();
+		ram_size = getRamSize();
+		allocateRam();
+		cartridgeTypeInit();
 		return;
 	}
-	std::cout << "GamePak NOT LOADED\n";
 	file.close();
-
-	this->allocateRam();
+	fprintf(stderr, "GamePak not loaded");  exit(-1);
 }
 
 GamePak::GamePak()
@@ -51,9 +52,13 @@ Byte GamePak::getMemory(const Word address)
 
 	if (address <= 0x7FFF) // otherwise return calculate the address by the rom bank used and return that data
 		return this->rom[(address - 0x4000) + (this->current_rom_bank * 0x4000)];
+	
 
+	if (!ram_bank_enable)
+		return 0;
+	
 	if (address <= 0xBFFF)
-		return this->rom[(address - 0x2000) + (this->current_ram_bank * 0x2000)];
+		return this->ram[(address - 0x2000) + (this->current_ram_bank * 0x2000)];
 }
 
 void GamePak::setMemory(const Word address, const Byte data)
@@ -70,14 +75,13 @@ void GamePak::setMemory(const Word address, const Byte data)
 
 void GamePak::allocateRam()
 {
-	if (this->getCartridgeType() == 0x05 || this->getCartridgeType() == 0x06)
+	if (cartridge_type == 0x05 || cartridge_type == 0x06)
 	{
 		this->ram = std::make_unique<Byte[]>(256);
 		return;
 	}
 
-	Byte number_of_banks = this->getRamSize();
-	switch (number_of_banks)
+	switch (ram_size)
 	{
 	case 0: break;
 	case 1: break;
@@ -85,13 +89,13 @@ void GamePak::allocateRam()
 	case 3: this->ram = std::make_unique<Byte[]>(4 * 0x2000); break;
 	case 4: this->ram = std::make_unique<Byte[]>(16 * 0x2000); break;
 	case 5: this->ram = std::make_unique<Byte[]>(8 * 0x2000); break;
-	default: throw "unreachable number of banks";
+	default: fprintf(stderr, "Unreachable number of banks");  exit(-1);;
 	}
 }
 
 void GamePak::ramBankEnableHandler(const Word address, const Byte data)
 {
-	switch (this->getCartridgeType())
+	switch (cartridge_type)
 	{
 	case 0x00: break; // ROM ONLY
 	case 0x01: // MBC1
@@ -110,7 +114,7 @@ void GamePak::ramBankEnableHandler(const Word address, const Byte data)
 		break;
 	case 0x05: // MBC2
 	case 0x06: // MBC2 + BATTERY
-		if (!address & (0b1 << 4))
+		if (!(address & (0b1 << 4)))
 		{
 			if ((data & 0xF) == 0xA)
 			{
@@ -146,12 +150,13 @@ void GamePak::ramBankEnableHandler(const Word address, const Byte data)
 	case 0xFD: break;
 	case 0xFE: break;
 	case 0xFF: break;
+	default: fprintf(stderr, "Ram Bank number %i Enable not implemented", cartridge_type);  exit(-1);
 	}
 }
 
 void GamePak::ramBankChange(const Word address, const Byte data)
 {
-	switch (this->getCartridgeType())
+	switch (cartridge_type)
 	{
 	case 0x00: break; // ROM ONLY
 	case 0x01: // MBC1
@@ -181,12 +186,13 @@ void GamePak::ramBankChange(const Word address, const Byte data)
 	case 0xFD: break;
 	case 0xFE: break;
 	case 0xFF: break;
+	default: fprintf(stderr, "Ram Bank number %i Change not implemented", cartridge_type);  exit(-1);
 	}
 }
 
 void GamePak::romBankChange(const Word address, const Byte data)
 {
-	switch (this->getCartridgeType())
+	switch (cartridge_type)
 	{
 	case 0x00: break; // ROM ONLY
 	case 0x01: // MBC1
@@ -216,5 +222,42 @@ void GamePak::romBankChange(const Word address, const Byte data)
 	case 0xFD: break;
 	case 0xFE: break;
 	case 0xFF: break;
+	default: fprintf(stderr, "Rom Bank number %i Change not implemented", cartridge_type);  exit(-1);
+	}
+}
+
+void GamePak::cartridgeTypeInit()
+{
+	switch (cartridge_type)
+	{
+	case 0x00: current_rom_bank = 1; break; // ROM ONLY
+	case 0x01: // MBC1
+	case 0x02: // MBC1 + RAM
+	case 0x03: // MBC1 + RAM + battery
+	case 0x05: // MBC2
+	case 0x06: // MBC2 + BATTERY
+	case 0x08: break; // ROM + RAM
+	case 0x09: break; // ROM + RAM + BATTERY
+	case 0x0B: break; // MMM01
+	case 0x0C: break; // MMM01 + RAM
+	case 0x0D: break; // MMM01 + RAM + BATTERY
+	case 0x0F: break; // MBC3
+	case 0x10: break; // MBC3 + RAM
+	case 0x11: break;
+	case 0x12: break;
+	case 0x13: break;
+	case 0x19: break;
+	case 0x1A: break;
+	case 0x1B: break;
+	case 0x1C: break;
+	case 0x1D: break;
+	case 0x1E: break;
+	case 0x20: break;
+	case 0x22: break;
+	case 0xFC: break;
+	case 0xFD: break;
+	case 0xFE: break;
+	case 0xFF: break;
+	default: fprintf(stderr, "Rom Bank number %i Change not implemented", cartridge_type);  exit(-1);
 	}
 }
