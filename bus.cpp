@@ -14,6 +14,8 @@ void BUS::cycleSystemOneFrame()
 
     while (current_cycles <= CYCLES_PER_FRAME)
     {
+        /*if (cpu.registers.pc == 0x100)
+            __debugbreak();*/
 
         this->cpu.mStepCPU();
         this->cpu.updateTimers();
