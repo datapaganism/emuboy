@@ -21,6 +21,7 @@ public:
 	Byte cartridge_type = 0;
 	Byte rom_size = 0;
 	Byte ram_size = 0;
+	Byte number_of_rom_banks = 0;
 
 	void readSave();
 	void writeSave();	

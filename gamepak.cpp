@@ -17,6 +17,7 @@ GamePak::GamePak(const std::string filename) : GamePak::GamePak()
 		gamepak_loaded = true;
 		cartridge_type = getCartridgeType();
 		rom_size = getRomSize();
+		number_of_rom_banks = 2 << rom_size;
 		ram_size = getRamSize();
 		allocateRam();
 		cartridgeTypeInit();
@@ -45,6 +46,8 @@ Byte GamePak::getRamSize()
 	return this->rom[0x149];
 }
 
+
+
 Byte GamePak::getMemory(const Word address)
 {
 	if (address <= 0x3FFF) // if address is within rom bank 0
@@ -63,14 +66,22 @@ Byte GamePak::getMemory(const Word address)
 
 void GamePak::setMemory(const Word address, const Byte data)
 {
-	if (address < 0x2000) // enable ram bank writing
-		this->ramBankEnableHandler(address, data); return;
+	if (address <= 0x1FFF)
+	{ // enable ram bank writing
+		this->ramBankEnableHandler(address, data);
+		return;
+	}
 
 	if (address <= 0x4000) // rom bank change
-		this->romBankChange(address, data); return;
+	{
+		this->romBankChange(address, data);
+		return;
+	}
 
 	if (address <= 0x6000) // rom / ram bank change
+	{
 		return;
+	}
 }
 
 void GamePak::allocateRam()
@@ -195,7 +206,22 @@ void GamePak::romBankChange(const Word address, const Byte data)
 	switch (cartridge_type)
 	{
 	case 0x00: break; // ROM ONLY
-	case 0x01: // MBC1
+	case 0x01:
+		{
+			Byte rom_bank_to_select = data & 0x1F;
+			if (rom_bank_to_select == 0)
+			{
+				current_rom_bank = 1;
+				return;
+			}
+			if (rom_bank_to_select > number_of_rom_banks)
+			{
+				current_rom_bank = rom_bank_to_select & number_of_rom_banks;
+				return;
+			}
+			current_rom_bank = rom_bank_to_select;
+			return;
+		} // MBC1
 	case 0x02: // MBC1 + RAM
 	case 0x03: // MBC1 + RAM + battery
 	case 0x05: // MBC2
@@ -258,6 +284,6 @@ void GamePak::cartridgeTypeInit()
 	case 0xFD: break;
 	case 0xFE: break;
 	case 0xFF: break;
-	default: fprintf(stderr, "Rom Bank number %i Change not implemented", cartridge_type);  exit(-1);
+	default: fprintf(stderr, "Cartridge type %i INIT not implemented", cartridge_type);  exit(-1);
 	}
 }

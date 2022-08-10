@@ -14,6 +14,8 @@ void BUS::cycleSystemOneFrame()
 
     while (current_cycles <= CYCLES_PER_FRAME)
     {
+        if (cpu.registers.pc == 0x0248)
+            printf("");
 
         this->cpu.mStepCPU();
         this->cpu.updateTimers();
