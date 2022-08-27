@@ -96,11 +96,25 @@ void Fetcher::updateFetcher(const int cycles)
 			if (ly < YRES)
 				if (bg_active)
 				{
-					this->fetcher_x = (*ppu->registers.scx + this->fetcher_scanline_x) & 0x1F;
-					this->fetcher_y = (*ppu->registers.scy + ly) & 255;
+					fetcher_x_tile = (*ppu->registers.scx + fetcher_scanline_x) & 0x1F;
+					fetcher_y_line = (*ppu->registers.scy + ly) & 255;
+
+					// bad tile at 66 or 9660
+					// should be 9862 map address
+					// 8fd0 address
+
+					int debug = 0;
+					int fetcher_y_tile = ((fetcher_y_line / 8));
+					if (fetcher_x_tile == 0x02 && (fetcher_y_tile) == 0x03)
+						debug++;
+
+					if (debug == 1)
+						printf("");
 
 					Word bg_tile_map_area_address = ((lcdc & (0b1 << 4)) == 1) ? 0x9C00 : 0x9800;
-					this->tile_map_address = bg_tile_map_area_address + (this->fetcher_x) + ((this->fetcher_y / 8) * 0x20 );			
+					this->tile_map_address = bg_tile_map_area_address + (fetcher_x_tile) + ((fetcher_y_line / 8) * 0x20 );			
+					if ((fetcher_x_tile == 0x02 && (fetcher_y_tile) == 0x03) && tile_map_address == 0x9862)
+						debug++;
 					this->tile_number = ppu->getMemory(this->tile_map_address);
 					this->tile_address = ppu->getTileAddressFromNumber(this->tile_number,PPU::background); // basically 0x8000 + (16 * tile_number)
 				}
@@ -118,15 +132,15 @@ void Fetcher::updateFetcher(const int cycles)
 
 
 					//if current x and y inside window
-					if (this->fifo->ppu->window_wy_triggered && (this->fetcher_scanline_x >= (wx + 7)))
+					if (this->fifo->ppu->window_wy_triggered && (fetcher_scanline_x >= (wx + 7)))
 					{
 						this->fifo->reset();
 						
-						this->fetcher_x = (((wx + 7) / 8) + this->fetcher_scanline_x) & 0x1F;
-						this->fetcher_y = (wy + ly) & 255;
+						fetcher_x_tile = (((wx + 7) / 8) + fetcher_scanline_x) & 0x1F;
+						fetcher_y_line = (wy + ly) & 255;
 
 						Word win_tile_map_area_address = ((*ppu->registers.lcdc & (0b1 << 6)) == 1) ? 0x9C00 : 0x9800;
-						this->tile_map_address = win_tile_map_area_address + (this->fetcher_x) + ((this->fetcher_y / 8) * 0x20);
+						this->tile_map_address = win_tile_map_area_address + (fetcher_x_tile) + ((fetcher_y_line / 8) * 0x20);
 						this->tile_number = ppu->getMemory(this->tile_map_address);
 						this->tile_address = ppu->getTileAddressFromNumber(this->tile_number, PPU::window); // basically 0x8000 + (16 * tile_number)
 					}
@@ -141,7 +155,7 @@ void Fetcher::updateFetcher(const int cycles)
 
 			if (bg_active || window_active)
 			{
-				this->tile_address += (2 * (this->fetcher_y % 8));
+				this->tile_address += (2 * (fetcher_y_line % 8));
 				this->data0 = ppu->getMemory(this->tile_address);
 			}
 
@@ -173,7 +187,7 @@ void Fetcher::updateFetcher(const int cycles)
 				//push to fifo
 				this->temp_buffer[i] = (FIFOPixel(colour, 0, 0, 0));
 			}
-			this->fetcher_scanline_x++;
+			fetcher_scanline_x++;
 
 			this->state++;
 		};
@@ -209,9 +223,9 @@ void Fetcher::reset()
 	this->tile_address = 0;
 	this->tile_map_address = 0;
 
-	this->fetcher_scanline_x = 0;
-	this->fetcher_x = 0;
-	this->fetcher_y = 0;
+	fetcher_scanline_x = 0;
+	fetcher_x_tile = 0;
+	fetcher_y_line = 0;
 }
 
 void Fetcher::incAddress()

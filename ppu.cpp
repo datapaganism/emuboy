@@ -293,8 +293,10 @@ Word PPU::getTileAddressFromNumber(const Byte tile_number, const enum eTileType 
 			return 0x8000 + (tile_number * 16);
 			break;
 		}
-		// LCDC.4 = 0, $9000 addressing
-		return (tile_number > 127) ? (0x8800 + tile_number * 16) : (0x9000 + tile_number * 16);
+		// LCDC.4 = 0, $8800/9000 addressing
+		// tile numbers 0-127 use 0x9000 addressing
+		// tile numbers 128-255 use 0x8800 addressing
+		return (tile_number > 127) ? (0x8800 + (tile_number - 128) * 16) : (0x9000 + tile_number * 16);
 		break;
 	}
 
