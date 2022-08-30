@@ -46,9 +46,9 @@ int main(int argc, char* argv[])
     //std::string rom_path = ((argv[1] != NULL) ? argv[1] : "C:\\dev\\repos\\emuboy\\roms\\blargg\\halt_bug.gb");
     //std::string rom_path = ((argv[1] != NULL) ? argv[1] : "C:\\dev\\repos\\emuboy\\roms\\blargg\\02-interrupts.gb");
     //std::string rom_path = ((argv[1] != NULL) ? argv[1] : "D:\\afk\\Downloads\\bgbw64\\bgbtest.gb");
-    std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\TETRIS.gb");
+    std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\Prince of Persia.gb");
     //std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\blargg\\02-interrupts.gb");
-    std::string bios_path = "..\\..\\..\\bios\\bios.bin";
+    std::string bios_path = "..\\..\\..\\bios\\bios.binX";
     
     WindowManager application(rom_path, bios_path);
     application.run();
