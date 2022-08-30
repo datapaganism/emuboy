@@ -5,6 +5,10 @@
 #include "config.hpp"
 #include "fifo.hpp"
 
+
+#define TEST 1
+
+
 class BUS;
 
 // gameboy graphics use a tiling system, instead of a frame buffer like modern systems.
@@ -49,21 +53,22 @@ struct Tile
 {
 	Tile();
 	Tile(BUS* bus, Word address);
-
 	std::array<Byte, 16> bytes_per_tile = { 0, };
-
 	void consolePrint();
 	Byte getPixelColour(int x, int y);	
 };
 
-
-
-/// <summary>
-/// im am such a fool, how do we know where we draw? well a framebuffer would be nice but there isnt enough ram for that,
-/// what is the work around? a tile map and tiles.
-/// you store the tiles in a region of memory and then a tile map which is like a frame buffer but has tile references.
-/// </summary>
-
+struct PPURegisters
+{
+	Byte* ly = nullptr;
+	Byte* wx = nullptr;
+	Byte* wy = nullptr;
+	Byte* lyc = nullptr;
+	Byte* scx = nullptr;
+	Byte* scy = nullptr;
+	Byte* stat = nullptr;
+	Byte* lcdc = nullptr;
+};
 
 
 class PPU
@@ -75,11 +80,11 @@ public:
 	enum eTileType { background, window, sprite };
 	Byte scanline_x = 0;
 	Tile tile;
-	FIFO fifo_bg;
-	FIFO fifo_sprite;
+	
 	BUS* bus = nullptr;
-	Byte* ly_ptr = nullptr;
+	PPURegisters registers;
 	int cycle_counter = 0;
+	bool window_wy_triggered = false;
 
 
 	void connectToBus(BUS* pBus);
@@ -100,11 +105,12 @@ public:
 	void updateState(Byte new_state);
 	Byte getMemory(const Word address);
 	void setMemory(const Word address, const Byte data);
-
-
+	
 private:
 
-	
+	void setRegisters();
+	FIFO fifo_bg;
+	FIFO fifo_sprite;
 
 
 };

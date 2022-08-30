@@ -1,24 +1,29 @@
 #include "fetcher.hpp"
 #include "fifo.hpp"
 #include "bus.hpp"
+#include "ppu.hpp"
 
 Fetcher::Fetcher()
 {
 
 }
 
-void Fetcher::connectToFIFO(FIFO* pFIFO)
+void Fetcher::connectToFIFO(FIFO* fifo_ptr)
 {
-	this->fifo_parent = pFIFO;
+	this->fifo = fifo_ptr;
 }
 
-Word Fetcher::SCRegistersToTopLeftBGMapAddress()
+void Fetcher::connectToPPU(PPU* ppu_ptr)
 {
-	BUS* bus = this->fifo_parent->ppu_parent->bus;
+	this->ppu = ppu_ptr;
+}
+
+Word Fetcher::scRegistersToTopLeftBGMapAddress()
+{
 	Word base_address = 0x9800;
 
-	Byte scx = bus->io[SCX - IOOFFSET];
-	Byte scy = bus->io[SCY - IOOFFSET];
+	Byte scx = *ppu->registers.scx;
+	Byte scy = *ppu->registers.scy;
 
 	//offset base address by scx and scy registers, scy/8 tells us how many tiles to move down, 0x20 represents one line in address  
 	base_address += (((scy / 8) * 0x20) + (scx / 8));
@@ -28,13 +33,12 @@ Word Fetcher::SCRegistersToTopLeftBGMapAddress()
 
 Byte Fetcher::getTileNumber(Word address)
 {
-	BUS* bus = this->fifo_parent->ppu_parent->bus;
 	Word base_tilemap_address = address;
-	
+
 	//base address is always at ly=0, incrementing it here is improtant
-	base_tilemap_address += ((bus->getMemory(LY, eMemoryAccessType::ppu) / 8) * 0x20);
+	base_tilemap_address += (*ppu->registers.ly / 8) * 0x20;
 	
-	Byte tile_number = bus->getMemory(base_tilemap_address, eMemoryAccessType::ppu);
+	Byte tile_number = ppu->getMemory(base_tilemap_address);
 
 	return tile_number;
 }
@@ -52,11 +56,9 @@ void Fetcher::updateFetcher(const int cycles)
 	{
 		this->cycle_counter -= 2;
 		
-		BUS* bus = this->fifo_parent->ppu_parent->bus;
-
-		Byte lcdc_register = bus->getMemory(LCDC, eMemoryAccessType::ppu);
-		bool window_active = lcdc_register & 0b00100000;
-		bool bg_active = lcdc_register & 0b1;
+		Byte lcdc = *ppu->registers.lcdc;
+		bool window_active = lcdc & 0b00100000;
+		bool bg_active = lcdc & 0b1;
 
 
 		/*
@@ -84,53 +86,64 @@ void Fetcher::updateFetcher(const int cycles)
 
 
 		*/
-		Byte ly = bus->io[LY - IOOFFSET];
+		Byte ly = *ppu->registers.ly;
 
 		switch (this->state)
 		{
 		case 0: // read tile address
 		{
 			//Word base_address;
-			if (bus->io[LY - IOOFFSET] < YRES)
+			if (ly < YRES)
 				if (bg_active)
 				{
-					this->fetcher_x = ((bus->io[SCX - IOOFFSET] / 8) + this->fetcher_scanline_x) & 0x1F;
-					this->fetcher_y = (bus->io[SCY - IOOFFSET] + bus->io[LY - IOOFFSET]) & 255;
+					fetcher_x_tile = (*ppu->registers.scx + fetcher_scanline_x) & 0x1F;
+					fetcher_y_line = (*ppu->registers.scy + ly) & 255;
 
-					Word bg_tile_map_area_address = ((lcdc_register & (0b1 << 4)) == 1) ? 0x9C00 : 0x9800;
-					this->tile_map_address = bg_tile_map_area_address + (this->fetcher_x) + ((this->fetcher_y / 8) * 0x20 );			
-					//this->tile_number = bus->video_ram[this->tile_map_address - VIDEORAMOFFSET];
-					this->tile_number = bus->getMemory(this->tile_map_address, eMemoryAccessType::ppu);
-					this->tile_address = bus->ppu.getTileAddressFromNumber(this->tile_number,PPU::background); // basically 0x8000 + (16 * tile_number)
+					// bad tile at 66 or 9660
+					// should be 9862 map address
+					// 8fd0 address
+
+					int debug = 0;
+					int fetcher_y_tile = ((fetcher_y_line / 8));
+					if (fetcher_x_tile == 0x02 && (fetcher_y_tile) == 0x03)
+						debug++;
+
+					if (debug == 1)
+						printf("");
+
+					Word bg_tile_map_area_address = ((lcdc & (0b1 << 4)) == 1) ? 0x9C00 : 0x9800;
+					this->tile_map_address = bg_tile_map_area_address + (fetcher_x_tile) + ((fetcher_y_line / 8) * 0x20 );			
+					if ((fetcher_x_tile == 0x02 && (fetcher_y_tile) == 0x03) && tile_map_address == 0x9862)
+						debug++;
+					this->tile_number = ppu->getMemory(this->tile_map_address);
+					this->tile_address = ppu->getTileAddressFromNumber(this->tile_number,PPU::background); // basically 0x8000 + (16 * tile_number)
 				}
 
-				if (window_active)
+				if (this->isWindowActive())
 				{
-					Byte wx = bus->io[WX - IOOFFSET];
-					Byte wy = bus->io[WY - IOOFFSET];
-					Byte ly = bus->io[LY - IOOFFSET];
+					Byte wx = *ppu->registers.wx;
+					Byte wy = *ppu->registers.wy;
+					//Byte ly = bus->io[LY - IOOFFSET];
 
 					/*
 						Besides the Background, there is also a Window overlaying it. The content of the Window is not scrollable; it is always displayed starting at the top left tile of its tile map. The only way to adjust the Window is by modifying its position on the screen, which is done via the WX and WY registers. The screen coordinates of the top left corner of the Window are (WX-7,WY). The tiles for the Window are stored in the Tile Data Table. Both the Background and the Window share the same Tile Data Table.
-
-	Whether the Window is displayed can be toggled using LCDC bit 5. But in Non-CGB mode this bit is only functional as long as LCDC bit 0 is set. Enabling the Window makes Mode 3 slightly longer on scanlines where it�s visible. (See WX and WY for the definition of �Window visibility�.)
+						Whether the Window is displayed can be toggled using LCDC bit 5. But in Non-CGB mode this bit is only functional as long as LCDC bit 0 is set. Enabling the Window makes Mode 3 slightly longer on scanlines where it�s visible. (See WX and WY for the definition of �Window visibility�.)
 					*/
 
 
 					//if current x and y inside window
-					//if ((ly >= wy) && (this->fetcher_scanline_x >= (wx + 7)))
-					//{
-					//	this->fifo_parent->reset();
-					//	
-					//	
-					//	this->fetcher_x = (((wx + 7) / 8) + this->fetcher_scanline_x) & 0x1F;
-					//	this->fetcher_y = (wy + bus->io[LY - IOOFFSET]) & 255;
+					if (this->fifo->ppu->window_wy_triggered && (fetcher_scanline_x >= (wx + 7)))
+					{
+						this->fifo->reset();
+						
+						fetcher_x_tile = (((wx + 7) / 8) + fetcher_scanline_x) & 0x1F;
+						fetcher_y_line = (wy + ly) & 255;
 
-					//	Word win_tile_map_area_address = ((bus->io[(LCDC) - IOOFFSET] & (0b1 << 6)) == 1) ? 0x9C00 : 0x9800;
-					//	this->tile_map_address = win_tile_map_area_address + (this->fetcher_x) + ((this->fetcher_y / 8) * 0x20);
-					//	this->tile_number = bus->video_ram[this->tile_map_address - VIDEORAMOFFSET];
-					//	this->tile_address = bus->ppu.getTileAddressFromNumber(this->tile_number, PPU::window); // basically 0x8000 + (16 * tile_number)
-					//}
+						Word win_tile_map_area_address = ((*ppu->registers.lcdc & (0b1 << 6)) == 1) ? 0x9C00 : 0x9800;
+						this->tile_map_address = win_tile_map_area_address + (fetcher_x_tile) + ((fetcher_y_line / 8) * 0x20);
+						this->tile_number = ppu->getMemory(this->tile_map_address);
+						this->tile_address = ppu->getTileAddressFromNumber(this->tile_number, PPU::window); // basically 0x8000 + (16 * tile_number)
+					}
 				}
 
 			this->state++;
@@ -142,8 +155,8 @@ void Fetcher::updateFetcher(const int cycles)
 
 			if (bg_active || window_active)
 			{
-				this->tile_address += (2 * (this->fetcher_y % 8));
-				this->data0 = bus->getMemory(this->tile_address, eMemoryAccessType::ppu);
+				this->tile_address += (2 * (fetcher_y_line % 8));
+				this->data0 = ppu->getMemory(this->tile_address);
 			}
 
 			
@@ -160,7 +173,7 @@ void Fetcher::updateFetcher(const int cycles)
 			if (bg_active || window_active)
 			{
 				incAddress();
-				this->data1 = bus->getMemory(this->tile_address, eMemoryAccessType::ppu);
+				this->data1 = ppu->getMemory(this->tile_address);
 			}
 
 			for (int i = 0; i < 8; i++)
@@ -174,20 +187,22 @@ void Fetcher::updateFetcher(const int cycles)
 				//push to fifo
 				this->temp_buffer[i] = (FIFOPixel(colour, 0, 0, 0));
 			}
-			this->fetcher_scanline_x++;
+			fetcher_scanline_x++;
 
 			this->state++;
 		};
 		case 3: //load to fifo or wait
 		{
+#if TEST 1
 			//if we cant push
-			if (this->fifo_parent->tail_pos > 7)
+			if (fifo->elemCount() > fifo_max_size / 2)
 				return;
-
+#else
+			if (fifo->tail_pos > (fifo_max_size / 2 ) - 1)
+				return;
+#endif
 			for (int i = 0; i < 8; i++)
-			{
-				this->fifo_parent->push(this->temp_buffer[i]);
-			}
+				this->fifo->push(this->temp_buffer[i]);
 
 			this->state = 0;
 		
@@ -208,9 +223,9 @@ void Fetcher::reset()
 	this->tile_address = 0;
 	this->tile_map_address = 0;
 
-	this->fetcher_scanline_x = 0;
-	this->fetcher_x = 0;
-	this->fetcher_y = 0;
+	fetcher_scanline_x = 0;
+	fetcher_x_tile = 0;
+	fetcher_y_line = 0;
 }
 
 void Fetcher::incAddress()
@@ -219,4 +234,9 @@ void Fetcher::incAddress()
 	inc++;
 
 	this->tile_address |= (inc & 0x1F);
+}
+
+bool Fetcher::isWindowActive()
+{
+	return *ppu->registers.lcdc & 0b00100000;
 }
