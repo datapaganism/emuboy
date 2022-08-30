@@ -14,6 +14,7 @@ void BUS::cycleSystemOneFrame()
 
     while (current_cycles <= CYCLES_PER_FRAME)
     {
+
         /*if (cpu.registers.pc == 0x100)
             __debugbreak();*/
 
@@ -325,8 +326,9 @@ Byte BUS::getMemory(const Word address, enum eMemoryAccessType access_type)
     if (address <= 0x00FF) //from 0x0000
     {
         // if the bios has never been loaded or if the register at 0xFF50 is set 1 (which is done by the bios program) we need to access the cartridge bank
-        if (this->io[(0xFF50) - IOOFFSET] == 0x1|| !this->bios_loaded)
-            return this->gamepak.rom[address];
+        if (this->io[(0xFF50) - IOOFFSET] == 0x1|| !bios_loaded)
+            return gamepak.getMemory(address);
+        
         
         return this->bios[address];
     }
@@ -335,7 +337,7 @@ Byte BUS::getMemory(const Word address, enum eMemoryAccessType access_type)
     {
 
         // game rom bank 0
-        return this->gamepak.rom[address];
+        return this->gamepak.getMemory(address);
     }
 
     if (address <= 0x7FFF) // from 0x4000
@@ -343,7 +345,7 @@ Byte BUS::getMemory(const Word address, enum eMemoryAccessType access_type)
         // game rom bank N
 
         //banking is not implemented but we will just now read the whole cart
-        return this->gamepak.rom[address];
+        return this->gamepak.getMemory(address);
   //      return 0b0;
     }
 
@@ -360,8 +362,7 @@ Byte BUS::getMemory(const Word address, enum eMemoryAccessType access_type)
 
     if (address <= 0xBFFF) // from 0xA000
     {
-        // cartridge ram
-        return 0b0;
+        return this->gamepak.getMemory(address);
     }
 
     if (address <= 0xDFFF) // from 0xC000
@@ -393,33 +394,25 @@ Byte BUS::getMemory(const Word address, enum eMemoryAccessType access_type)
     {
         switch (address)
         {
-        case 0xFF00:
-        {
-            Byte requestedJOYP = this->io[0];
-            if (requestedJOYP & 0x10) {
-                return 0xD0 | this->getActionButtonNibble();
+            case 0xFF00:
+            {
+                Byte requestedJOYP = this->io[0];
+                if (requestedJOYP & 0x10) {
+                    return 0xD0 | this->getActionButtonNibble();
+                }
+                if (requestedJOYP & 0x20) {
+                    return 0xE0 | this->getDirectionButtonNibble();
+                }
+                 fprintf(stderr, "cannot return input");  exit(-1);
             }
-            if (requestedJOYP & 0x20) {
-                return 0xE0 | this->getDirectionButtonNibble();
-            }
-                
-            
-           
-
-            fprintf(stderr, "cannot return input");  exit(-1);
-        }
-        case 0xFF26:// NR52
-        {
-            break;
-        }
-        }
-
-        if (address == 0xFF26) // NR52
-        {
+            //case 0xFF26:// NR52
+            //{
+            //    break;
+            //}
+            default: 
+                return this->io[address - IOOFFSET];
 
         }
-
-        return this->io[address - IOOFFSET];
     }
     if (address <= 0xFF7F) // from 0xFF4C
     {
@@ -473,18 +466,20 @@ void BUS::setMemory(const Word address, const Byte data, enum eMemoryAccessType 
     if (address <= 0x00ff)
     {
         // boot rom area, or rom bank 0
+        if (this->io[(0xFF50) - IOOFFSET] == 0x1 || !this->bios_loaded)
+            this->gamepak.setMemory(address,data);
         return;
     }
 
     if (address <= 0x3fff)
     {
-        // game rom bank 0
+        this->gamepak.setMemory(address, data);
         return;
     }
 
     if (address <= 0x7fff)
     {
-        // game rom bank N
+        this->gamepak.setMemory(address, data);
         return;
     }
 
@@ -504,8 +499,7 @@ void BUS::setMemory(const Word address, const Byte data, enum eMemoryAccessType 
 
     if (address <= 0xBFFF)
     {
-        // cartridge ram
-        return;
+        return this->gamepak.setMemory(address,data);
     }
 
     if (address <= 0xDFFF)
