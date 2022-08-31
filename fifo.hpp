@@ -47,7 +47,7 @@ public:
 	void connectToPPU(PPU* pPPU);
 	int elemCount();
 	FIFOPixel pop();
-	void updateFIFO(int cyclesUsed);
+	void popBy(int count);
 	void reset();
 private:
 };

@@ -1,4 +1,4 @@
-#include "ppu.hpp"
+﻿#include "ppu.hpp"
 #include "bus.hpp"
 #include <bitset>
 
@@ -32,6 +32,56 @@ void PPU::setMemory(const Word address, const Byte data)
 	this->bus->setMemory(address, data, eMemoryAccessType::ppu);
 }
 
+// this function takes over updateFIFO from both of the fifos
+// we have to pull pixels from both fifos and combine them for rendering.
+void PPU::clockFIFOS()
+{
+	for (int i = 0; i < 4; i++)
+	{
+		// while background fifo not empty
+		if (!fifo_bg.empty)
+		{
+			Byte ly = *registers.ly;
+
+			// between 0 and 159 pixels portion of the scanline
+			if (scanline_x < 160)
+			{
+				/*
+					Check scx register, % 8 gives the amount of pixels we are within a tile, if not 0, pop the fifo by the result
+				*/
+				Byte scx_pop = *registers.scx % 8;
+				if ((scanline_x == 0) && (scx_pop != 0))
+				{
+					fifo_bg.popBy(scx_pop);
+					fifo_sprite.popBy(scx_pop);
+				}
+				/*
+				The scroll registers are re - read on each tile fetch, except for the low 3 bits of SCX, which are only read at the beginning of the scanline(for the initial shifting of pixels).
+
+					All models before the CGB - D read the Y coordinate once for each bitplane(so a very precisely timed SCY write allows �desyncing� them), but CGB - D and later use the same Y coordinate for both no matter what.
+					*/
+				if (ly < 144 && scanline_x < 160)
+					addToFramebuffer(scanline_x, ly, combinePixels());
+
+				scanline_x++;
+			}
+		}
+	}
+}
+
+FIFOPixel PPU::combinePixels()
+{
+	if (!fifo_bg.empty && !fifo_sprite.empty)
+	{
+		FIFOPixel bg = fifo_bg.pop();
+		FIFOPixel sprite = fifo_sprite.pop();
+		
+		//need to finish this
+		return FIFOPixel();
+	}
+	return fifo_bg.pop();
+}
+
 void PPU::setRegisters()
 {
 	this->registers.ly = &this->bus->io[LY - IOOFFSET];
@@ -52,35 +102,11 @@ void PPU::updateGraphics(const int cycles)
 	// the cpu may have modified the registers since the last cycle, it is time to check and update any changes of the lcd stat.
 	//this->update_lcdstat();
 
-
-		//this->bus->setMemory(SCX, 0x00);
-		//this->bus->setMemory(SCY, 0x00);
-		//this->bus->io[LY - IOOFFSET] = 0x00;
-//		this->debug_register_set = false;
-
-	/*this->bus->setMemory(0x8000, 0xC2);
-	this->bus->setMemory(0x8001, 0x7F);
-	this->bus->setMemory(0x8002, 0xBD);
-	this->bus->setMemory(0x8003, 0xC3);
-	this->bus->setMemory(0x8004, 0xDB);
-	this->bus->setMemory(0x8005, 0x24);
-	this->bus->setMemory(0x8006, 0xA5);
-	this->bus->setMemory(0x8007, 0x5A);
-	this->bus->setMemory(0x8008, 0xA5);
-	this->bus->setMemory(0x8009, 0x5A);
-	this->bus->setMemory(0x800A, 0xDB);
-	this->bus->setMemory(0x800B, 0x24);
-	this->bus->setMemory(0x800C, 0xBD);
-	this->bus->setMemory(0x800D, 0xC3);
-	this->bus->setMemory(0x800E, 0xFF);
-	this->bus->setMemory(0x800F, 0x42);*/
-
 	if (this->lcdEnabled())
 	{
 
 		this->cycle_counter += cycles;
 
-		//switch (this->bus->io[STAT - IOOFFSET] & 0b00000011)
 		switch (*registers.stat & 0b00000011)
 		{
 		case 0: // h blank
@@ -114,8 +140,12 @@ void PPU::updateGraphics(const int cycles)
 		case 3: // graphics transfer
 		{
 			// update bg/win fetcher and fifo
+			
+			// Need to write special fetcher for sprites
 			this->fifo_bg.fetcher.updateFetcher(cycles);
-			this->fifo_bg.updateFIFO(cycles);
+			//this->fifo_sprite.fetcher.updateFetcher(cycles);
+
+			clockFIFOS();
 
 			if (this->scanline_x >= 160)
 				this->updateState(0);
@@ -138,42 +168,6 @@ void PPU::updateGraphics(const int cycles)
 	this->updateState(0);
 
 	return;
-
-
-
-
-
-	//if (this->lcdEnabled())
-	//{
-	//	this->cycle_counter += cycles;
-
-	//	if (this->cycle_counter >= 80)
-	//	{
-	//		this->fifo_bg.fetcher.updateFetcher(cycles);
-	//		this->fifo_bg.updateFIFO(cycles);
-	//	}
-
-	//	if (this->cycle_counter >= 456)
-	//	{
-	//		this->bus->io[0xFF44 - IOOFFSET]++;
-	//		this->cycle_counter = 0;
-
-	//		if (this->bus->io[0xFF44 - IOOFFSET] == 144)
-	//		{
-	//			this->bus->cpu.request_interrupt(vblank);
-	//			return;
-	//		}
-
-	//		if (this->bus->io[0xFF44 - IOOFFSET] > 153)
-	//		{
-	//			this->bus->io[0xFF44 - IOOFFSET] = 0;
-	//			return;
-	//		}
-
-	//		//this->render_scanline();
-	//	}
-	//	return;
-	//}
 }
 
 //void PPU::update_lcdstat()

@@ -105,6 +105,8 @@ public:
 	void updateState(Byte new_state);
 	Byte getMemory(const Word address);
 	void setMemory(const Word address, const Byte data);
+	void clockFIFOS();
+	FIFOPixel combinePixels();
 	
 private:
 

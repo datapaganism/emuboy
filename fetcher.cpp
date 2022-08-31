@@ -193,14 +193,10 @@ void Fetcher::updateFetcher(const int cycles)
 		};
 		case 3: //load to fifo or wait
 		{
-#if TEST 1
 			//if we cant push
 			if (fifo->elemCount() > fifo_max_size / 2)
 				return;
-#else
-			if (fifo->tail_pos > (fifo_max_size / 2 ) - 1)
-				return;
-#endif
+
 			for (int i = 0; i < 8; i++)
 				this->fifo->push(this->temp_buffer[i]);
 
