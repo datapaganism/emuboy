@@ -127,6 +127,15 @@ void PPU::updateGraphics(const int cycles)
 
 		case 2: // oam search
 		{
+			Byte* oam_base_ptr = this->bus->oam_ram.get();
+			for (int i = 0; i < 40; i++)
+			{
+				oam_base_ptr;
+				Byte y_position = *oam_base_ptr++;
+				Byte x_position = *oam_base_ptr++;
+				Byte tile_index = *oam_base_ptr++;
+				Byte flags		= *oam_base_ptr++;
+			}
 			// do stuff
 			if (*registers.wy == *registers.ly)
 				this->window_wy_triggered = true;

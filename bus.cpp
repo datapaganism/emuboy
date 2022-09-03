@@ -14,9 +14,10 @@ void BUS::cycleSystemOneFrame()
 
     while (current_cycles <= CYCLES_PER_FRAME)
     {
-
-        /*if (cpu.registers.pc == 0x100)
-            __debugbreak();*/
+        // att ffb8 there is an instruction to load data into oam
+        // need to find out why it doesnt execute
+        if (cpu.registers.pc == 0xFFB8)
+            __debugbreak();
 
         this->cpu.mStepCPU();
         this->cpu.updateTimers();
