@@ -19,7 +19,7 @@ void DMA_Controller::updateDMA(int cyclesUsed)
 {
     if (this->dma_triggered)
     {
-        int cycle_counter = cyclesUsed;
+        this->cycle_counter = cyclesUsed;
 
         while (this->cycle_counter != 0)
         {
