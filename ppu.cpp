@@ -76,7 +76,7 @@ FIFOPixel PPU::combinePixels()
 		FIFOPixel bg = fifo_bg.pop();
 		FIFOPixel sprite = fifo_sprite.pop();
 		
-		//need to finish this
+		//need to mix the pixels, not finished
 		return FIFOPixel();
 	}
 	return fifo_bg.pop();
@@ -127,16 +127,6 @@ void PPU::updateGraphics(const int cycles)
 
 		case 2: // oam search
 		{
-
-			for (int i = 0; i < 40; i++)
-			{
-				struct OAMentry* test = (OAMentry*)this->bus->oam_ram.get() + i;
-				if (test->y_loc != 0)
-				{
-					printf("oam_no:%i y_loc:%x x_loc:%x tile_no:%x attribute:%x\n", i, test->y_loc, test->x_loc, test->tile_no, test->attribute);
-				}
-				
-			}
 			// do stuff
 			if (*registers.wy == *registers.ly)
 				this->window_wy_triggered = true;
@@ -144,12 +134,14 @@ void PPU::updateGraphics(const int cycles)
 			// OAM selection priority, during each scanline the PPU can only render 10 sprites, a hardware limitation.
 			// the scan will go through the OAM sequentially, checking if an entry's Y is within LY and making sure that we check the lcdc.2 obj size.
 			// I will scan the oam and if we find matches I will store them in an array that the fetcher can access when needed.
-
 			for (int i = 0; i < 40; i++)
 			{
 				struct OAMentry* entry = (OAMentry*)this->bus->oam_ram.get() + i;
-				if (entry->y_loc != 0)
+				if (entry->y_loc == *registers.ly)
 				{
+					oam_priority.push(entry);
+					if (oam_priority.full)
+						break;
 				}
 
 			}
@@ -193,94 +185,7 @@ void PPU::updateGraphics(const int cycles)
 	return;
 }
 
-//void PPU::update_lcdstat()
-//{
-//
-//	/*
-//		LCDSTAT
-//
-//		00: H-Blank
-//		01: V-Blank
-//		10: Searching Sprites Atts
-//		11: Transfering Data to LCD Driver 
-//	
-//		Bit 3: Mode 0 Interupt Enabled
-//		Bit 4: Mode 1 Interupt Enabled
-//		Bit 5: Mode 2 Interupt Enabled
-//	*/
-//	Byte* lcdstat_register_ptr = &this->bus->io[STAT - IOOFFSET];
-//	
-//	Byte* ly_ptr = &this->bus->io[LY - IOOFFSET];
-//
-//	Byte original_mode = (*lcdstat_register_ptr & 0b00000011);
-//	bool lyc_ly_flag   = (*lcdstat_register_ptr & 0b00000100);
-//	bool mode0_irq     = (*lcdstat_register_ptr & 0b00001000);
-//	bool mode1_irq     = (*lcdstat_register_ptr & 0b00010000);
-//	bool mode2_irq     = (*lcdstat_register_ptr & 0b00100000);
-//	bool lyc_ly_irq    = (*lcdstat_register_ptr & 0b01000000);
-//	
-//
-//	bool irq_needed = false;
-//
-//	if (!this->lcdEnabled())
-//	{
-//		// reset to the start of the drawing routine, set ly back to 0
-//		this->cycle_counter = 0;
-//		*ly_ptr = 0;
-//
-//		//update register to mode one
-//		*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000001);
-//
-//		return;
-//	}
-//	
-//	// if in vblank
-//	if (*ly_ptr >= 144)
-//	{
-//		*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000001);
-//		irq_needed = mode1_irq;
-//	}
-//	// if not in vblank where are in h
-//	else
-//	{
-//		// OAM scan, mode 2
-//		if (this->cycle_counter <= 80)
-//		{
-//			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000010);
-//			irq_needed = mode2_irq;
-//		}
-//		// pixel transfer, mode 3
-//		else if (this->cycle_counter <= 172)
-//		{
-//			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000011);
-//		}
-//		// h blank, mode 0
-//		else
-//		{
-//			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000000);
-//			irq_needed = mode0_irq;
-//		}
-//
-//
-//	}
-//
-//	if (original_mode != (*lcdstat_register_ptr & 0b00000011) && irq_needed)
-//		this->bus->cpu.request_interrupt(lcdstat);
-//	
-//	//time to check LYC = LY
-//
-//	//set register for equality
-//	if (*ly_ptr == this->bus->io[LYC - IOOFFSET])
-//	{
-//		*lcdstat_register_ptr |= 0b00000100;
-//		// if interrupt is enabled
-//		if (lyc_ly_irq)
-//			this->bus->cpu.request_interrupt(lcdstat);
-//	}
-//	else
-//		*lcdstat_register_ptr &= ~0b00000100;
-//	
-//}
+
 
 bool PPU::lcdEnabled()
 {
@@ -321,53 +226,6 @@ Word PPU::getTileAddressFromNumber(const Byte tile_number, const enum eTileType 
 	}
 }
 
-//void PPU::render_scanline()
-//{
-//	//resets fifos
-//	//this->fifo_bg = FIFO();
-//	//this->fifo_sprite = FIFO();
-//
-//	// temp setting of scx, scy, ly registers
-//	this->setMemory(SCX, 0x80);
-//	this->setMemory(SCY, 0x40);
-//	this->bus->io[LY - IOOFFSET] = 0x00;
-//	
-//	// get tile number and address of topleft tile of viewport
-//	Byte tile_number = this->fifo_bg.fetcher.getTileNumber();
-//	Word tile_address = this->get_tile_address(tile_number, PPU::background);
-//
-//	// get scy
-//	Byte scy = this->getMemory(SCY);
-//
-//	// get top and bottom byte of 8 pixel line from tile
-//	Byte line_data0 = this->getMemory(tile_address + 2 * (scy % 8));
-//	Byte line_data1 = this->getMemory((tile_address + 1) + 2 * (scy % 8));
-//	
-//	for (int i = 0; i < 8; i++) 
-//	{
-//		// get colour of pixel
-//		int offset = (0b1 << (7 - i));
-//		bool bit0 = line_data0 & offset;
-//		bool bit1 = line_data1 & offset;
-//		Byte colour = (((Byte)bit0 << 1) | (Byte)bit1);
-//		
-//		//push to fifo
-//		this->fifo_bg.push(FIFOPixel(colour, 0, 0, 0));
-//
-//	}
-//
-//	// get ly for setting to framebuffer
-//	Byte ly = this->getMemory(LY);
-//	
-//	
-//	// pop fifo 8 times into framebuffer
-//	for (int i = 0; i < 8; i++)
-//	{
-//		this->addToFramebuffer(i, ly, this->fifo_bg.pop());
-//	}
-//
-//}
-//
 
 
 void PPU::addToFramebuffer(const int x, const int y, const FIFOPixel fifo_pixel)
@@ -428,6 +286,7 @@ void PPU::newScanline()
 	this->fifo_bg.reset();
 	this->fifo_sprite.reset();
 	this->window_wy_triggered = false;
+	oam_priority.reset();
 }
 
 void PPU::updateState(Byte new_state)
@@ -529,3 +388,139 @@ Tile::Tile()
 	this->bytes_per_tile.fill(0x00);
 }
 
+//void PPU::update_lcdstat()
+//{
+//
+//	/*
+//		LCDSTAT
+//
+//		00: H-Blank
+//		01: V-Blank
+//		10: Searching Sprites Atts
+//		11: Transfering Data to LCD Driver 
+//	
+//		Bit 3: Mode 0 Interupt Enabled
+//		Bit 4: Mode 1 Interupt Enabled
+//		Bit 5: Mode 2 Interupt Enabled
+//	*/
+//	Byte* lcdstat_register_ptr = &this->bus->io[STAT - IOOFFSET];
+//	
+//	Byte* ly_ptr = &this->bus->io[LY - IOOFFSET];
+//
+//	Byte original_mode = (*lcdstat_register_ptr & 0b00000011);
+//	bool lyc_ly_flag   = (*lcdstat_register_ptr & 0b00000100);
+//	bool mode0_irq     = (*lcdstat_register_ptr & 0b00001000);
+//	bool mode1_irq     = (*lcdstat_register_ptr & 0b00010000);
+//	bool mode2_irq     = (*lcdstat_register_ptr & 0b00100000);
+//	bool lyc_ly_irq    = (*lcdstat_register_ptr & 0b01000000);
+//	
+//
+//	bool irq_needed = false;
+//
+//	if (!this->lcdEnabled())
+//	{
+//		// reset to the start of the drawing routine, set ly back to 0
+//		this->cycle_counter = 0;
+//		*ly_ptr = 0;
+//
+//		//update register to mode one
+//		*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000001);
+//
+//		return;
+//	}
+//	
+//	// if in vblank
+//	if (*ly_ptr >= 144)
+//	{
+//		*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000001);
+//		irq_needed = mode1_irq;
+//	}
+//	// if not in vblank where are in h
+//	else
+//	{
+//		// OAM scan, mode 2
+//		if (this->cycle_counter <= 80)
+//		{
+//			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000010);
+//			irq_needed = mode2_irq;
+//		}
+//		// pixel transfer, mode 3
+//		else if (this->cycle_counter <= 172)
+//		{
+//			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000011);
+//		}
+//		// h blank, mode 0
+//		else
+//		{
+//			*lcdstat_register_ptr = ((*lcdstat_register_ptr & 0b11111100) | 0b00000000);
+//			irq_needed = mode0_irq;
+//		}
+//
+//
+//	}
+//
+//	if (original_mode != (*lcdstat_register_ptr & 0b00000011) && irq_needed)
+//		this->bus->cpu.request_interrupt(lcdstat);
+//	
+//	//time to check LYC = LY
+//
+//	//set register for equality
+//	if (*ly_ptr == this->bus->io[LYC - IOOFFSET])
+//	{
+//		*lcdstat_register_ptr |= 0b00000100;
+//		// if interrupt is enabled
+//		if (lyc_ly_irq)
+//			this->bus->cpu.request_interrupt(lcdstat);
+//	}
+//	else
+//		*lcdstat_register_ptr &= ~0b00000100;
+//	
+//}
+
+//void PPU::render_scanline()
+//{
+//	//resets fifos
+//	//this->fifo_bg = FIFO();
+//	//this->fifo_sprite = FIFO();
+//
+//	// temp setting of scx, scy, ly registers
+//	this->setMemory(SCX, 0x80);
+//	this->setMemory(SCY, 0x40);
+//	this->bus->io[LY - IOOFFSET] = 0x00;
+//	
+//	// get tile number and address of topleft tile of viewport
+//	Byte tile_number = this->fifo_bg.fetcher.getTileNumber();
+//	Word tile_address = this->get_tile_address(tile_number, PPU::background);
+//
+//	// get scy
+//	Byte scy = this->getMemory(SCY);
+//
+//	// get top and bottom byte of 8 pixel line from tile
+//	Byte line_data0 = this->getMemory(tile_address + 2 * (scy % 8));
+//	Byte line_data1 = this->getMemory((tile_address + 1) + 2 * (scy % 8));
+//	
+//	for (int i = 0; i < 8; i++) 
+//	{
+//		// get colour of pixel
+//		int offset = (0b1 << (7 - i));
+//		bool bit0 = line_data0 & offset;
+//		bool bit1 = line_data1 & offset;
+//		Byte colour = (((Byte)bit0 << 1) | (Byte)bit1);
+//		
+//		//push to fifo
+//		this->fifo_bg.push(FIFOPixel(colour, 0, 0, 0));
+//
+//	}
+//
+//	// get ly for setting to framebuffer
+//	Byte ly = this->getMemory(LY);
+//	
+//	
+//	// pop fifo 8 times into framebuffer
+//	for (int i = 0; i < 8; i++)
+//	{
+//		this->addToFramebuffer(i, ly, this->fifo_bg.pop());
+//	}
+//
+//}
+//

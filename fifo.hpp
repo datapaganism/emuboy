@@ -29,10 +29,9 @@ class PPU;
 constexpr int fifo_max_size = 16;
 
 template <class T = FIFOPixel, int max_size = fifo_max_size>
-using Stack = StackT<FIFOPixel, fifo_max_size>;
+using FIFOStack = Stack<FIFOPixel, fifo_max_size>;
 
-
-class FIFO : public Stack<>
+class FIFO : public FIFOStack<>
 {
 public:
 	FIFO();

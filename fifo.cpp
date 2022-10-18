@@ -10,7 +10,7 @@ FIFO::FIFO()
 
 void FIFO::reset()
 {
-	Stack<>::reset();
+	FIFOStack<>::reset();
 	fifo_cycle_counter = 0;
 	fetcher.reset();
 }

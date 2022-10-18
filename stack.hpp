@@ -4,10 +4,10 @@
 
 
 template <class T, int max_size>
-class StackT
+class Stack
 {
 public:
-	StackT();
+	Stack();
 	std::array<T, max_size> queue;
 	int tail_pos = 0;
 	int head_pos = 0;
@@ -25,12 +25,12 @@ public:
 
 
 template<class T, int max_size>
-inline StackT<T, max_size>::StackT()
+inline Stack<T, max_size>::Stack()
 {
 }
 
 template<class T, int max_size>
-inline void StackT<T, max_size>::push(T elem)
+inline void Stack<T, max_size>::push(T elem)
 {
 	if (!full)
 	{
@@ -47,15 +47,15 @@ inline void StackT<T, max_size>::push(T elem)
 
 
 template<class T, int max_size>
-inline int StackT<T, max_size>::elemCount()
+inline int Stack<T, max_size>::elemCount()
 {
 	if (head_pos > tail_pos)
-		return (fifo_max_size - head_pos) + tail_pos + 1;
+		return (max_size - head_pos) + tail_pos + 1;
 	return (tail_pos - head_pos) + 1;
 }
 
 template<class T, int max_size>
-inline T StackT<T, max_size>::pop()
+inline T Stack<T, max_size>::pop()
 {
 	if (!empty)
 	{
@@ -71,12 +71,12 @@ inline T StackT<T, max_size>::pop()
 }
 
 template<class T, int max_size>
-inline void StackT<T, max_size>::popBy(int count)
+inline void Stack<T, max_size>::popBy(int count)
 {
 	if (!empty)
 	{
 		head_pos += count;
-		if (head_pos >= fifo_max_size)
+		if (head_pos >= max_size)
 			head_pos = 0;
 		full = false;
 		empty = head_pos == tail_pos;
@@ -85,7 +85,7 @@ inline void StackT<T, max_size>::popBy(int count)
 }
 
 template<class T, int max_size>
-inline void StackT<T, max_size>::reset()
+inline void Stack<T, max_size>::reset()
 {
 	tail_pos = 0;
 	head_pos = 0;

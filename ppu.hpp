@@ -4,10 +4,12 @@
 
 #include "config.hpp"
 #include "fifo.hpp"
+#include "stack.hpp"
 
 
 #define TEST 1
 
+constexpr int oam_priority_max = 10;
 
 class BUS;
 
@@ -92,6 +94,7 @@ public:
 	PPURegisters registers;
 	int cycle_counter = 0;
 	bool window_wy_triggered = false;
+	Stack<OAMentry*, oam_priority_max> oam_priority;
 
 
 	void connectToBus(BUS* pBus);
