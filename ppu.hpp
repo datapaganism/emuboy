@@ -70,6 +70,13 @@ struct PPURegisters
 	Byte* lcdc = nullptr;
 };
 
+struct OAMentry
+{
+	Byte y_loc = 0;
+	Byte x_loc = 0;
+	Byte tile_no = 0;
+	Byte attribute = 0;
+};
 
 class PPU
 {

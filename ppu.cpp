@@ -127,9 +127,32 @@ void PPU::updateGraphics(const int cycles)
 
 		case 2: // oam search
 		{
+
+			for (int i = 0; i < 40; i++)
+			{
+				struct OAMentry* test = (OAMentry*)this->bus->oam_ram.get() + i;
+				if (test->y_loc != 0)
+				{
+					printf("oam_no:%i y_loc:%x x_loc:%x tile_no:%x attribute:%x\n", i, test->y_loc, test->x_loc, test->tile_no, test->attribute);
+				}
+				
+			}
 			// do stuff
 			if (*registers.wy == *registers.ly)
 				this->window_wy_triggered = true;
+
+			// OAM selection priority, during each scanline the PPU can only render 10 sprites, a hardware limitation.
+			// the scan will go through the OAM sequentially, checking if an entry's Y is within LY and making sure that we check the lcdc.2 obj size.
+			// I will scan the oam and if we find matches I will store them in an array that the fetcher can access when needed.
+
+			for (int i = 0; i < 40; i++)
+			{
+				struct OAMentry* entry = (OAMentry*)this->bus->oam_ram.get() + i;
+				if (entry->y_loc != 0)
+				{
+				}
+
+			}
 
 			if (this->cycle_counter >= (80 / 4))
 			{
