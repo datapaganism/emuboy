@@ -2,6 +2,7 @@
 #include <array>
 
 #include "config.hpp"
+#include "stack.hpp"
 #include "fetcher.hpp"
 #include "FIFO_pixel.hpp"
 
@@ -26,28 +27,20 @@ class PPU;
 
 
 constexpr int fifo_max_size = 16;
-const FIFOPixel blank_pixel(0, 0, 0, 0);
 
-class FIFO
+template <class T = FIFOPixel, int max_size = fifo_max_size>
+using Stack = StackT<FIFOPixel, fifo_max_size>;
+
+
+class FIFO : public Stack<>
 {
 public:
 	FIFO();
-
 	Fetcher fetcher;
-	std::array<FIFOPixel, fifo_max_size> queue;
-	bool can_fetch = true;
 	int fifo_cycle_counter = 0;
 	PPU* ppu = nullptr;
-	int tail_pos = 0;
-	int head_pos = 0;
-	bool empty = true;
-	bool full = false;
 
-	void push(FIFOPixel pixel);
 	void connectToPPU(PPU* pPPU);
-	int elemCount();
-	FIFOPixel pop();
-	void popBy(int count);
 	void reset();
 private:
 };
