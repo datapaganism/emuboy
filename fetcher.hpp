@@ -36,6 +36,7 @@ public:
 	void reset();
 	void incAddress();
 	bool isWindowActive();
+	void progressFetcherState();
 
 private:
 	

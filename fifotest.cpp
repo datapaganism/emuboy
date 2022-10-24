@@ -1,26 +1,11 @@
-#include "fifo.hpp"
-#include "stack.hpp"
-#include "FIFO_pixel.hpp"
+#include "bus.hpp"
 #include <iostream>
 
-int main()
+#undef main
+int main(int argc, char* argv[])
 {
-
-	const int fifo_max_size = 16;
-	FIFO fifo;
-	//Stack<FIFOPixel> stack;
-	const FIFOPixel test(1, 1, 0, 0);
-
-	for (int i = 0; i < fifo_max_size; i++)
-		fifo.push(test);
-
-	for (int i = 0; i < fifo_max_size; i++)
-		fifo.pop();
-
-	for (int i = 0; i < fifo_max_size; i++)
-		fifo.push(test);
-
-	fifo.reset();
-
-	return 0;
+    int x = 0;
+    x++;
+    BUS bus("C:\\dev\\datapaganism\\emuboy\\roms\\empty.bin", "");
+    return 0;
 }

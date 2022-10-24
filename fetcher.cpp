@@ -3,6 +3,9 @@
 #include "bus.hpp"
 #include "ppu.hpp"
 
+
+//https://www.reddit.com/r/EmuDev/comments/s6cpis/gameboy_trying_to_understand_sprite_fifo_behavior/
+
 Fetcher::Fetcher()
 {
 
@@ -235,4 +238,15 @@ void Fetcher::incAddress()
 bool Fetcher::isWindowActive()
 {
 	return *ppu->registers.lcdc & 0b00100000;
+}
+
+void Fetcher::progressFetcherState()
+{
+	if (ppu->dot_delay != 0)
+	{
+		ppu->dot_delay--;
+		return;
+	}
+
+	state = (state + 1) % 4;
 }

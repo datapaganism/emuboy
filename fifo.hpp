@@ -2,7 +2,7 @@
 #include <array>
 
 #include "config.hpp"
-#include "stack.hpp"
+#include "mystack.hpp"
 #include "fetcher.hpp"
 #include "FIFO_pixel.hpp"
 

@@ -67,7 +67,7 @@ inline T Stack<T, max_size>::pop()
 		empty = head_pos == tail_pos;
 		return *temp;
 	}
-	//fprintf(stderr, "cannot pop empty StackT<T, max_size>");  exit(-1);
+	fprintf(stderr, "cannot pop empty StackT<T, max_size>");  exit(-1);
 }
 
 template<class T, int max_size>

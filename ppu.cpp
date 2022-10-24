@@ -10,8 +10,8 @@ PPU::PPU()
 {
 	this->fifo_bg.connectToPPU(this);
 	this->fifo_bg.fetcher.connectToPPU(this);
-	this->fifo_sprite.connectToPPU(this);
-	this->fifo_sprite.fetcher.connectToPPU(this);
+	this->fifo_oam.connectToPPU(this);
+	this->fifo_oam.fetcher.connectToPPU(this);
 
 }
 
@@ -53,7 +53,7 @@ void PPU::clockFIFOS()
 				if ((scanline_x == 0) && (scx_pop != 0))
 				{
 					fifo_bg.popBy(scx_pop);
-					fifo_sprite.popBy(scx_pop);
+					fifo_oam.popBy(scx_pop);
 				}
 				/*
 				The scroll registers are re - read on each tile fetch, except for the low 3 bits of SCX, which are only read at the beginning of the scanline(for the initial shifting of pixels).
@@ -71,11 +71,13 @@ void PPU::clockFIFOS()
 
 FIFOPixel PPU::combinePixels()
 {
-	if (!fifo_bg.empty && !fifo_sprite.empty)
+	if (!fifo_bg.empty && !fifo_oam.empty)
 	{
 		FIFOPixel bg = fifo_bg.pop();
-		FIFOPixel sprite = fifo_sprite.pop();
+		FIFOPixel sprite = fifo_oam.pop();
 		
+		if (sprite.colour == 0x0)
+
 		//need to mix the pixels, not finished
 		return FIFOPixel();
 	}
@@ -284,7 +286,7 @@ void PPU::newScanline()
 	this->cycle_counter = 0;
 	this->scanline_x = 0;
 	this->fifo_bg.reset();
-	this->fifo_sprite.reset();
+	this->fifo_oam.reset();
 	this->window_wy_triggered = false;
 	oam_priority.reset();
 }
@@ -387,6 +389,17 @@ Tile::Tile()
 {
 	this->bytes_per_tile.fill(0x00);
 }
+
+void PPU::debugAddToBGFIFO(FIFOPixel pixel)
+{
+	this->fifo_bg.push(pixel);
+}
+
+void PPU::debugAddToOAMFIFO(FIFOPixel pixel)
+{
+	this->fifo_oam.push(pixel);
+}
+
 
 //void PPU::update_lcdstat()
 //{

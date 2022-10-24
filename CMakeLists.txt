@@ -33,6 +33,7 @@ target_link_libraries(emuboy ${SDL2_LIBRARIES})
 add_executable (emuboycpu "cputest.cpp" "config.hpp" "bus.hpp" "bus.cpp" "cpu.hpp" "cpu.cpp" "dma_controller.hpp" "dma_controller.cpp" "fetcher.hpp" "fetcher.cpp" "fifo.hpp" "fifo.cpp" "FIFO_pixel.hpp" "gamepak.hpp" "gamepak.cpp" "joypad_mapping.hpp" "ppu.hpp" "ppu.cpp" )
 target_link_libraries(emuboycpu ${SDL2_LIBRARIES})
 
-add_executable (fifotest "fifotest.cpp" "config.hpp" "FIFO_pixel.hpp" "stack.hpp" "fifo.hpp" "fifo.cpp" "fetcher.cpp" "fetcher.hpp")
+add_executable (fifotest "fifotest.cpp" "config.hpp" "bus.hpp" "bus.cpp" "cpu.hpp" "cpu.cpp" "dma_controller.hpp" "dma_controller.cpp" "fetcher.hpp" "fetcher.cpp" "fifo.hpp" "fifo.cpp" "FIFO_pixel.hpp" "gamepak.hpp" "gamepak.cpp" "joypad_mapping.hpp" "ppu.hpp" "ppu.cpp" "mystack.hpp" )
 target_link_libraries(fifotest ${SDL2_LIBRARIES})
+
 # TODO: Add tests and install targets if needed.

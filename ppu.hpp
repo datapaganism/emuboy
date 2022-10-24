@@ -4,7 +4,7 @@
 
 #include "config.hpp"
 #include "fifo.hpp"
-#include "stack.hpp"
+#include "mystack.hpp"
 
 
 #define TEST 1
@@ -95,6 +95,7 @@ public:
 	int cycle_counter = 0;
 	bool window_wy_triggered = false;
 	Stack<OAMentry*, oam_priority_max> oam_priority;
+	int dot_delay = 0;
 
 
 	void connectToBus(BUS* pBus);
@@ -118,11 +119,13 @@ public:
 	void clockFIFOS();
 	FIFOPixel combinePixels();
 	
+	void debugAddToBGFIFO(FIFOPixel pixel);
+	void debugAddToOAMFIFO(FIFOPixel pixel);
 private:
 
 	void setRegisters();
 	FIFO fifo_bg;
-	FIFO fifo_sprite;
+	FIFO fifo_oam;
 
 
 };
