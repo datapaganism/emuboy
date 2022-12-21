@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <iostream>
 #include "config.hpp"
 
 
@@ -15,8 +16,9 @@ public:
 	bool full = false;
 
 	void push(T elem);
-	int elemCount();
+	int size();
 	T pop();
+	T getBack();
 	void popBy(int count);
 	void reset();
 
@@ -47,7 +49,7 @@ inline void Stack<T, max_size>::push(T elem)
 
 
 template<class T, int max_size>
-inline int Stack<T, max_size>::elemCount()
+inline int Stack<T, max_size>::size()
 {
 	if (head_pos > tail_pos)
 		return (max_size - head_pos) + tail_pos + 1;
@@ -69,6 +71,16 @@ inline T Stack<T, max_size>::pop()
 	}
 	fprintf(stderr, "cannot pop empty StackT<T, max_size>");  exit(-1);
 }
+// gets top element without popping it
+template<class T, int max_size>
+inline T Stack<T, max_size>::getBack()
+{
+	if (!empty)
+		return queue[head_pos];
+	return nullptr;
+	fprintf(stderr, "cannot softpop empty StackT<T, max_size>");  exit(-1);
+}
+
 
 template<class T, int max_size>
 inline void Stack<T, max_size>::popBy(int count)
