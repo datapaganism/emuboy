@@ -70,10 +70,10 @@ void Fetcher::updateFetcher(const int cycles)
 			OAMentry* obj = ppu->oam_priority.getBack();
 			if (obj != nullptr)
 			{
-				if (ppu->scanline_x >= obj->x_pos - 8 &&
-					ppu->scanline_x <= obj->x_pos &&
-					ly >= obj->y_pos -16 &&
-					ly < obj->y_pos - 8
+				if (ppu->scanline_x >= (obj->x_pos - 8)            // its like this is correct but the 
+					&& ppu->scanline_x < (obj->x_pos - 8) + 8
+					&& ly >= (obj->y_pos - 16)
+					&& ly < (obj->y_pos -16) + 8
 					)
 				{
 					// if there is a sprite on this line
@@ -266,7 +266,8 @@ void Fetcher::updateFetcher(const int cycles)
 
 				for (int i = 0; i < 8; i++)
 				{
-					original_fifo_pixels[i].colour = pixels[i].colour;
+					if (pixels[i].colour != 0)
+						original_fifo_pixels[i].colour = pixels[i].colour;
 				}
 
 				for (int i = 0; i < original_fifo_pixels.size(); i++)

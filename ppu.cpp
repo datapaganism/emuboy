@@ -136,14 +136,14 @@ void PPU::updateGraphics(const int cycles)
 			if (*registers.wy == *registers.ly)
 				this->window_wy_triggered = true;
 
-			int sprite_height = (*registers.lcdc & 0b00000010) ? 16 : 8;
+			int sprite_height = (*registers.lcdc & 0b1 << 2) ? 16 : 8;
 			for (int i = 0; i < cycles * 2; i++)
 			{
 				struct OAMentry* entry = (OAMentry*)this->bus->oam_ram.get() + oam_scan_iterator++;
 				if (entry->x_pos != 0)
 				{
 					// this will by very buggy
-					if (*registers.ly + 16 >= entry->y_pos && *registers.ly + 16 < entry->y_pos + sprite_height)
+					if (*registers.ly >= (entry->y_pos - 16) && *registers.ly < (entry->y_pos - 16) + sprite_height)
 					{
 						oam_priority.push(entry);
 						if (oam_priority.full)
@@ -174,7 +174,7 @@ void PPU::updateGraphics(const int cycles)
 			if (this->cycle_counter >= (80 / 4))
 			{
 				if (oam_scan_iterator != 40)
-					exit(40);
+					//exit(40);
 				this->updateState(ePPUstate::graphics_transfer);
 			}
 		} break;
