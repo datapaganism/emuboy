@@ -10,10 +10,10 @@ struct FIFOPixel
 
 	FIFOPixel()
 	{
-		this->bg_priority = 0;
-		this->sprite_priority = 0;
-		this->colour = 0;
-		this->palette = 0;
+		this->bg_priority = true;
+		this->sprite_priority = true;
+		this->colour = 0xFF;
+		this->palette = 0xFF;
 	};
 
 	FIFOPixel(Byte colour, Byte palette, bool sprite_priority, bool bg_priority) : FIFOPixel()
@@ -24,3 +24,5 @@ struct FIFOPixel
 		this->bg_priority = bg_priority;
 	}
 };
+
+const FIFOPixel empty_fifo_pixel = FIFOPixel();

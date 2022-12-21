@@ -34,14 +34,17 @@ void PPU::setMemory(const Word address, const Byte data)
 
 // this function takes over updateFIFO from both of the fifos
 // we have to pull pixels from both fifos and combine them for rendering.
-void PPU::clockFIFOS()
+void PPU::clockFIFOmCycle()
 {
+	if (this->fifo_bg.fetcher.rendering_sprite)
+		return;
+
 	for (int i = 0; i < 4; i++)
 	{
 		// while background fifo not empty
 		if (!fifo_bg.empty)
 		{
-			Byte ly = *registers.ly;
+			const Byte ly = *registers.ly;
 
 			// between 0 and 159 pixels portion of the scanline
 			if (scanline_x < 160)
@@ -49,11 +52,10 @@ void PPU::clockFIFOS()
 				/*
 					Check scx register, % 8 gives the amount of pixels we are within a tile, if not 0, pop the fifo by the result
 				*/
-				Byte scx_pop = *registers.scx % 8;
+				const Byte scx_pop = *registers.scx % 8;
 				if ((scanline_x == 0) && (scx_pop != 0))
 				{
 					fifo_bg.popBy(scx_pop);
-					fifo_oam.popBy(scx_pop);
 				}
 				/*
 				The scroll registers are re - read on each tile fetch, except for the low 3 bits of SCX, which are only read at the beginning of the scanline(for the initial shifting of pixels).
@@ -61,7 +63,7 @@ void PPU::clockFIFOS()
 					All models before the CGB - D read the Y coordinate once for each bitplane(so a very precisely timed SCY write allows �desyncing� them), but CGB - D and later use the same Y coordinate for both no matter what.
 					*/
 				if (ly < 144 && scanline_x < 160)
-					addToFramebuffer(scanline_x, ly, combinePixels());
+					addToFramebuffer(scanline_x, ly, fifo_bg.pop());
 
 				scanline_x++;
 			}
@@ -77,6 +79,7 @@ FIFOPixel PPU::combinePixels()
 		FIFOPixel sprite = fifo_oam.pop();
 		
 		if (sprite.colour == 0x0)
+			// mask sprite and OR with bg background color
 
 		//need to mix the pixels, not finished
 		return FIFOPixel();
@@ -111,7 +114,7 @@ void PPU::updateGraphics(const int cycles)
 
 		switch (*registers.stat & 0b00000011)
 		{
-		case 0: // h blank
+		case ePPUstate::h_blank: // h blank
 		{
 			if (this->cycle_counter >= (456 / 4))
 			{
@@ -119,7 +122,7 @@ void PPU::updateGraphics(const int cycles)
 			}
 		} break;
 
-		case 1: // v blank
+		case ePPUstate::v_blank: // v blank
 		{
 			if (this->cycle_counter >= (456 / 4))
 			{
@@ -127,34 +130,56 @@ void PPU::updateGraphics(const int cycles)
 			}
 		} break;
 
-		case 2: // oam search
+		case ePPUstate::oam_search: // oam search
 		{
 			// do stuff
 			if (*registers.wy == *registers.ly)
 				this->window_wy_triggered = true;
 
+			int sprite_height = (*registers.lcdc & 0b00000010) ? 16 : 8;
+			for (int i = 0; i < cycles * 2; i++)
+			{
+				struct OAMentry* entry = (OAMentry*)this->bus->oam_ram.get() + oam_scan_iterator++;
+				if (entry->x_pos != 0)
+				{
+					// this will by very buggy
+					if (*registers.ly + 16 >= entry->y_pos && *registers.ly + 16 < entry->y_pos + sprite_height)
+					{
+						oam_priority.push(entry);
+						if (oam_priority.full)
+							break;
+					}
+				}
+			}
+
 			// OAM selection priority, during each scanline the PPU can only render 10 sprites, a hardware limitation.
 			// the scan will go through the OAM sequentially, checking if an entry's Y is within LY and making sure that we check the lcdc.2 obj size.
 			// I will scan the oam and if we find matches I will store them in an array that the fetcher can access when needed.
-			for (int i = 0; i < 40; i++)
-			{
-				struct OAMentry* entry = (OAMentry*)this->bus->oam_ram.get() + i;
-				if (entry->y_loc == *registers.ly)
-				{
-					oam_priority.push(entry);
-					if (oam_priority.full)
-						break;
-				}
-
-			}
+			//int sprite_height = (*registers.lcdc & 0b00000010) ? 16 : 8;
+			//for (oam_scan_iterator; oam_scan_iterator < 40; oam_scan_iterator++)
+			//{
+			//	struct OAMentry* entry = (OAMentry*)this->bus->oam_ram.get() + oam_scan_iterator;
+			//	if (entry->x_pos != 0)
+			//	{
+			//		// this will by very buggy
+			//		if (*registers.ly + 16 >= entry->y_pos && *registers.ly + 16 < entry->y_pos + sprite_height)
+			//		{
+			//			oam_priority.push(entry);
+			//			if (oam_priority.full)
+			//				break;
+			//		}
+			//	}
+			//}
 
 			if (this->cycle_counter >= (80 / 4))
 			{
-				this->updateState(3);
+				if (oam_scan_iterator != 40)
+					exit(40);
+				this->updateState(ePPUstate::graphics_transfer);
 			}
 		} break;
 
-		case 3: // graphics transfer
+		case ePPUstate::graphics_transfer: // graphics transfer
 		{
 			// update bg/win fetcher and fifo
 			
@@ -162,10 +187,10 @@ void PPU::updateGraphics(const int cycles)
 			this->fifo_bg.fetcher.updateFetcher(cycles);
 			//this->fifo_sprite.fetcher.updateFetcher(cycles);
 
-			clockFIFOS();
+			clockFIFOmCycle();
 
 			if (this->scanline_x >= 160)
-				this->updateState(0);
+				this->updateState(ePPUstate::h_blank);
 
 			//if (this->scanline_x >= 8)
 				//this->newScanline();
@@ -182,7 +207,7 @@ void PPU::updateGraphics(const int cycles)
 	*registers.ly = 0;
 
 	//update register to mode one
-	this->updateState(0);
+	this->updateState(ePPUstate::h_blank);
 
 	return;
 }
@@ -289,6 +314,7 @@ void PPU::newScanline()
 	this->fifo_oam.reset();
 	this->window_wy_triggered = false;
 	oam_priority.reset();
+	oam_scan_iterator = 0;
 }
 
 void PPU::updateState(Byte new_state)

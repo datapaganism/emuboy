@@ -4,7 +4,7 @@
 
 #include "config.hpp"
 #include "fifo.hpp"
-#include "mystack.hpp"
+#include "stack.hpp"
 
 
 #define TEST 1
@@ -74,10 +74,18 @@ struct PPURegisters
 
 struct OAMentry
 {
-	Byte y_loc = 0;
-	Byte x_loc = 0;
+	Byte y_pos = 0; // y pos + 16
+	Byte x_pos = 0; // x pos + 8
 	Byte tile_no = 0;
 	Byte attribute = 0;
+};
+
+enum ePPUstate
+{
+	h_blank = 0,
+	v_blank,
+	oam_search,
+	graphics_transfer,	
 };
 
 class PPU
@@ -96,6 +104,7 @@ public:
 	bool window_wy_triggered = false;
 	Stack<OAMentry*, oam_priority_max> oam_priority;
 	int dot_delay = 0;
+	int oam_scan_iterator = 0;
 
 
 	void connectToBus(BUS* pBus);
@@ -116,7 +125,7 @@ public:
 	void updateState(Byte new_state);
 	Byte getMemory(const Word address);
 	void setMemory(const Word address, const Byte data);
-	void clockFIFOS();
+	void clockFIFOmCycle();
 	FIFOPixel combinePixels();
 	
 	void debugAddToBGFIFO(FIFOPixel pixel);
