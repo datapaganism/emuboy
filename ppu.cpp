@@ -155,26 +155,11 @@ void PPU::updateGraphics(const int cycles)
 			// OAM selection priority, during each scanline the PPU can only render 10 sprites, a hardware limitation.
 			// the scan will go through the OAM sequentially, checking if an entry's Y is within LY and making sure that we check the lcdc.2 obj size.
 			// I will scan the oam and if we find matches I will store them in an array that the fetcher can access when needed.
-			//int sprite_height = (*registers.lcdc & 0b00000010) ? 16 : 8;
-			//for (oam_scan_iterator; oam_scan_iterator < 40; oam_scan_iterator++)
-			//{
-			//	struct OAMentry* entry = (OAMentry*)this->bus->oam_ram.get() + oam_scan_iterator;
-			//	if (entry->x_pos != 0)
-			//	{
-			//		// this will by very buggy
-			//		if (*registers.ly + 16 >= entry->y_pos && *registers.ly + 16 < entry->y_pos + sprite_height)
-			//		{
-			//			oam_priority.push(entry);
-			//			if (oam_priority.full)
-			//				break;
-			//		}
-			//	}
-			//}
 
 			if (this->cycle_counter >= (80 / 4))
 			{
 				if (oam_scan_iterator != 40)
-					//exit(40);
+					exit(40);
 				this->updateState(ePPUstate::graphics_transfer);
 			}
 		} break;
@@ -392,14 +377,6 @@ Byte Tile::getPixelColour(int x, int y)
 	bool bit1 = this->bytes_per_tile[(2 * static_cast<long long>(y)) + 1] & offset;
 
 	Byte result = (((Byte)bit0 << 1) | (Byte)bit1);
-
-	/*if (result != 0)
-		std::cout << "";
-	if (result == 00)
-		std::cout << "  ";
-	else
-		std::cout << std::bitset<2>{result};
-	*/
 	return result;
 }
 
@@ -515,51 +492,3 @@ void PPU::debugAddToOAMFIFO(FIFOPixel pixel)
 //		*lcdstat_register_ptr &= ~0b00000100;
 //	
 //}
-
-//void PPU::render_scanline()
-//{
-//	//resets fifos
-//	//this->fifo_bg = FIFO();
-//	//this->fifo_sprite = FIFO();
-//
-//	// temp setting of scx, scy, ly registers
-//	this->setMemory(SCX, 0x80);
-//	this->setMemory(SCY, 0x40);
-//	this->bus->io[LY - IOOFFSET] = 0x00;
-//	
-//	// get tile number and address of topleft tile of viewport
-//	Byte tile_number = this->fifo_bg.fetcher.getTileNumber();
-//	Word tile_address = this->get_tile_address(tile_number, PPU::background);
-//
-//	// get scy
-//	Byte scy = this->getMemory(SCY);
-//
-//	// get top and bottom byte of 8 pixel line from tile
-//	Byte line_data0 = this->getMemory(tile_address + 2 * (scy % 8));
-//	Byte line_data1 = this->getMemory((tile_address + 1) + 2 * (scy % 8));
-//	
-//	for (int i = 0; i < 8; i++) 
-//	{
-//		// get colour of pixel
-//		int offset = (0b1 << (7 - i));
-//		bool bit0 = line_data0 & offset;
-//		bool bit1 = line_data1 & offset;
-//		Byte colour = (((Byte)bit0 << 1) | (Byte)bit1);
-//		
-//		//push to fifo
-//		this->fifo_bg.push(FIFOPixel(colour, 0, 0, 0));
-//
-//	}
-//
-//	// get ly for setting to framebuffer
-//	Byte ly = this->getMemory(LY);
-//	
-//	
-//	// pop fifo 8 times into framebuffer
-//	for (int i = 0; i < 8; i++)
-//	{
-//		this->addToFramebuffer(i, ly, this->fifo_bg.pop());
-//	}
-//
-//}
-//

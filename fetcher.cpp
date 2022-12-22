@@ -335,8 +335,10 @@ void Fetcher::reset()
 	fetcher_scanline_x = 0;
 	fetcher_x_tile = 0;
 	fetcher_y_line = 0;
+	
+	rendering_sprite = false;
+	fifo_needs_more_bgwin_pixels = false;
 
-	this->ppu->oam_priority.empty = true;
 }
 
 void Fetcher::incAddress()
