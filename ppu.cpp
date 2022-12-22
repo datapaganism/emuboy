@@ -8,11 +8,7 @@
 
 PPU::PPU()
 {
-	this->fifo_bg.connectToPPU(this);
-	this->fifo_bg.fetcher.connectToPPU(this);
-	this->fifo_oam.connectToPPU(this);
-	this->fifo_oam.fetcher.connectToPPU(this);
-
+	this->fifo.connectToPPU(this);
 }
 
 // called during BUS consturctor 
@@ -24,51 +20,12 @@ void PPU::connectToBus(BUS* pBus)
 
 Byte PPU::getMemory(const Word address)
 {
-	return this->bus->getMemory(address, eMemoryAccessType::ppu);
+	return bus->getMemory(address, eMemoryAccessType::ppu);
 }
 
 void PPU::setMemory(const Word address, const Byte data)
 {
-	this->bus->setMemory(address, data, eMemoryAccessType::ppu);
-}
-
-// this function takes over updateFIFO from both of the fifos
-// we have to pull pixels from both fifos and combine them for rendering.
-void PPU::clockFIFOmCycle()
-{
-	if (this->fifo_bg.fetcher.rendering_sprite)
-		return;
-
-	for (int i = 0; i < 4; i++)
-	{
-		// while background fifo not empty
-		if (!fifo_bg.empty)
-		{
-			const Byte ly = *registers.ly;
-
-			// between 0 and 159 pixels portion of the scanline
-			if (scanline_x < 160)
-			{
-				/*
-					Check scx register, % 8 gives the amount of pixels we are within a tile, if not 0, pop the fifo by the result
-				*/
-				const Byte scx_pop = *registers.scx % 8;
-				if ((scanline_x == 0) && (scx_pop != 0))
-				{
-					fifo_bg.popBy(scx_pop);
-				}
-				/*
-				The scroll registers are re - read on each tile fetch, except for the low 3 bits of SCX, which are only read at the beginning of the scanline(for the initial shifting of pixels).
-
-					All models before the CGB - D read the Y coordinate once for each bitplane(so a very precisely timed SCY write allows �desyncing� them), but CGB - D and later use the same Y coordinate for both no matter what.
-					*/
-				if (ly < 144 && scanline_x < 160)
-					addToFramebuffer(scanline_x, ly, fifo_bg.pop());
-
-				scanline_x++;
-			}
-		}
-	}
+	bus->setMemory(address, data, eMemoryAccessType::ppu);
 }
 
 void PPU::setRegisters()
@@ -116,16 +73,6 @@ void PPU::updateGraphics(const int cycles)
 
 		case ePPUstate::oam_search: // oam search
 		{
-			Byte* oam_base_ptr = this->bus->oam_ram.get();
-			for (int i = 0; i < 40; i++)
-			{
-				oam_base_ptr;
-				Byte y_position = *oam_base_ptr++;
-				Byte x_position = *oam_base_ptr++;
-				Byte tile_index = *oam_base_ptr++;
-				Byte flags		= *oam_base_ptr++;
-			}
-			// do stuff
 			if (*registers.wy == *registers.ly)
 				this->window_wy_triggered = true;
 
@@ -159,19 +106,12 @@ void PPU::updateGraphics(const int cycles)
 
 		case ePPUstate::graphics_transfer: // graphics transfer
 		{
-			// update bg/win fetcher and fifo
-			
-			// Need to write special fetcher for sprites
-			this->fifo_bg.fetcher.updateFetcher(cycles);
-			//this->fifo_sprite.fetcher.updateFetcher(cycles);
-
-			clockFIFOmCycle();
+			//fetch and then render pixels
+			this->fifo.fetchPixels(cycles);
+			this->fifo.renderPixels(cycles);
 
 			if (this->scanline_x >= 160)
 				this->updateState(ePPUstate::h_blank);
-
-			//if (this->scanline_x >= 8)
-				//this->newScanline();
 		} break;
 
 		default: fprintf(stderr, "Unreachable PPU STAT");  exit(-1); break;
@@ -190,12 +130,9 @@ void PPU::updateGraphics(const int cycles)
 	return;
 }
 
-
-
 bool PPU::lcdEnabled()
 {
 	return (bool)(*registers.lcdc & (0b1 << 7));
-
 }
 
 
@@ -288,8 +225,7 @@ void PPU::newScanline()
 
 	this->cycle_counter = 0;
 	this->scanline_x = 0;
-	this->fifo_bg.reset();
-	this->fifo_oam.reset();
+	this->fifo.reset();
 	this->window_wy_triggered = false;
 	oam_priority.reset();
 	oam_scan_iterator = 0;
@@ -388,14 +324,8 @@ Tile::Tile()
 
 void PPU::debugAddToBGFIFO(FIFOPixel pixel)
 {
-	this->fifo_bg.push(pixel);
+	this->fifo.push(pixel);
 }
-
-void PPU::debugAddToOAMFIFO(FIFOPixel pixel)
-{
-	this->fifo_oam.push(pixel);
-}
-
 
 //void PPU::update_lcdstat()
 //{

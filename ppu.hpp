@@ -124,16 +124,14 @@ public:
 	void updateState(Byte new_state);
 	Byte getMemory(const Word address);
 	void setMemory(const Word address, const Byte data);
-	void clockFIFOmCycle();
+	void renderFromFIFO();
 
 	
 	void debugAddToBGFIFO(FIFOPixel pixel);
-	void debugAddToOAMFIFO(FIFOPixel pixel);
 private:
 
 	void setRegisters();
-	FIFO fifo_bg;
-	FIFO fifo_oam;
+	FIFO fifo;
 
 
 };
