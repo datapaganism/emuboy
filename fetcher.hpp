@@ -21,7 +21,6 @@ class Fetcher
 public:
 	Fetcher();
 	
-	Word address_to_read = 0;
 	Word tile_map_address = 0;
 	Word tile_address = 0;
 	Byte tile_number = 0;
@@ -46,7 +45,6 @@ public:
 	void reset();
 	void incAddress();
 	bool isWindowActive();
-	void progressFetcherState();
 
 private:
 	

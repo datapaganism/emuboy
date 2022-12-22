@@ -36,7 +36,6 @@ class FIFO : public FIFOStack<>
 public:
 	FIFO();
 	Fetcher fetcher;
-	int fifo_cycle_counter = 0;
 	PPU* ppu = nullptr;
 
 	void connectToPPU(PPU* pPPU);

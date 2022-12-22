@@ -11,7 +11,6 @@ FIFO::FIFO()
 void FIFO::reset()
 {
 	FIFOStack<>::reset();
-	fifo_cycle_counter = 0;
 	fetcher.reset();
 }
 

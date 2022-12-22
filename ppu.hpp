@@ -103,7 +103,6 @@ public:
 	int cycle_counter = 0;
 	bool window_wy_triggered = false;
 	Stack<OAMentry*, oam_priority_max> oam_priority;
-	int dot_delay = 0;
 	int oam_scan_iterator = 0;
 
 
@@ -126,7 +125,7 @@ public:
 	Byte getMemory(const Word address);
 	void setMemory(const Word address, const Byte data);
 	void clockFIFOmCycle();
-	FIFOPixel combinePixels();
+
 	
 	void debugAddToBGFIFO(FIFOPixel pixel);
 	void debugAddToOAMFIFO(FIFOPixel pixel);

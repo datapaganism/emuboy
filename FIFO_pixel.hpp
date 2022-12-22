@@ -24,5 +24,3 @@ struct FIFOPixel
 		this->bg_priority = bg_priority;
 	}
 };
-
-const FIFOPixel empty_fifo_pixel = FIFOPixel();

@@ -327,7 +327,6 @@ void Fetcher::reset()
 	this->state = 0;
 	this->cycle_counter = 0;
 	this->pixels.fill(FIFOPixel());
-	this->address_to_read = 0;
 	this->tile_number = 0;
 	this->tile_address = 0;
 	this->tile_map_address = 0;
@@ -354,14 +353,4 @@ bool Fetcher::isWindowActive()
 	return *ppu->registers.lcdc & 0b00100000;
 }
 
-void Fetcher::progressFetcherState()
-{
-	if (ppu->dot_delay != 0)
-	{
-		ppu->dot_delay--;
-		return;
-	}
-
-	state = (state + 1) % 4;
-}
 
