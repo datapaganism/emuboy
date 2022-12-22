@@ -6,13 +6,13 @@ const int DEFAULT_SCREEN_HEIGHT = 480;
 const bool SHOW_ON_START = false;
 
 
-#define GB_CLOCKSPEED  4194304 // Hz
-#define GB_CPU_MCYCLE_CLOCKSPEED 1048576
+constexpr int GB_CPU_TCYCLE_CLOCKSPEED = 4194304; // Hz
+constexpr int GB_CPU_MCYCLE_CLOCKSPEED = GB_CPU_TCYCLE_CLOCKSPEED / 4;
 #define GBC_CLOCKSPEED 8388000 // Hz, Color model, maybe implement in the future.
 
-#define VSYNC 59.73 // Hz, basically 60 but I want to be accurate
+constexpr int VSYNC = 59.73; // Hz, basically 60 but I want to be accurate;
 
-#define CYCLES_PER_FRAME GB_CPU_MCYCLE_CLOCKSPEED/VSYNC // used to figure out how many CPU operations can be done before we need update the screen a single frame
+constexpr int CYCLES_PER_FRAME = GB_CPU_MCYCLE_CLOCKSPEED / VSYNC; // used to figure out how many CPU operations can be done before we need update the screen a single frame
 
 // the CPU uses cycles 70221 times per video frame
 // a video frame takes 70221/4 cycles to render.
@@ -47,7 +47,7 @@ const bool SHOW_ON_START = false;
 #define TMA  0xFF06
 #define TAC  0xFF07
 
-#define DIVinit GB_CLOCKSPEED / 16382
+#define DIVinit GB_CPU_TCYCLE_CLOCKSPEED / 16382
 #define DIV_INC_RATE GB_CPU_MCYCLE_CLOCKSPEED / 16382
 
 #define LCDC 0xFF40  //LCD Control R/W Register //ff40

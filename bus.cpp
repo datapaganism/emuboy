@@ -14,9 +14,10 @@ void BUS::cycleSystemOneFrame()
 
     while (current_cycles <= CYCLES_PER_FRAME)
     {
-
-        /*if (cpu.registers.pc == 0x100)
-            __debugbreak();*/
+        // att ffb8 there is an instruction to load data into oam
+        // need to find out why it doesnt execute
+        if (cpu.registers.pc == 0xFFB8)
+            __debugbreak();
 
         this->cpu.mStepCPU();
         this->cpu.updateTimers();
@@ -43,7 +44,6 @@ void BUS::cycleSystemOneFrame()
             }
         }
     }
-    
 }
 
 
@@ -295,9 +295,10 @@ Byte BUS::getDirectionButtonNibble()
 // what hardware we are reading from using if guards
 Byte BUS::getMemory(const Word address, enum eMemoryAccessType access_type)
 {
+    /*
     switch (access_type)
     {
-        /*
+        
         case MEMORY_ACCESS_TYPE::cpu:
         {
             if (this->dma_controller.dma_triggered)
@@ -319,8 +320,10 @@ Byte BUS::getMemory(const Word address, enum eMemoryAccessType access_type)
             if (address == 0xFFFF)
                 return this->interrupt_enable_register;
         } break;
-        default: break;*/
+        
+        default: break;
     }
+    */
 
     // boot rom area, or rom bank 0
     if (address <= 0x00FF) //from 0x0000

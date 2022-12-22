@@ -1,21 +1,11 @@
-#include "fifo.hpp"
-#include "FIFO_pixel.hpp"
+#include "bus.hpp"
 #include <iostream>
 
-int main()
+#undef main
+int main(int argc, char* argv[])
 {
-	FIFO fifo;
-	const FIFOPixel test(1, 1, 0, 0);
-
-	for (int i = 0; i < fifo_max_size; i++)
-		fifo.push(test);
-
-	for (int i = 0; i < fifo_max_size; i++)
-		fifo.pop();
-
-	for (int i = 0; i < fifo_max_size; i++)
-		fifo.push(test);
-
-
-	return 0;
+    int x = 0;
+    x++;
+    BUS bus("C:\\dev\\datapaganism\\emuboy\\roms\\empty.bin", "");
+    return 0;
 }

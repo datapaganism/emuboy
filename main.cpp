@@ -47,7 +47,8 @@ int main(int argc, char* argv[])
     //std::string rom_path = ((argv[1] != NULL) ? argv[1] : "C:\\dev\\repos\\emuboy\\roms\\blargg\\02-interrupts.gb");
     //std::string rom_path = ((argv[1] != NULL) ? argv[1] : "D:\\afk\\Downloads\\bgbw64\\bgbtest.gb");
 
-    std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\DR.MARIO.gb");
+    //std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\metasprites.gb");
+    std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\TETRIS.gb");
     //std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\blargg\\02-interrupts.gb");
     std::string bios_path = "..\\..\\..\\bios\\bios.binX";
     
