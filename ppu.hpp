@@ -4,10 +4,12 @@
 
 #include "config.hpp"
 #include "fifo.hpp"
+#include "stack.hpp"
 
 
 #define TEST 1
 
+constexpr int oam_priority_max = 10;
 
 class BUS;
 
@@ -70,6 +72,21 @@ struct PPURegisters
 	Byte* lcdc = nullptr;
 };
 
+struct OAMentry
+{
+	Byte y_pos = 0; // y pos + 16
+	Byte x_pos = 0; // x pos + 8
+	Byte tile_no = 0;
+	Byte attribute = 0;
+};
+
+enum ePPUstate
+{
+	h_blank = 0,
+	v_blank,
+	oam_search,
+	graphics_transfer,	
+};
 
 class PPU
 {
@@ -85,6 +102,9 @@ public:
 	PPURegisters registers;
 	int cycle_counter = 0;
 	bool window_wy_triggered = false;
+	Stack<OAMentry*, oam_priority_max> oam_priority;
+	int dot_delay = 0;
+	int oam_scan_iterator = 0;
 
 
 	void connectToBus(BUS* pBus);
@@ -105,14 +125,16 @@ public:
 	void updateState(Byte new_state);
 	Byte getMemory(const Word address);
 	void setMemory(const Word address, const Byte data);
-	void clockFIFOS();
+	void clockFIFOmCycle();
 	FIFOPixel combinePixels();
 	
+	void debugAddToBGFIFO(FIFOPixel pixel);
+	void debugAddToOAMFIFO(FIFOPixel pixel);
 private:
 
 	void setRegisters();
 	FIFO fifo_bg;
-	FIFO fifo_sprite;
+	FIFO fifo_oam;
 
 
 };

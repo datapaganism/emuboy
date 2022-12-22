@@ -10,8 +10,8 @@ PPU::PPU()
 {
 	this->fifo_bg.connectToPPU(this);
 	this->fifo_bg.fetcher.connectToPPU(this);
-	this->fifo_sprite.connectToPPU(this);
-	this->fifo_sprite.fetcher.connectToPPU(this);
+	this->fifo_oam.connectToPPU(this);
+	this->fifo_oam.fetcher.connectToPPU(this);
 
 }
 
@@ -34,14 +34,17 @@ void PPU::setMemory(const Word address, const Byte data)
 
 // this function takes over updateFIFO from both of the fifos
 // we have to pull pixels from both fifos and combine them for rendering.
-void PPU::clockFIFOS()
+void PPU::clockFIFOmCycle()
 {
+	if (this->fifo_bg.fetcher.rendering_sprite)
+		return;
+
 	for (int i = 0; i < 4; i++)
 	{
 		// while background fifo not empty
 		if (!fifo_bg.empty)
 		{
-			Byte ly = *registers.ly;
+			const Byte ly = *registers.ly;
 
 			// between 0 and 159 pixels portion of the scanline
 			if (scanline_x < 160)
@@ -49,11 +52,10 @@ void PPU::clockFIFOS()
 				/*
 					Check scx register, % 8 gives the amount of pixels we are within a tile, if not 0, pop the fifo by the result
 				*/
-				Byte scx_pop = *registers.scx % 8;
+				const Byte scx_pop = *registers.scx % 8;
 				if ((scanline_x == 0) && (scx_pop != 0))
 				{
 					fifo_bg.popBy(scx_pop);
-					fifo_sprite.popBy(scx_pop);
 				}
 				/*
 				The scroll registers are re - read on each tile fetch, except for the low 3 bits of SCX, which are only read at the beginning of the scanline(for the initial shifting of pixels).
@@ -61,7 +63,7 @@ void PPU::clockFIFOS()
 					All models before the CGB - D read the Y coordinate once for each bitplane(so a very precisely timed SCY write allows �desyncing� them), but CGB - D and later use the same Y coordinate for both no matter what.
 					*/
 				if (ly < 144 && scanline_x < 160)
-					addToFramebuffer(scanline_x, ly, combinePixels());
+					addToFramebuffer(scanline_x, ly, fifo_bg.pop());
 
 				scanline_x++;
 			}
@@ -71,12 +73,15 @@ void PPU::clockFIFOS()
 
 FIFOPixel PPU::combinePixels()
 {
-	if (!fifo_bg.empty && !fifo_sprite.empty)
+	if (!fifo_bg.empty && !fifo_oam.empty)
 	{
 		FIFOPixel bg = fifo_bg.pop();
-		FIFOPixel sprite = fifo_sprite.pop();
+		FIFOPixel sprite = fifo_oam.pop();
 		
-		//need to finish this
+		if (sprite.colour == 0x0)
+			// mask sprite and OR with bg background color
+
+		//need to mix the pixels, not finished
 		return FIFOPixel();
 	}
 	return fifo_bg.pop();
@@ -109,7 +114,7 @@ void PPU::updateGraphics(const int cycles)
 
 		switch (*registers.stat & 0b00000011)
 		{
-		case 0: // h blank
+		case ePPUstate::h_blank: // h blank
 		{
 			if (this->cycle_counter >= (456 / 4))
 			{
@@ -117,7 +122,7 @@ void PPU::updateGraphics(const int cycles)
 			}
 		} break;
 
-		case 1: // v blank
+		case ePPUstate::v_blank: // v blank
 		{
 			if (this->cycle_counter >= (456 / 4))
 			{
@@ -125,7 +130,7 @@ void PPU::updateGraphics(const int cycles)
 			}
 		} break;
 
-		case 2: // oam search
+		case ePPUstate::oam_search: // oam search
 		{
 			Byte* oam_base_ptr = this->bus->oam_ram.get();
 			for (int i = 0; i < 40; i++)
@@ -140,13 +145,35 @@ void PPU::updateGraphics(const int cycles)
 			if (*registers.wy == *registers.ly)
 				this->window_wy_triggered = true;
 
+			int sprite_height = (*registers.lcdc & 0b1 << 2) ? 16 : 8;
+			for (int i = 0; i < cycles * 2; i++)
+			{
+				struct OAMentry* entry = (OAMentry*)this->bus->oam_ram.get() + oam_scan_iterator++;
+				if (entry->x_pos != 0)
+				{
+					// this will by very buggy
+					if (*registers.ly >= (entry->y_pos - 16) && *registers.ly < (entry->y_pos - 16) + sprite_height)
+					{
+						oam_priority.push(entry);
+						if (oam_priority.full)
+							break;
+					}
+				}
+			}
+
+			// OAM selection priority, during each scanline the PPU can only render 10 sprites, a hardware limitation.
+			// the scan will go through the OAM sequentially, checking if an entry's Y is within LY and making sure that we check the lcdc.2 obj size.
+			// I will scan the oam and if we find matches I will store them in an array that the fetcher can access when needed.
+
 			if (this->cycle_counter >= (80 / 4))
 			{
-				this->updateState(3);
+				if (oam_scan_iterator != 40)
+					exit(40);
+				this->updateState(ePPUstate::graphics_transfer);
 			}
 		} break;
 
-		case 3: // graphics transfer
+		case ePPUstate::graphics_transfer: // graphics transfer
 		{
 			// update bg/win fetcher and fifo
 			
@@ -154,10 +181,10 @@ void PPU::updateGraphics(const int cycles)
 			this->fifo_bg.fetcher.updateFetcher(cycles);
 			//this->fifo_sprite.fetcher.updateFetcher(cycles);
 
-			clockFIFOS();
+			clockFIFOmCycle();
 
 			if (this->scanline_x >= 160)
-				this->updateState(0);
+				this->updateState(ePPUstate::h_blank);
 
 			//if (this->scanline_x >= 8)
 				//this->newScanline();
@@ -174,10 +201,217 @@ void PPU::updateGraphics(const int cycles)
 	*registers.ly = 0;
 
 	//update register to mode one
-	this->updateState(0);
+	this->updateState(ePPUstate::h_blank);
 
 	return;
 }
+
+
+
+bool PPU::lcdEnabled()
+{
+	return (bool)(*registers.lcdc & (0b1 << 7));
+
+}
+
+
+/// <summary>
+/// output 8000-8FFF or 8800-97FF
+/// </summary>
+Word PPU::getTileAddressFromNumber(const Byte tile_number, const enum eTileType eTileType)
+{
+	switch (eTileType)
+	{
+	case PPU::sprite:
+		return 0x8000 + (tile_number * 16);
+		break;
+
+	case PPU::background:
+	case PPU::window:
+	{
+		bool addressing_mode = (*registers.lcdc & (0b1 << 4));
+		// LCDC.4 = 1, $8000 addressing
+		if (addressing_mode == 1)
+		{
+			return 0x8000 + (tile_number * 16);
+			break;
+		}
+		// LCDC.4 = 0, $8800/9000 addressing
+		// tile numbers 0-127 use 0x9000 addressing
+		// tile numbers 128-255 use 0x8800 addressing
+		return (tile_number > 127) ? (0x8800 + (tile_number - 128) * 16) : (0x9000 + tile_number * 16);
+		break;
+	}
+
+	default: fprintf(stderr, "Unreachable eTileType");  exit(-1); break;
+	}
+}
+
+
+
+void PPU::addToFramebuffer(const int x, const int y, const FIFOPixel fifo_pixel)
+{
+	if (x < XRES && y < YRES)
+		this->bus->framebuffer[static_cast<long long>(x) + (XRES * static_cast<long long>(y))] = this->dmgFramebufferPixelToRGB(fifo_pixel);
+}
+
+
+FramebufferPixel PPU::dmgFramebufferPixelToRGB(const FIFOPixel fifo_pixel)
+{
+
+	Byte palette_register = this->getMemory(0xFF47);
+
+	Byte id_to_palette_id = 0;
+	switch (fifo_pixel.colour)
+	{
+	case 0:
+		id_to_palette_id = (palette_register & 0b00000011); break;
+	case 1:
+		id_to_palette_id = (palette_register & 0b00001100) >> 2; break;
+	case 2:
+		id_to_palette_id = (palette_register & 0b00110000) >> 4; break;
+	case 3:
+		id_to_palette_id = (palette_register & 0b11000000) >> 6; break;
+	};
+
+	switch (id_to_palette_id)
+	{
+	case 0:
+		return FramebufferPixel(GB_PALLETE_00_r, GB_PALLETE_00_g, GB_PALLETE_00_b); // white
+	case 1:
+		return FramebufferPixel(GB_PALLETE_01_r, GB_PALLETE_01_g, GB_PALLETE_01_b); // light gray
+	case 2:
+		return FramebufferPixel(GB_PALLETE_10_r, GB_PALLETE_10_g, GB_PALLETE_10_b); // dark gray
+	case 3:
+		return FramebufferPixel(GB_PALLETE_11_r, GB_PALLETE_11_g, GB_PALLETE_11_b); // black
+	default: fprintf(stderr, "Unreachable id_to_palette_id");  exit(-1); break;
+	}
+}
+
+void PPU::newScanline()
+{
+	(*registers.ly)++;
+	this->updateState(2);
+
+	if (*registers.ly == 144)
+	{
+		this->updateState(1);
+		this->bus->cpu.requestInterrupt(vblank);
+	}
+
+	if (*registers.ly > 153)
+		*registers.ly = 0;
+
+	this->cycle_counter = 0;
+	this->scanline_x = 0;
+	this->fifo_bg.reset();
+	this->fifo_oam.reset();
+	this->window_wy_triggered = false;
+	oam_priority.reset();
+	oam_scan_iterator = 0;
+}
+
+void PPU::updateState(Byte new_state)
+{
+	Byte original_mode = (*registers.stat & 0x3);
+	bool irq_needed = false;
+
+	switch (new_state)
+	{
+	case 0: {
+		*registers.stat = (*registers.stat & 0xFC) | 0x0;
+		irq_needed = (*registers.stat & 0b00001000);
+	}break;
+
+	case 1: {
+		*registers.stat = (*registers.stat & 0xFC) | 0x1;
+		if (this->lcdEnabled())
+			irq_needed = (*registers.stat & 0b00010000);
+	}break;
+
+	case 2: {
+		*registers.stat = (*registers.stat & 0xFC) | 0x2;
+		irq_needed = (*registers.stat & 0b00100000);
+	}break;
+
+	case 3: {
+		*registers.stat = (*registers.stat & 0xFC) | 0x3;
+	}break;
+
+	default: fprintf(stderr, "Unreachable PPU new state"); exit(-1); break;
+	}
+
+	//if mode has changed
+
+	if ((original_mode != (*registers.stat & 0x3)) && irq_needed)
+		this->bus->cpu.requestInterrupt(lcdstat);
+
+	//time to check LYC = LY
+
+//set register for equality
+	if (*registers.ly == *registers.lyc)
+	{
+		*registers.stat |= 0b00000100;
+		// if interrupt is enabled
+		if (*registers.stat & 0b01000000)
+			this->bus->cpu.requestInterrupt(lcdstat);
+	}
+	else
+		*registers.stat &=  ~0b00000100;
+}
+
+Byte PPU::getPPUState()
+{
+	return *registers.stat & 0b00000011;
+}
+
+void Tile::consolePrint()
+{
+	for (int y = 0; y < 8; y++)
+	{
+		for (int x = 0; x < 8; x++)
+		{
+			this->getPixelColour(x, y);
+			std::cout << " ";
+		}
+		std::cout << "\n";
+	}
+}
+
+Byte Tile::getPixelColour(int x, int y)
+{
+	int offset = (0b1 << (7 - x));
+
+	bool bit0 = this->bytes_per_tile[2 * static_cast<long long>(y)] & offset;
+	bool bit1 = this->bytes_per_tile[(2 * static_cast<long long>(y)) + 1] & offset;
+
+	Byte result = (((Byte)bit0 << 1) | (Byte)bit1);
+	return result;
+}
+
+Tile::Tile(BUS* bus, Word address)
+{
+	for (int i = 0; i < 16; i++)
+	{
+		this->bytes_per_tile[i] = bus->getMemory(address + i, eMemoryAccessType::ppu);
+	}
+}
+
+Tile::Tile()
+{
+	this->bytes_per_tile.fill(0x00);
+}
+
+void PPU::debugAddToBGFIFO(FIFOPixel pixel)
+{
+	this->fifo_bg.push(pixel);
+}
+
+void PPU::debugAddToOAMFIFO(FIFOPixel pixel)
+{
+	this->fifo_oam.push(pixel);
+}
+
 
 //void PPU::update_lcdstat()
 //{
@@ -267,251 +501,3 @@ void PPU::updateGraphics(const int cycles)
 //		*lcdstat_register_ptr &= ~0b00000100;
 //	
 //}
-
-bool PPU::lcdEnabled()
-{
-	return (bool)(*registers.lcdc & (0b1 << 7));
-
-}
-
-
-/// <summary>
-/// output 8000-8FFF or 8800-97FF
-/// </summary>
-Word PPU::getTileAddressFromNumber(const Byte tile_number, const enum eTileType eTileType)
-{
-	switch (eTileType)
-	{
-	case PPU::sprite:
-		return 0x8000 + (tile_number * 16);
-		break;
-
-	case PPU::background:
-	case PPU::window:
-	{
-		bool addressing_mode = (*registers.lcdc & (0b1 << 4));
-		// LCDC.4 = 1, $8000 addressing
-		if (addressing_mode == 1)
-		{
-			return 0x8000 + (tile_number * 16);
-			break;
-		}
-		// LCDC.4 = 0, $8800/9000 addressing
-		// tile numbers 0-127 use 0x9000 addressing
-		// tile numbers 128-255 use 0x8800 addressing
-		return (tile_number > 127) ? (0x8800 + (tile_number - 128) * 16) : (0x9000 + tile_number * 16);
-		break;
-	}
-
-	default: fprintf(stderr, "Unreachable eTileType");  exit(-1); break;
-	}
-}
-
-//void PPU::render_scanline()
-//{
-//	//resets fifos
-//	//this->fifo_bg = FIFO();
-//	//this->fifo_sprite = FIFO();
-//
-//	// temp setting of scx, scy, ly registers
-//	this->setMemory(SCX, 0x80);
-//	this->setMemory(SCY, 0x40);
-//	this->bus->io[LY - IOOFFSET] = 0x00;
-//	
-//	// get tile number and address of topleft tile of viewport
-//	Byte tile_number = this->fifo_bg.fetcher.getTileNumber();
-//	Word tile_address = this->get_tile_address(tile_number, PPU::background);
-//
-//	// get scy
-//	Byte scy = this->getMemory(SCY);
-//
-//	// get top and bottom byte of 8 pixel line from tile
-//	Byte line_data0 = this->getMemory(tile_address + 2 * (scy % 8));
-//	Byte line_data1 = this->getMemory((tile_address + 1) + 2 * (scy % 8));
-//	
-//	for (int i = 0; i < 8; i++) 
-//	{
-//		// get colour of pixel
-//		int offset = (0b1 << (7 - i));
-//		bool bit0 = line_data0 & offset;
-//		bool bit1 = line_data1 & offset;
-//		Byte colour = (((Byte)bit0 << 1) | (Byte)bit1);
-//		
-//		//push to fifo
-//		this->fifo_bg.push(FIFOPixel(colour, 0, 0, 0));
-//
-//	}
-//
-//	// get ly for setting to framebuffer
-//	Byte ly = this->getMemory(LY);
-//	
-//	
-//	// pop fifo 8 times into framebuffer
-//	for (int i = 0; i < 8; i++)
-//	{
-//		this->addToFramebuffer(i, ly, this->fifo_bg.pop());
-//	}
-//
-//}
-//
-
-
-void PPU::addToFramebuffer(const int x, const int y, const FIFOPixel fifo_pixel)
-{
-	if (x < XRES && y < YRES)
-		this->bus->framebuffer[static_cast<long long>(x) + (XRES * static_cast<long long>(y))] = this->dmgFramebufferPixelToRGB(fifo_pixel);
-}
-
-
-FramebufferPixel PPU::dmgFramebufferPixelToRGB(const FIFOPixel fifo_pixel)
-{
-
-	Byte palette_register = this->getMemory(0xFF47);
-
-	Byte id_to_palette_id = 0;
-	switch (fifo_pixel.colour)
-	{
-	case 0:
-		id_to_palette_id = (palette_register & 0b00000011); break;
-	case 1:
-		id_to_palette_id = (palette_register & 0b00001100) >> 2; break;
-	case 2:
-		id_to_palette_id = (palette_register & 0b00110000) >> 4; break;
-	case 3:
-		id_to_palette_id = (palette_register & 0b11000000) >> 6; break;
-	};
-
-	switch (id_to_palette_id)
-	{
-	case 0:
-		return FramebufferPixel(GB_PALLETE_00_r, GB_PALLETE_00_g, GB_PALLETE_00_b); // white
-	case 1:
-		return FramebufferPixel(GB_PALLETE_01_r, GB_PALLETE_01_g, GB_PALLETE_01_b); // light gray
-	case 2:
-		return FramebufferPixel(GB_PALLETE_10_r, GB_PALLETE_10_g, GB_PALLETE_10_b); // dark gray
-	case 3:
-		return FramebufferPixel(GB_PALLETE_11_r, GB_PALLETE_11_g, GB_PALLETE_11_b); // black
-	default: fprintf(stderr, "Unreachable id_to_palette_id");  exit(-1); break;
-	}
-}
-
-void PPU::newScanline()
-{
-	(*registers.ly)++;
-	this->updateState(2);
-
-	if (*registers.ly == 144)
-	{
-		this->updateState(1);
-		this->bus->cpu.requestInterrupt(vblank);
-	}
-
-	if (*registers.ly > 153)
-		*registers.ly = 0;
-
-	this->cycle_counter = 0;
-	this->scanline_x = 0;
-	this->fifo_bg.reset();
-	this->fifo_sprite.reset();
-	this->window_wy_triggered = false;
-}
-
-void PPU::updateState(Byte new_state)
-{
-	Byte original_mode = (*registers.stat & 0x3);
-	bool irq_needed = false;
-
-	switch (new_state)
-	{
-	case 0: {
-		*registers.stat = (*registers.stat & 0xFC) | 0x0;
-		irq_needed = (*registers.stat & 0b00001000);
-	}break;
-
-	case 1: {
-		*registers.stat = (*registers.stat & 0xFC) | 0x1;
-		if (this->lcdEnabled())
-			irq_needed = (*registers.stat & 0b00010000);
-	}break;
-
-	case 2: {
-		*registers.stat = (*registers.stat & 0xFC) | 0x2;
-		irq_needed = (*registers.stat & 0b00100000);
-	}break;
-
-	case 3: {
-		*registers.stat = (*registers.stat & 0xFC) | 0x3;
-	}break;
-
-	default: fprintf(stderr, "Unreachable PPU new state"); exit(-1); break;
-	}
-
-	//if mode has changed
-
-	if ((original_mode != (*registers.stat & 0x3)) && irq_needed)
-		this->bus->cpu.requestInterrupt(lcdstat);
-
-	//time to check LYC = LY
-
-//set register for equality
-	if (*registers.ly == *registers.lyc)
-	{
-		*registers.stat |= 0b00000100;
-		// if interrupt is enabled
-		if (*registers.stat & 0b01000000)
-			this->bus->cpu.requestInterrupt(lcdstat);
-	}
-	else
-		*registers.stat &=  ~0b00000100;
-}
-
-Byte PPU::getPPUState()
-{
-	return *registers.stat & 0b00000011;
-}
-
-void Tile::consolePrint()
-{
-	for (int y = 0; y < 8; y++)
-	{
-		for (int x = 0; x < 8; x++)
-		{
-			this->getPixelColour(x, y);
-			std::cout << " ";
-		}
-		std::cout << "\n";
-	}
-}
-
-Byte Tile::getPixelColour(int x, int y)
-{
-	int offset = (0b1 << (7 - x));
-
-	bool bit0 = this->bytes_per_tile[2 * static_cast<long long>(y)] & offset;
-	bool bit1 = this->bytes_per_tile[(2 * static_cast<long long>(y)) + 1] & offset;
-
-	Byte result = (((Byte)bit0 << 1) | (Byte)bit1);
-
-	/*if (result != 0)
-		std::cout << "";
-	if (result == 00)
-		std::cout << "  ";
-	else
-		std::cout << std::bitset<2>{result};
-	*/
-	return result;
-}
-
-Tile::Tile(BUS* bus, Word address)
-{
-	for (int i = 0; i < 16; i++)
-	{
-		this->bytes_per_tile[i] = bus->getMemory(address + i, eMemoryAccessType::ppu);
-	}
-}
-
-Tile::Tile()
-{
-	this->bytes_per_tile.fill(0x00);
-}
-

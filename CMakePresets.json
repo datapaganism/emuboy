@@ -32,7 +32,7 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "SDL2_DIR": "C:/vclib/SDL2-2.0.18"
+        "SDL2_DIR": "C:/vclib/SDL2-2.24.1"
       }
     },
     {
