@@ -71,22 +71,6 @@ void PPU::clockFIFOmCycle()
 	}
 }
 
-FIFOPixel PPU::combinePixels()
-{
-	if (!fifo_bg.empty && !fifo_oam.empty)
-	{
-		FIFOPixel bg = fifo_bg.pop();
-		FIFOPixel sprite = fifo_oam.pop();
-		
-		if (sprite.colour == 0x0)
-			// mask sprite and OR with bg background color
-
-		//need to mix the pixels, not finished
-		return FIFOPixel();
-	}
-	return fifo_bg.pop();
-}
-
 void PPU::setRegisters()
 {
 	this->registers.ly = &this->bus->io[LY - IOOFFSET];
