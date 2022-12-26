@@ -78,6 +78,21 @@ struct OAMentry
 	Byte x_pos = 0; // x pos + 8
 	Byte tile_no = 0;
 	Byte attribute = 0;
+
+	bool getXFlip()
+	{
+		return (bool)(attribute & (0b1 << 5));
+	}
+
+	bool getYFlip()
+	{
+		return (bool)(attribute & (0b1 << 6));
+	}
+
+	bool getBGWinOverOBJ()
+	{
+		return (bool)(attribute & (0b1 << 7));
+	}
 };
 
 enum ePPUstate
@@ -124,14 +139,14 @@ public:
 	void updateState(Byte new_state);
 	Byte getMemory(const Word address);
 	void setMemory(const Word address, const Byte data);
-	void renderFromFIFO();
 
+	void sortOAMPriority();
 	
 	void debugAddToBGFIFO(FIFOPixel pixel);
 private:
 
 	void setRegisters();
-	FIFO fifo;
+	PixelFIFO fifo;
 
 
 };

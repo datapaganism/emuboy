@@ -40,6 +40,8 @@ public:
     Byte interrupt_enable_register = 0;
 
     std::unique_ptr<FramebufferPixel[]> framebuffer = std::make_unique<FramebufferPixel[]>(XRES * YRES);
+
+    uint64_t DEBUG_mCycle_counter = 0;
    
     void init();
     void biosInit();
@@ -63,5 +65,6 @@ public:
     bool DEBUG_PC_breakpoint_hit = false;
     void DEBUG_fill_ram(Word address, std::string byteString);
     void DEBUG_nintendo_logo();
+    void DEBUG_print_ASCII_from_serial();
 };
 

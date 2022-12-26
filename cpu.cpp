@@ -43,6 +43,8 @@ void CPU::mStepCPU()
 					this->ei_triggered = false;
 				}
 
+				//DEBUG_printCurrentState(0x100);
+
 				this->checkForInterrupts();
 				if (this->interrupt_vector != 0)
 				{
@@ -196,6 +198,7 @@ void CPU::DEBUG_printCurrentState(Word pc)
 		this->debug_toggle = true;
 	if (this->debug_toggle)
 	{
+		std::cout << this->bus->DEBUG_mCycle_counter << "\n";
 		printf("%s:0x%.4X  ", "pc", this->registers.pc);
 		//printf("%s:0x%.2X  ", "cyclesused", this->mcycles_used);
 		printf("op:0x%.2X | ", this->getMemory(this->registers.pc));

@@ -1,6 +1,7 @@
 ﻿#include "ppu.hpp"
 #include "bus.hpp"
 #include <bitset>
+#include <algorithm>
 
 // ppu pushes for 4 pixels per NOP
 // https://www.reddit.com/r/EmuDev/comments/8uahbc/dmg_bgb_lcd_timings_and_cnt/e1iooum/
@@ -26,6 +27,13 @@ Byte PPU::getMemory(const Word address)
 void PPU::setMemory(const Word address, const Byte data)
 {
 	bus->setMemory(address, data, eMemoryAccessType::ppu);
+}
+
+// sorts the array based on the x pos of each OAM entry
+void PPU::sortOAMPriority()
+{
+	int size = oam_priority.size() - 1;
+	std::sort(oam_priority.queue.begin(), oam_priority.queue.begin() + size, [](OAMentry* a, OAMentry* b) {return a->x_pos < b->x_pos; });
 }
 
 void PPU::setRegisters()
@@ -82,6 +90,9 @@ void PPU::updateGraphics(const int cycles)
 				struct OAMentry* entry = (OAMentry*)this->bus->oam_ram.get() + oam_scan_iterator++;
 				if (entry->x_pos != 0)
 				{
+					//printf("%02i | %x %x %x %x\n", oam_scan_iterator, entry->y_pos, entry->x_pos, entry->tile_no, entry->attribute);
+					//if (*registers.ly == 0x64)
+					//	NO_OP;
 					// this will by very buggy
 					if (*registers.ly >= (entry->y_pos - 16) && *registers.ly < (entry->y_pos - 16) + sprite_height)
 					{
@@ -99,7 +110,12 @@ void PPU::updateGraphics(const int cycles)
 			if (this->cycle_counter >= (80 / 4))
 			{
 				if (oam_scan_iterator != 40)
-					exit(40);
+				{
+					fprintf(stderr, "OAM scan should have checked 40 objs, not %i", oam_scan_iterator);  exit(-40);
+				}
+
+				if (oam_priority.size() > 2)
+					this->sortOAMPriority();
 				this->updateState(ePPUstate::graphics_transfer);
 			}
 		} break;
@@ -211,6 +227,7 @@ FramebufferPixel PPU::dmgFramebufferPixelToRGB(const FIFOPixel fifo_pixel)
 
 void PPU::newScanline()
 {
+	//std::cout << cycle_counter << "\n";
 	(*registers.ly)++;
 	this->updateState(2);
 

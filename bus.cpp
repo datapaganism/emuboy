@@ -10,39 +10,21 @@
 
 void BUS::cycleSystemOneFrame()
 {
-    int current_cycles = 0;
+    int current_mcycles = 0;
 
-    while (current_cycles <= CYCLES_PER_FRAME)
+    while (current_mcycles <= CPU_MCYCLES_PER_FRAME)
     {
-        // att ffb8 there is an instruction to load data into oam
-        // need to find out why it doesnt execute
-        if (cpu.registers.pc == 0xFFB8)
-            __debugbreak();
-
         this->cpu.mStepCPU();
         this->cpu.updateTimers();
-        
+
         this->dma_controller.updateDMA(4);
 
         this->ppu.updateGraphics(4);
 
-        current_cycles++;
+        current_mcycles++;
+        DEBUG_mCycle_counter++;
 
-        // Serial monitoring
-        if ((this->io[0xFF02 - IOOFFSET] & ~0x7E) == 0x81)
-        {
-            char c = this->io[0xFF01 - IOOFFSET];
-            if (c == ' ')
-            {
-                this->cpu.debug_toggle = true;
-                printf("");
-            }
-            if (c != 0)
-            {
-                printf("%c", c);
-                this->io[0xFF02 - IOOFFSET] = 0x0;
-            }
-        }
+        //DEBUG_print_ASCII_from_serial();
     }
 }
 
@@ -246,6 +228,25 @@ void BUS::DEBUG_nintendo_logo()
 
 
 
+}
+
+void BUS::DEBUG_print_ASCII_from_serial()
+{
+    // Serial monitoring
+    if ((this->io[0xFF02 - IOOFFSET] & ~0x7E) == 0x81)
+    {
+        char c = this->io[0xFF01 - IOOFFSET];
+        if (c == ' ')
+        {
+            this->cpu.debug_toggle = true;
+            printf("");
+        }
+        if (c != 0)
+        {
+            printf("%c", c);
+            this->io[0xFF02 - IOOFFSET] = 0x0;
+        }
+    }
 }
 
 BUS::BUS(const std::string rom_path, const std::string bios_path)

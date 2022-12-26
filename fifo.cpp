@@ -5,17 +5,17 @@
 
 //https://www.reddit.com/r/EmuDev/comments/s6cpis/gameboy_trying_to_understand_sprite_fifo_behavior/
 
-FIFO::FIFO()
+PixelFIFO::PixelFIFO()
 {
 
 }
 
-void FIFO::connectToPPU(PPU* ppu_ptr)
+void PixelFIFO::connectToPPU(PPU* ppu_ptr)
 {
 	this->ppu = ppu_ptr;
 }
 
-Word FIFO::scRegistersToTopLeftBGMapAddress()
+Word PixelFIFO::scRegistersToTopLeftBGMapAddress()
 {
 	Word base_address = 0x9800;
 
@@ -28,7 +28,7 @@ Word FIFO::scRegistersToTopLeftBGMapAddress()
 	return base_address;
 }
 
-Byte FIFO::getTileNumber(Word address)
+Byte PixelFIFO::getTileNumber(Word address)
 {
 	Word base_tilemap_address = address;
 
@@ -40,7 +40,7 @@ Byte FIFO::getTileNumber(Word address)
 	return tile_number;
 }
 
-void FIFO::renderPixels(const int cycles)
+void PixelFIFO::renderPixels(const int cycles)
 {
 	if (this->rendering_sprite)
 		return;
@@ -58,10 +58,13 @@ void FIFO::renderPixels(const int cycles)
 				/*
 					Check scx register, % 8 gives the amount of pixels we are within a tile, if not 0, pop the fifo by the result
 				*/
-				const Byte scx_pop = *ppu->registers.scx % 8;
-				if ((ppu->scanline_x == 0) && (scx_pop != 0))
+				if (!this->rendering_sprite)
 				{
-					popBy(scx_pop);
+					const Byte scx_pop = *ppu->registers.scx % 8;
+					if ((ppu->scanline_x == 0) && (scx_pop != 0))
+					{
+						popBy(scx_pop);
+					}
 				}
 				/*
 				The scroll registers are re - read on each tile fetch, except for the low 3 bits of SCX, which are only read at the beginning of the scanline(for the initial shifting of pixels).
@@ -103,7 +106,7 @@ void FIFO::renderPixels(const int cycles)
 
 */
 
-void FIFO::fetchPixels(const int cycles)
+void PixelFIFO::fetchPixels(const int cycles)
 {
 	// Window stuff
 	/*
@@ -124,17 +127,22 @@ void FIFO::fetchPixels(const int cycles)
 
 		if (!rendering_sprite)
 		{
-			OAMentry* obj = ppu->oam_priority.getBack();
-			if (obj != nullptr)
+			current_sprite = ppu->oam_priority.getBack();
+			if (current_sprite != nullptr)
 			{
-				if (ppu->scanline_x >= (obj->x_pos - 8)            // its like this is correct but the 
-					&& ppu->scanline_x < (obj->x_pos - 8) + 8
-					&& ly >= (obj->y_pos - 16)
-					&& ly < (obj->y_pos - 16) + 8
+				if (ppu->scanline_x >= (current_sprite->x_pos - 8)            // its like this is correct but the 
+					&& ppu->scanline_x < (current_sprite->x_pos - 8) + 8
+					&& ly >= (current_sprite->y_pos - 16)
+					&& ly < (current_sprite->y_pos - 16) + 8
 					)
 				{
 					// if there is a sprite on this line
 					rendering_sprite = true;
+
+					//current_sprite->attribute = (0b1 << 6);
+
+					//if (current_sprite->tile_no == 0x27)
+						//NO_OP;
 					// if FIFO hasnt enough pixels to mix sprite with
 					if (size() < 8)
 						fifo_needs_more_bgwin_pixels = true;
@@ -152,7 +160,7 @@ void FIFO::fetchPixels(const int cycles)
 			{
 				if (rendering_sprite && !fifo_needs_more_bgwin_pixels)
 				{
-					this->tile_number = ppu->oam_priority.getBack()->tile_no;
+					this->tile_number = current_sprite->tile_no;
 					this->tile_address = ppu->getTileAddressFromNumber(tile_number, PPU::sprite);
 					this->state++;
 					break;
@@ -205,6 +213,16 @@ void FIFO::fetchPixels(const int cycles)
 			//if bg is not enabled, get no data
 			this->data0 = 00;
 
+			if (rendering_sprite && !fifo_needs_more_bgwin_pixels)
+			{
+				Byte current_scanline_y_offset = (ly - (current_sprite->y_pos - 16));
+				(current_sprite->getYFlip()) ? this->tile_address += 16 - (2 * current_scanline_y_offset) : this->tile_address += (2 * current_scanline_y_offset);
+				this->data0 = ppu->getMemory(this->tile_address);
+				this->state++;
+				break;
+			}
+
+
 			if (bg_active || window_active)
 			{
 				this->tile_address += (2 * (fetcher_y_line % 8));
@@ -215,11 +233,32 @@ void FIFO::fetchPixels(const int cycles)
 		}
 		case eFetcherState::get_tile_data_high: // get data 1, construct 8 pixel buffer
 		{
-
-			//this->incAddress();			
-			// 
 			//if bg is not enabled, get no data
 			this->data1 = 00;
+
+			if (rendering_sprite && !fifo_needs_more_bgwin_pixels)
+			{
+				incAddress();
+				this->data1 = ppu->getMemory(this->tile_address);
+
+				
+				for (int i = 0; i < 8; i++)
+				{
+					// get colour of pixel
+					int offset = (0b1 << (7 - i));
+					bool bit0 = data0 & offset;
+					bool bit1 = data1 & offset;
+					Byte colour = (((Byte)bit0 << 1) | (Byte)bit1);
+
+					if (current_sprite->getXFlip())
+						this->pixels[7 - i] = (FIFOPixel(colour, 0, current_sprite->getBGWinOverOBJ(), 0));
+					else
+						this->pixels[i] = (FIFOPixel(colour, 0, current_sprite->getBGWinOverOBJ(), 0));
+				}
+				this->state++;
+				break;
+			}
+
 
 			if (bg_active || window_active)
 			{
@@ -238,12 +277,7 @@ void FIFO::fetchPixels(const int cycles)
 				//push to fifo
 				this->pixels[i] = (FIFOPixel(colour, 0, 0, 0));
 			}
-			// rendering a sprite should not increment the FIFO's x position
-			if (rendering_sprite && !fifo_needs_more_bgwin_pixels)
-			{
-				this->state++;
-				break;
-			}
+			// rendering a sprite should not increment the PixelFIFO's x position
 			fetcher_scanline_x++;
 
 			this->state++;
@@ -269,7 +303,7 @@ void FIFO::fetchPixels(const int cycles)
 
 				for (int i = 0; i < 8; i++)
 				{
-					if (pixels[i].colour != 0)
+					if (pixels[i].colour != 0 && !pixels[i].sprite_priority)
 						original_fifo_pixels[i].colour = pixels[i].colour;
 				}
 
@@ -292,7 +326,7 @@ void FIFO::fetchPixels(const int cycles)
 	}
 }
 
-void FIFO::reset()
+void PixelFIFO::reset()
 {
 	this->data0 = NULL;
 	this->data1 = NULL;
@@ -313,7 +347,7 @@ void FIFO::reset()
 
 }
 
-void FIFO::incAddress()
+void PixelFIFO::incAddress()
 {
 	Byte inc = this->tile_address & 0x1F;
 	inc++;
@@ -321,7 +355,8 @@ void FIFO::incAddress()
 	this->tile_address |= (inc & 0x1F);
 }
 
-bool FIFO::isWindowActive()
+
+bool PixelFIFO::isWindowActive()
 {
 	return *ppu->registers.lcdc & 0b00100000;
 }

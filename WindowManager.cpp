@@ -53,7 +53,7 @@ void WindowManager::run()
     bool quit = false;
     bool pause = false;
 
-    unsigned int ticks_now = 0, ticks_previous = 0;
+    uint64_t ticks_now = 0, ticks_previous = 0;
     double tick_delta = 0;
     while (!quit)
     {
@@ -99,10 +99,10 @@ void WindowManager::run()
 
         // tick at custom frequency
 
-        ticks_now = SDL_GetTicks();
+        ticks_now = SDL_GetTicks64();
         tick_delta = ticks_now - ticks_previous;
 
-        if (tick_delta > 1000 / VSYNC)
+        if (tick_delta >= FRAMETIME)
         {
             ticks_previous = ticks_now;
 
