@@ -87,29 +87,6 @@ constexpr int DIVinit = DIV_INC_RATE;
 // convert to hz from gb freq register 
 // hz = 131072 / (2048 - gb)
 
-
-#define GB_PALLETE_OFF 0xFFFFFFFF
-#define GB_PALLETE_00  0xFF 
-#define GB_PALLETE_01  0xC0
-#define GB_PALLETE_10  0x69
-#define GB_PALLETE_11  0x00
-
-#define GB_PALLETE_00_r 0x89 
-#define GB_PALLETE_00_g 0xc0 
-#define GB_PALLETE_00_b 0x77
-
-#define GB_PALLETE_01_r 0x4d 
-#define GB_PALLETE_01_g 0xa3 
-#define GB_PALLETE_01_b 0x50 
-
-#define GB_PALLETE_10_r 0x37
-#define GB_PALLETE_10_g 0x76 
-#define GB_PALLETE_10_b 0x4A 
-
-#define GB_PALLETE_11_r 0x22 
-#define GB_PALLETE_11_g 0x49 
-#define GB_PALLETE_11_b 0x39 
-
 #define GB_PALLETE_BG_r 0xCA 
 #define GB_PALLETE_BG_g 0xDC 
 #define GB_PALLETE_BG_b 0x9F 

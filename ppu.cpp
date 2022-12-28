@@ -205,34 +205,11 @@ void PPU::addToFramebuffer(const int x, const int y, const FIFOPixel fifo_pixel)
 
 FramebufferPixel PPU::dmgFramebufferPixelToRGB(const FIFOPixel fifo_pixel)
 {
-
 	Byte palette_register = this->getMemory(0xFF47);
 
-	Byte id_to_palette_id = 0;
-	switch (fifo_pixel.colour)
-	{
-	case 0:
-		id_to_palette_id = (palette_register & 0b00000011); break;
-	case 1:
-		id_to_palette_id = (palette_register & 0b00001100) >> 2; break;
-	case 2:
-		id_to_palette_id = (palette_register & 0b00110000) >> 4; break;
-	case 3:
-		id_to_palette_id = (palette_register & 0b11000000) >> 6; break;
-	};
+	Byte id_to_palette_id = (palette_register & 0b11 << 2 * fifo_pixel.colour) >> 2 * fifo_pixel.colour;
 
-	switch (id_to_palette_id)
-	{
-	case 0:
-		return FramebufferPixel(GB_PALLETE_00_r, GB_PALLETE_00_g, GB_PALLETE_00_b); // white
-	case 1:
-		return FramebufferPixel(GB_PALLETE_01_r, GB_PALLETE_01_g, GB_PALLETE_01_b); // light gray
-	case 2:
-		return FramebufferPixel(GB_PALLETE_10_r, GB_PALLETE_10_g, GB_PALLETE_10_b); // dark gray
-	case 3:
-		return FramebufferPixel(GB_PALLETE_11_r, GB_PALLETE_11_g, GB_PALLETE_11_b); // black
-	default: fprintf(stderr, "Unreachable id_to_palette_id");  exit(-1); break;
-	}
+	return palette_array[current_palette][id_to_palette_id];
 }
 
 void PPU::newScanline()
@@ -353,6 +330,11 @@ void PPU::debugAddToBGFIFO(FIFOPixel pixel)
 {
 	this->fifo.push(pixel);
 }
+
+void PPU::incrementPalette()
+{
+	current_palette = (current_palette + 1) % palette_array_size;
+};
 
 //void PPU::update_lcdstat()
 //{

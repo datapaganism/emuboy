@@ -9,6 +9,11 @@ void EmulatorWindow::handleEvent(SDL_Event& e)
         case SDL_KEYDOWN:
         {
             int keyPressed = e.key.keysym.sym;
+            if (keyPressed == SDLK_8)
+            {
+                ppu.incrementPalette();
+                break;
+            }
             enum eJoypadButtons pressed = keyToEnum(keyPressed);
             if (pressed != UNKNOWN)
                 this->pressButton(pressed);
