@@ -250,10 +250,7 @@ void PixelFIFO::fetchPixels(const int cycles)
 					bool bit1 = data1 & offset;
 					Byte colour = (((Byte)bit0 << 1) | (Byte)bit1);
 
-					if (current_sprite->getXFlip())
-						this->pixels[7 - i] = (FIFOPixel(colour, 0, current_sprite->getBGWinOverOBJ(), 0));
-					else
-						this->pixels[i] = (FIFOPixel(colour, 0, current_sprite->getBGWinOverOBJ(), 0));
+					this->pixels[(current_sprite->getXFlip()) ? 7 - i : i] = (FIFOPixel(colour, 0, current_sprite->getBGWinOverOBJ(), 0));
 				}
 				this->state++;
 				break;
@@ -301,9 +298,15 @@ void PixelFIFO::fetchPixels(const int cycles)
 				while (!empty)
 					original_fifo_pixels.push_back(pop());
 
+				// can check underlying pixel to see if it is a sprite pixel and compare about
+				// priority
 				for (int i = 0; i < 8; i++)
 				{
-					if (pixels[i].colour != 0 && !pixels[i].sprite_priority)
+					if ( 
+						pixels[i].colour != 0
+						//&& original_fifo_pixels[i].colour == 0
+						//&& pixels[i].sprite_priority
+						)
 						original_fifo_pixels[i].colour = pixels[i].colour;
 				}
 
