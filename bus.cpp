@@ -253,9 +253,8 @@ BUS::BUS(const std::string rom_path, const std::string bios_path)
     this->loadBios(bios_path);
 
     //fill framebuffer
-    FramebufferPixel blank(GB_PALLETE_00_r, GB_PALLETE_00_g, GB_PALLETE_00_b);
     for (int i = 0; i < XRES * YRES; i++)
-        this->framebuffer[i] = blank;
+        this->framebuffer[i] = palette_array[ppu.current_palette][0];
 }
 
 

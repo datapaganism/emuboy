@@ -51,6 +51,14 @@ struct FramebufferPixel
 	Byte alpha = 0xFF;
 };
 
+const FramebufferPixel palette_array[][4] =
+{
+	{FramebufferPixel(0x89, 0xC0, 0x77), FramebufferPixel(0x4D, 0xA3, 0x50) , FramebufferPixel(0x37, 0x76, 0x4A), FramebufferPixel(0x22, 0x49, 0x39) },
+	{FramebufferPixel(00, 00, 00), FramebufferPixel(84, 252, 252) , FramebufferPixel(252, 84, 252), FramebufferPixel(0xFF, 0xff, 0xff) },
+};
+
+const int palette_array_size = sizeof(palette_array) / sizeof(palette_array[0]);
+
 struct Tile
 {
 	Tile();
@@ -120,6 +128,7 @@ public:
 	Stack<OAMentry*, oam_priority_max> oam_priority;
 	int oam_scan_iterator = 0;
 
+	int current_palette = 0;
 
 	void connectToBus(BUS* pBus);
 	void updateGraphics(const int cycles);
@@ -143,6 +152,8 @@ public:
 	void sortOAMPriority();
 	
 	void debugAddToBGFIFO(FIFOPixel pixel);
+
+	void incrementPalette();
 private:
 
 	void setRegisters();

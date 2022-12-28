@@ -405,7 +405,7 @@ void CPU::updateTimers(const int tcycles)
 		4194304 / 16384 = 256, every 256 tcyles div will overflow
 	*/
 	this->divtimer_counter += tcycles;
-	if (this->divtimer_counter >= DIV_INC_RATE)
+	if (this->divtimer_counter >= DIV_INC_RATE - 1)
 	{
 		this->divtimer_counter = 0;
 		this->bus->io[DIV - IOOFFSET]++;
@@ -414,7 +414,7 @@ void CPU::updateTimers(const int tcycles)
 	if (this->bus->io[TAC - IOOFFSET] & (0b00000100))
 	{
 		this->timer_counter += tcycles;
-		if (this->timer_counter >= this->getTACFrequency())
+		if (this->timer_counter >= this->getTACFrequency() - 1)
 		{
 			this->timer_counter = 0;
 			this->bus->io[TIMA - IOOFFSET]++;
