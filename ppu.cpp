@@ -48,24 +48,34 @@ void PPU::setRegisters()
 	this->registers.lcdc = &this->bus->io[LCDC - IOOFFSET];
 }
 
-void PPU::updateGraphics(const int cycles)
+void PPU::updateGraphics(const int tcycles)
 {
-	// one frame takes 70221 cycles
-	// one scanline is 456 cycles 
+	// one frame takes 70221 tcycles
+	// one scanline is 456 tcycles 
 
 	// the cpu may have modified the registers since the last cycle, it is time to check and update any changes of the lcd stat.
 	//this->update_lcdstat();
 
+	/*
+		every cpu machine cycle is eqv to 2 tcycles of the 
+
+		dot to mcycle -> / 4
+		scanline is 456 dots, or 114 mcycles
+		oam scan is 20 mcycles
+
+		70221 dots is a single frame
+	*/
+
 	if (this->lcdEnabled())
 	{
 
-		this->cycle_counter += cycles;
+		this->cycle_counter += tcycles;
 
 		switch (*registers.stat & 0b00000011)
 		{
 		case ePPUstate::h_blank: // h blank
 		{
-			if (this->cycle_counter >= (456 / 4))
+			if (this->cycle_counter >= (456))
 			{
 				this->newScanline();
 			}
@@ -73,7 +83,7 @@ void PPU::updateGraphics(const int cycles)
 
 		case ePPUstate::v_blank: // v blank
 		{
-			if (this->cycle_counter >= (456 / 4))
+			if (this->cycle_counter >= (456))
 			{
 				this->newScanline();
 			}
@@ -85,7 +95,7 @@ void PPU::updateGraphics(const int cycles)
 				this->window_wy_triggered = true;
 
 			int sprite_height = (*registers.lcdc & 0b1 << 2) ? 16 : 8;
-			for (int i = 0; i < cycles * 2; i++)
+			for (int i = 0; i < tcycles / 2; i++)
 			{
 				struct OAMentry* entry = (OAMentry*)this->bus->oam_ram.get() + oam_scan_iterator++;
 				if (entry->x_pos != 0)
@@ -107,14 +117,14 @@ void PPU::updateGraphics(const int cycles)
 			// the scan will go through the OAM sequentially, checking if an entry's Y is within LY and making sure that we check the lcdc.2 obj size.
 			// I will scan the oam and if we find matches I will store them in an array that the fetcher can access when needed.
 
-			if (this->cycle_counter >= (80 / 4))
+			if (this->cycle_counter >= (80))
 			{
 				if (oam_scan_iterator != 40)
 				{
 					fprintf(stderr, "OAM scan should have checked 40 objs, not %i", oam_scan_iterator);  exit(-40);
 				}
 
-				if (oam_priority.size() > 2)
+				if (oam_priority.size() > 1)
 					this->sortOAMPriority();
 				this->updateState(ePPUstate::graphics_transfer);
 			}
@@ -123,8 +133,8 @@ void PPU::updateGraphics(const int cycles)
 		case ePPUstate::graphics_transfer: // graphics transfer
 		{
 			//fetch and then render pixels
-			this->fifo.fetchPixels(cycles);
-			this->fifo.renderPixels(cycles);
+			this->fifo.fetchPixels(tcycles);
+			this->fifo.renderPixels(tcycles);
 
 			if (this->scanline_x >= 160)
 				this->updateState(ePPUstate::h_blank);

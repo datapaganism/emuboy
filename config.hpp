@@ -15,7 +15,7 @@ constexpr int GB_CPU_MCYCLE_CLOCKSPEED = GB_CPU_TCYCLE_CLOCKSPEED / 4;
 constexpr double VSYNC = 59.73; // Hz, basically 60 but I want to be accurate;
 constexpr double FRAMETIME = 1000.0 / VSYNC;
 
-constexpr int CPU_MCYCLES_PER_FRAME = GB_CPU_MCYCLE_CLOCKSPEED / VSYNC; // used to figure out how many CPU operations can be done before we need update the screen a single frame
+constexpr int CPU_TCYCLES_PER_FRAME = GB_CPU_TCYCLE_CLOCKSPEED / VSYNC; // used to figure out how many CPU operations can be done before we need update the screen a single frame
 
 // the CPU uses cycles 70221 times per video frame
 // a video frame takes 70221/4 cycles to render.
@@ -54,8 +54,8 @@ constexpr int CPU_MCYCLES_PER_FRAME = GB_CPU_MCYCLE_CLOCKSPEED / VSYNC; // used 
 #define TMA  0xFF06
 #define TAC  0xFF07
 
-#define DIVinit GB_CPU_TCYCLE_CLOCKSPEED / 16382
-#define DIV_INC_RATE GB_CPU_MCYCLE_CLOCKSPEED / 16382
+constexpr int DIV_INC_RATE = GB_CPU_TCYCLE_CLOCKSPEED / 16382;
+constexpr int DIVinit = DIV_INC_RATE;
 
 #define LCDC 0xFF40  //LCD Control R/W Register //ff40
 #define STAT 0xFF41 //LCDC Status R/W Register //ff41

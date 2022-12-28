@@ -10,21 +10,14 @@
 
 void BUS::cycleSystemOneFrame()
 {
-    int current_mcycles = 0;
-
-    while (current_mcycles <= CPU_MCYCLES_PER_FRAME)
+    for (int i = 0; i < CPU_TCYCLES_PER_FRAME; i += 4)
     {
         this->cpu.mStepCPU();
-        this->cpu.updateTimers();
+        this->cpu.updateTimers(4);
 
         this->dma_controller.updateDMA(4);
 
         this->ppu.updateGraphics(4);
-
-        current_mcycles++;
-        DEBUG_mCycle_counter++;
-
-        //DEBUG_print_ASCII_from_serial();
     }
 }
 

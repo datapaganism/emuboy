@@ -49,8 +49,8 @@ int main(int argc, char* argv[])
 
     //std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\metasprites.gb");
     std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\DR.MARIO.gb");
-    //std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\blargg\\02-interrupts.gb");
-    std::string bios_path = "..\\..\\..\\bios\\bios.bin";
+   // std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\empty.gb");
+    std::string bios_path = "..\\..\\..\\bios\\bios.binx";
     
     WindowManager application(rom_path, bios_path);
 
