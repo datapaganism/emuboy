@@ -54,7 +54,7 @@ constexpr int CPU_TCYCLES_PER_FRAME = GB_CPU_TCYCLE_CLOCKSPEED / VSYNC; // used 
 #define TMA  0xFF06
 #define TAC  0xFF07
 
-constexpr int DIV_INC_RATE = GB_CPU_TCYCLE_CLOCKSPEED / 16382;
+constexpr int DIV_INC_RATE = GB_CPU_TCYCLE_CLOCKSPEED / 16384;
 constexpr int DIVinit = DIV_INC_RATE;
 
 #define LCDC 0xFF40  //LCD Control R/W Register //ff40

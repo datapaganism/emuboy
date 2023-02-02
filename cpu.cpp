@@ -367,35 +367,6 @@ void CPU::setNibble(Byte* reigster_one, const Byte value, const bool setHi)
 }
 
 
-void CPU::updateTimers()
-
-{
-	// DIV updates at 16384hz, the CPU in mCycles is = 1048576hz
-	// 1048576 / 163384 = 64
-	// every 64 mCycles, div increments by 1
-	
-	if (++this->divtimer_counter >= DIV_INC_RATE)
-	{
-		this->divtimer_counter = 0;
-		this->bus->io[DIV - IOOFFSET]++;
-	}
-		// if TMC bit 2 is set, this means that the timer is enabled
-	if (this->bus->io[TAC - IOOFFSET] & (0b00000100))
-	{
-		if (++this->timer_counter >= this->getTACFrequency())
-		{
-			this->timer_counter = 0;
-			this->bus->io[TIMA - IOOFFSET]++;
-
-			if (this->bus->io[TIMA - IOOFFSET] == 0xFF)
-			{
-				this->bus->io[TIMA - IOOFFSET] = this->bus->io[TMA - IOOFFSET]; //TIMA gets reset to TMA on overflow
-				this->requestInterrupt(timer);
-			}		
-		}
-	}
-}
-
 void CPU::updateTimers(const int tcycles)
 
 {
@@ -405,25 +376,26 @@ void CPU::updateTimers(const int tcycles)
 		4194304 / 16384 = 256, every 256 tcyles div will overflow
 	*/
 	this->divtimer_counter += tcycles;
-	if (this->divtimer_counter >= DIV_INC_RATE - 1)
+	if (this->divtimer_counter >= DIV_INC_RATE)
 	{
 		this->divtimer_counter = 0;
 		this->bus->io[DIV - IOOFFSET]++;
 	}
+
 	// if TMC bit 2 is set, this means that the timer is enabled
 	if (this->bus->io[TAC - IOOFFSET] & (0b00000100))
 	{
 		this->timer_counter += tcycles;
-		if (this->timer_counter >= this->getTACFrequency() - 1)
+		if (this->timer_counter >= this->getTACFrequency())
 		{
 			this->timer_counter = 0;
-			this->bus->io[TIMA - IOOFFSET]++;
-
 			if (this->bus->io[TIMA - IOOFFSET] == 0xFF)
 			{
 				this->bus->io[TIMA - IOOFFSET] = this->bus->io[TMA - IOOFFSET]; //TIMA gets reset to TMA on overflow
 				this->requestInterrupt(timer);
+				return;
 			}
+			this->bus->io[TIMA - IOOFFSET]++;
 		}
 	}
 }
