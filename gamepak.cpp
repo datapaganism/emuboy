@@ -54,9 +54,12 @@ Byte GamePak::getMemory(const Word address)
 		return this->rom[address];
 
 	if (address <= 0x7FFF) // otherwise return calculate the address by the rom bank used and return that data
-		return this->rom[(address - 0x4000) + (this->current_rom_bank * 0x4000)];
-	
+	{
+		int new_address = (address - 0x4000) + (current_rom_bank * 0x4000);
+		return rom[new_address];
 
+	}
+	
 	if (!ram_bank_enable)
 		return 0;
 	
@@ -209,6 +212,7 @@ void GamePak::romBankChange(const Word address, const Byte data)
 	case 0x01:
 		{
 			Byte rom_bank_to_select = data & 0x1F;
+			
 			if (rom_bank_to_select == 0)
 			{
 				current_rom_bank = 1;
@@ -216,7 +220,9 @@ void GamePak::romBankChange(const Word address, const Byte data)
 			}
 			if (rom_bank_to_select > number_of_rom_banks)
 			{
-				current_rom_bank = rom_bank_to_select & number_of_rom_banks;
+				current_rom_bank = (rom_bank_to_select & number_of_rom_banks);
+				if (current_rom_bank == 8)
+					NO_OP;
 				return;
 			}
 			current_rom_bank = rom_bank_to_select;
@@ -257,11 +263,11 @@ void GamePak::cartridgeTypeInit()
 	switch (cartridge_type)
 	{
 	case 0x00: current_rom_bank = 1; break; // ROM ONLY
-	case 0x01: // MBC1
+	case 0x01: current_rom_bank = 1;// MBC1
 	case 0x02: // MBC1 + RAM
-	case 0x03: // MBC1 + RAM + battery
+	case 0x03:  break;// MBC1 + RAM + battery
 	case 0x05: // MBC2
-	case 0x06: // MBC2 + BATTERY
+	case 0x06:  break;// MBC2 + BATTERY
 	case 0x08: break; // ROM + RAM
 	case 0x09: break; // ROM + RAM + BATTERY
 	case 0x0B: break; // MMM01

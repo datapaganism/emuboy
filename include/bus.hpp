@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <memory>
+#include <fstream>
 
 #include "cpu.hpp"
 #include "gamepak.hpp"
@@ -8,7 +9,7 @@
 #include "config.hpp"
 #include "joypad_mapping.hpp"
 #include "dma_controller.hpp"
-
+#include "logger.hpp"
 
 
 enum eMemoryAccessType
@@ -22,6 +23,9 @@ enum eMemoryAccessType
 
 class BUS
 {
+private:
+    std::string rom_path;
+    std::string bios_path;
 public:
     BUS(const std::string rom_path, const std::string bios_path);
 
@@ -29,6 +33,7 @@ public:
     CPU cpu;
     GamePak gamepak;
     DMA_Controller dma_controller;
+    //Logger logger;
 
     bool bios_loaded = false;
     std::unique_ptr<Byte[]> work_ram  = std::make_unique<Byte[]>(0x2000);
@@ -66,5 +71,7 @@ public:
     void DEBUG_fill_ram(Word address, std::string byteString);
     void DEBUG_nintendo_logo();
     void DEBUG_print_ASCII_from_serial();
+
+    void saveState();
 };
 

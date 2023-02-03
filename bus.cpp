@@ -18,6 +18,7 @@ void BUS::cycleSystemOneFrame()
         this->dma_controller.updateDMA(4);
 
         this->ppu.updateGraphics(4);
+        DEBUG_print_ASCII_from_serial();
     }
 }
 
@@ -242,8 +243,29 @@ void BUS::DEBUG_print_ASCII_from_serial()
     }
 }
 
+void BUS::saveState()
+{
+    std::string state_path = rom_path + ".state";
+
+   /*
+   std::ofstream state_file(state_path);
+   if (state_file.is_open())
+   {
+        for (int i = 0; i < sizeof(cpu.registers); i++)
+        {
+            Registers* regptr = &cpu.registers;
+            Byte buf = *((Byte*)(regptr + i));
+            state_file << buf;
+        }
+   }
+   */
+}
+
 BUS::BUS(const std::string rom_path, const std::string bios_path)
 {
+    this->rom_path = rom_path;
+    this->bios_path = bios_path;
+
     this->cpu.connectToBus(this);
     this->ppu.connectToBus(this);
     this->dma_controller.connectToBus(this);
@@ -322,7 +344,7 @@ Byte BUS::getMemory(const Word address, enum eMemoryAccessType access_type)
     if (address <= 0x00FF) //from 0x0000
     {
         // if the bios has never been loaded or if the register at 0xFF50 is set 1 (which is done by the bios program) we need to access the cartridge bank
-        if (this->io[(0xFF50) - IOOFFSET] == 0x1|| !bios_loaded)
+        if (this->io[(0xFF50) - IOOFFSET] == 0x1 || !bios_loaded)
             return gamepak.getMemory(address);
         
         

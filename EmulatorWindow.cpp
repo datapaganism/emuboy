@@ -14,6 +14,11 @@ void EmulatorWindow::handleEvent(SDL_Event& e)
                 ppu.incrementPalette();
                 break;
             }
+            if (keyPressed == SDLK_F5)
+            {
+                this->saveState();
+                break;
+            }
             enum eJoypadButtons pressed = keyToEnum(keyPressed);
             if (pressed != UNKNOWN)
                 this->pressButton(pressed);

@@ -29,7 +29,7 @@ void CPU::mStepCPU()
 {	
 	if (this->is_executing_instruction)
 	{
-		//DEBUG_printCurrentState(0x10c);
+		//DEBUG_printCurrentState(0x101);
 
 		//decode and execute instruction // takes a cycle
 		this->instructionHandler();
@@ -210,12 +210,12 @@ void CPU::DEBUG_printCurrentState(Word pc)
 		printf("%s:0x%.4X  ", "SP", this->registers.sp);
 		printf("%s:0x%.4X  ", "STAT", this->getMemory(STAT));
 		printf("%s:%i  ", "IME", this->interrupt_master_enable);
-		printf("%s:%x  ", "DIV", this->bus->io[4]);
-		printf("%s:%x  ", "TIMA", this->bus->io[5]);
-		printf("%s:%x  ", "TMA", this->bus->io[6]);
-		printf("%s:%x  ", "TAC", this->bus->io[7]);
-		printf("%s:%x  ", "divC", this->divtimer_counter);
-		printf("%s:%x  ", "timC", this->timer_counter);
+		//printf("%s:%x  ", "DIV", this->bus->io[4]);
+		//printf("%s:%x  ", "TIMA", this->bus->io[5]);
+		//printf("%s:%x  ", "TMA", this->bus->io[6]);
+		//printf("%s:%x  ", "TAC", this->bus->io[7]);
+		//printf("%s:%x  ", "divC", this->divtimer_counter);
+		//printf("%s:%x  ", "timC", this->timer_counter);
 		
 
 		/*printf("%s:%i  ","z", this->registers.get_flag(z));
