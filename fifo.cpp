@@ -80,6 +80,32 @@ void PixelFIFO::renderPixels(const int cycles)
 	}
 }
 
+/*
+	if wx + 7 >= scx and wy >= scy
+	then window is inside viewport
+
+	word base_address;
+
+	(lcdc.4) ? base_address = 0x9C00 : base_address = 0x9800;
+
+	// if current x and y inside window
+	if ((ly >= wy) && (fetcher_scanline_x >= (wx + 7))) AND window is active?
+	{
+		(lcdc.6) ? base_address = 0x9C00 : 0x9800;
+	}
+
+
+
+	if.lcdc.3 == 1 and fetcher_scanline_x not inside window then use 0x9c00
+	if lcdc.3 == 1 and fetcher_scanline_x inside window, use lcdc.6 value for address.
+
+
+	if lcdc.6 == 1 and fetcher_scanline_x is inside window then use 0x9c00
+	if lcdc.6 == 0 and fetcher_scanline_x is not inside window then use lcdc.3 value for bg address
+
+
+*/
+
 void PixelFIFO::fetchPixels(const int cycles)
 {
 	// Window stuff
@@ -142,13 +168,13 @@ void PixelFIFO::fetchPixels(const int cycles)
 
 				if (bg_active)
 				{
-					fetcher_x_tile = ((*ppu->registers.scx/8) + fetcher_scanline_x) & 0x1F;
+					fetcher_x_tile = (*ppu->registers.scx + fetcher_scanline_x) & 0x1F;
 					fetcher_y_line = (*ppu->registers.scy + ly) & 255;
 
 					int fetcher_y_tile = ((fetcher_y_line / 8));
 
-					Word bg_tile_map_area_address = (lcdc & (0b1 << 4)) ? 0x9C00 : 0x9800;
-					this->tile_map_address = bg_tile_map_area_address + (fetcher_x_tile) + ((fetcher_y_line / 8) * 0x20);
+					Word bg_tile_map_area_address = ((lcdc & (0b1 << 4)) == 1) ? 0x9C00 : 0x9800;
+					this->tile_map_address = bg_tile_map_area_address + (fetcher_x_tile)+((fetcher_y_line / 8) * 0x20);
 					this->tile_number = ppu->getMemory(this->tile_map_address);
 					this->tile_address = ppu->getTileAddressFromNumber(this->tile_number, PPU::background); // basically 0x8000 + (16 * tile_number)
 				}
