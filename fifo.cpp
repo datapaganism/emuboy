@@ -168,7 +168,7 @@ void PixelFIFO::fetchPixels(const int cycles)
 
 				if (bg_active)
 				{
-					fetcher_x_tile = (*ppu->registers.scx + fetcher_scanline_x) & 0x1F;
+					fetcher_x_tile = ((*ppu->registers.scx/8) + fetcher_scanline_x) & 0x1F;
 					fetcher_y_line = (*ppu->registers.scy + ly) & 255;
 
 					int fetcher_y_tile = ((fetcher_y_line / 8));
