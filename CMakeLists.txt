@@ -27,7 +27,7 @@ endfunction()
 
 
 # Add source to this project's executable.
-add_executable (emuboy "main.cpp" "Window.cpp" "WindowManager.cpp" "bus.cpp" "cpu.cpp" "dma_controller.cpp"  "gamepak.cpp"  "ppu.cpp" "VRAMViewer.cpp" "BGMapViewer.cpp"  "EmulatorWindow.cpp" "fifo.cpp" "logger.cpp")
+add_executable (emuboy "main.cpp" "Window.cpp" "WindowManager.cpp" "bus.cpp" "cpu.cpp" "dma_controller.cpp"  "gamepak.cpp"  "ppu.cpp" "VRAMViewer.cpp" "BGMapViewer.cpp"  "EmulatorWindow.cpp" "fifo.cpp")
 target_include_directories(emuboy PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(emuboy ${SDL2_LIBRARIES})
 

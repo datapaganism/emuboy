@@ -48,14 +48,10 @@ int main(int argc, char* argv[])
     //std::string rom_path = ((argv[1] != NULL) ? argv[1] : "D:\\afk\\Downloads\\bgbw64\\bgbtest.gb");
 
     //std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\metasprites.gb");
-<<<<<<< Updated upstream
-    std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\Super Mario Land.gb");
    // std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\empty.gb");
-=======
     std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\TETRIS.gb");
     //std::string rom_path = ((argv[1] != NULL) ? argv[1] : "C:\\Users\\afk\\Downloads\\Nintendo - Game Boy\\Catrap (USA).gb");
     // std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\empty.gb");
->>>>>>> Stashed changes
     std::string bios_path = "..\\..\\..\\bios\\bios.bin";
     
     WindowManager application(rom_path, bios_path);

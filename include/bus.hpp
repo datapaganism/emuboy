@@ -9,7 +9,6 @@
 #include "config.hpp"
 #include "joypad_mapping.hpp"
 #include "dma_controller.hpp"
-#include "logger.hpp"
 
 
 enum eMemoryAccessType
