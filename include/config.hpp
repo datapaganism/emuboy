@@ -1,6 +1,8 @@
 #pragma once
 #include <cstdint>
 
+#define NO_OP [](){}()
+
 const int DEFAULT_SCREEN_WIDTH = 640;
 const int DEFAULT_SCREEN_HEIGHT = 480;
 const bool SHOW_ON_START = false;
@@ -10,13 +12,18 @@ constexpr int GB_CPU_TCYCLE_CLOCKSPEED = 4194304; // Hz
 constexpr int GB_CPU_MCYCLE_CLOCKSPEED = GB_CPU_TCYCLE_CLOCKSPEED / 4;
 #define GBC_CLOCKSPEED 8388000 // Hz, Color model, maybe implement in the future.
 
-constexpr int VSYNC = 59.73; // Hz, basically 60 but I want to be accurate;
+constexpr double VSYNC = 59.73; // Hz, basically 60 but I want to be accurate;
+constexpr double FRAMETIME = 1000.0 / VSYNC;
 
-constexpr int CYCLES_PER_FRAME = GB_CPU_MCYCLE_CLOCKSPEED / VSYNC; // used to figure out how many CPU operations can be done before we need update the screen a single frame
+constexpr int CPU_TCYCLES_PER_FRAME = GB_CPU_TCYCLE_CLOCKSPEED / VSYNC; // used to figure out how many CPU operations can be done before we need update the screen a single frame
 
 // the CPU uses cycles 70221 times per video frame
 // a video frame takes 70221/4 cycles to render.
 
+
+/*
+	we advance the cpu by a single mcycle
+*/
 
 #define XRES 160
 #define YRES 144
@@ -47,8 +54,8 @@ constexpr int CYCLES_PER_FRAME = GB_CPU_MCYCLE_CLOCKSPEED / VSYNC; // used to fi
 #define TMA  0xFF06
 #define TAC  0xFF07
 
-#define DIVinit GB_CPU_TCYCLE_CLOCKSPEED / 16382
-#define DIV_INC_RATE GB_CPU_MCYCLE_CLOCKSPEED / 16382
+constexpr int DIV_INC_RATE = GB_CPU_TCYCLE_CLOCKSPEED / 16384;
+constexpr int DIVinit = DIV_INC_RATE;
 
 #define LCDC 0xFF40  //LCD Control R/W Register //ff40
 #define STAT 0xFF41 //LCDC Status R/W Register //ff41
@@ -79,29 +86,6 @@ constexpr int CYCLES_PER_FRAME = GB_CPU_MCYCLE_CLOCKSPEED / VSYNC; // used to fi
 
 // convert to hz from gb freq register 
 // hz = 131072 / (2048 - gb)
-
-
-#define GB_PALLETE_OFF 0xFFFFFFFF
-#define GB_PALLETE_00  0xFF 
-#define GB_PALLETE_01  0xC0
-#define GB_PALLETE_10  0x69
-#define GB_PALLETE_11  0x00
-
-#define GB_PALLETE_00_r 0x89 
-#define GB_PALLETE_00_g 0xc0 
-#define GB_PALLETE_00_b 0x77
-
-#define GB_PALLETE_01_r 0x4d 
-#define GB_PALLETE_01_g 0xa3 
-#define GB_PALLETE_01_b 0x50 
-
-#define GB_PALLETE_10_r 0x37
-#define GB_PALLETE_10_g 0x76 
-#define GB_PALLETE_10_b 0x4A 
-
-#define GB_PALLETE_11_r 0x22 
-#define GB_PALLETE_11_g 0x49 
-#define GB_PALLETE_11_b 0x39 
 
 #define GB_PALLETE_BG_r 0xCA 
 #define GB_PALLETE_BG_g 0xDC 

@@ -115,6 +115,7 @@ public:
 	void mStepCPU();
 	void haltHandler();
 	void updateTimers();
+	void updateTimers(const int cycles);
 	void requestInterrupt(const eInterruptTypes type);
 	
 	void DEBUG_printCurrentState(Word pc);

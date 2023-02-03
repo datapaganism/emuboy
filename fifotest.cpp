@@ -6,6 +6,6 @@ int main(int argc, char* argv[])
 {
     int x = 0;
     x++;
-    BUS bus("C:\\dev\\datapaganism\\emuboy\\roms\\empty.bin", "");
+    BUS bus("C:\\dev\\datapaganism\\emuboy\\roms\\empty.gb", "");
     return 0;
 }

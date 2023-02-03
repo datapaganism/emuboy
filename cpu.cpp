@@ -29,6 +29,8 @@ void CPU::mStepCPU()
 {	
 	if (this->is_executing_instruction)
 	{
+		//DEBUG_printCurrentState(0x101);
+
 		//decode and execute instruction // takes a cycle
 		this->instructionHandler();
 			
@@ -42,6 +44,8 @@ void CPU::mStepCPU()
 					this->interrupt_master_enable = true;
 					this->ei_triggered = false;
 				}
+
+				
 
 				this->checkForInterrupts();
 				if (this->interrupt_vector != 0)
@@ -206,12 +210,12 @@ void CPU::DEBUG_printCurrentState(Word pc)
 		printf("%s:0x%.4X  ", "SP", this->registers.sp);
 		printf("%s:0x%.4X  ", "STAT", this->getMemory(STAT));
 		printf("%s:%i  ", "IME", this->interrupt_master_enable);
-		/*printf("%s:%x  ", "DIV", this->bus->io[4]);
-		printf("%s:%x  ", "TIMA", this->bus->io[5]);
-		printf("%s:%x  ", "TMA", this->bus->io[6]);
-		printf("%s:%x  ", "TAC", this->bus->io[7]);
-		printf("%s:%x  ", "divC", this->divtimerCounter);
-		printf("%s:%x  ", "timC", this->timerCounter);*/
+		//printf("%s:%x  ", "DIV", this->bus->io[4]);
+		//printf("%s:%x  ", "TIMA", this->bus->io[5]);
+		//printf("%s:%x  ", "TMA", this->bus->io[6]);
+		//printf("%s:%x  ", "TAC", this->bus->io[7]);
+		//printf("%s:%x  ", "divC", this->divtimer_counter);
+		//printf("%s:%x  ", "timC", this->timer_counter);
 		
 
 		/*printf("%s:%i  ","z", this->registers.get_flag(z));
@@ -363,31 +367,35 @@ void CPU::setNibble(Byte* reigster_one, const Byte value, const bool setHi)
 }
 
 
-void CPU::updateTimers()
+void CPU::updateTimers(const int tcycles)
 
 {
-	// DIV updates at 16384hz, the CPU in mCycles is = 1048576hz
-	// 1048576 / 163384 = 64
-	// every 64 mCycles, div increments by 1
-	
-	if (++this->divtimer_counter >= DIV_INC_RATE)
+	/*
+		Timestep is 4 tcycles, 4.2M cycles in a second
+		div overflows 16384 times a second
+		4194304 / 16384 = 256, every 256 tcyles div will overflow
+	*/
+	this->divtimer_counter += tcycles;
+	if (this->divtimer_counter >= DIV_INC_RATE)
 	{
 		this->divtimer_counter = 0;
 		this->bus->io[DIV - IOOFFSET]++;
 	}
-		// if TMC bit 2 is set, this means that the timer is enabled
+
+	// if TMC bit 2 is set, this means that the timer is enabled
 	if (this->bus->io[TAC - IOOFFSET] & (0b00000100))
 	{
-		if (++this->timer_counter >= this->getTACFrequency())
+		this->timer_counter += tcycles;
+		if (this->timer_counter >= this->getTACFrequency())
 		{
 			this->timer_counter = 0;
-			this->bus->io[TIMA - IOOFFSET]++;
-
 			if (this->bus->io[TIMA - IOOFFSET] == 0xFF)
 			{
 				this->bus->io[TIMA - IOOFFSET] = this->bus->io[TMA - IOOFFSET]; //TIMA gets reset to TMA on overflow
 				this->requestInterrupt(timer);
-			}		
+				return;
+			}
+			this->bus->io[TIMA - IOOFFSET]++;
 		}
 	}
 }
@@ -415,10 +423,10 @@ int CPU::getTACFrequency()
 {
 	switch (this->getTMCFrequency())
 	{
-	case 0: { return GB_CPU_MCYCLE_CLOCKSPEED / 4096; } break;
-	case 1: { return GB_CPU_MCYCLE_CLOCKSPEED / 262144; } break;
-	case 2: { return GB_CPU_MCYCLE_CLOCKSPEED / 65536; } break;
-	case 3: { return GB_CPU_MCYCLE_CLOCKSPEED / 16384; } break;
+	case 0: { return GB_CPU_TCYCLE_CLOCKSPEED / 4096; } break;
+	case 1: { return GB_CPU_TCYCLE_CLOCKSPEED / 262144; } break;
+	case 2: { return GB_CPU_TCYCLE_CLOCKSPEED / 65536; } break;
+	case 3: { return GB_CPU_TCYCLE_CLOCKSPEED / 16384; } break;
 	default: fprintf(stderr, "Unreachable timer frequency");  exit(-1); break;
 	}
 

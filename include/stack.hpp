@@ -51,6 +51,9 @@ inline void Stack<T, max_size>::push(T elem)
 template<class T, int max_size>
 inline int Stack<T, max_size>::size()
 {
+	if (empty)
+		return 0;
+
 	if (head_pos > tail_pos)
 		return (max_size - head_pos) + tail_pos + 1;
 	return (tail_pos - head_pos) + 1;

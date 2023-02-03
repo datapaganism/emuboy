@@ -43,7 +43,7 @@ void WindowManager::run()
         std::cout << "Failed to initialize!\n";
         return;
     }
-        // Cast the base pointer back to dervied class so we can access BUS class element.
+    // Cast the base pointer back to dervied class so we can access BUS class element.
     EmulatorWindow* emulator_window_ptr = static_cast<EmulatorWindow*>(this->windows[0].get());
         
     //Create and push back secondary windows, and pass the new pointer so the other windows can acess the emulator's BUS.
@@ -53,7 +53,7 @@ void WindowManager::run()
     bool quit = false;
     bool pause = false;
 
-    unsigned int ticks_now = 0, ticks_previous = 0;
+    uint64_t ticks_now = 0, ticks_previous = 0;
     double tick_delta = 0;
     while (!quit)
     {
@@ -99,10 +99,11 @@ void WindowManager::run()
 
         // tick at custom frequency
 
-        ticks_now = SDL_GetTicks();
+        ticks_now = SDL_GetTicks64();
         tick_delta = ticks_now - ticks_previous;
 
-        if (tick_delta > 1000 / VSYNC)
+        // every 16.7ms we update the emulation state
+        if (tick_delta >= FRAMETIME)
         {
             ticks_previous = ticks_now;
 

@@ -13,9 +13,17 @@ void BGMapViewer::handleEvent(SDL_Event& e) {}
 void BGMapViewer::updateState() {}
 void BGMapViewer::updateRender()
 {
+        int scx = *bus_ptr->ppu.registers.scx;
+        int scy = *bus_ptr->ppu.registers.scy;
         this->generateBGMapFramebuffer();
         SDL_UpdateTexture(this->texture, NULL, this->framebuffer.get(), 8 * 32 * sizeof(FramebufferPixel));
         SDL_RenderCopy(this->renderer, this->texture, NULL, NULL);
+
+        SDL_SetRenderDrawColor(this->renderer, 255, 0, 0, 255);
+        SDL_RenderDrawLine(this->renderer,scx,scy,scx+XRES*scaling,scy);
+        SDL_RenderDrawLine(this->renderer,scx,scy,scx,scy+YRES*scaling);
+        SDL_RenderDrawLine(this->renderer, scx + XRES * scaling,scy, scx + XRES * scaling,scy+YRES*scaling);
+        SDL_RenderDrawLine(this->renderer,scx, scy + YRES * scaling,scx+XRES*scaling,scy+YRES*scaling);
 }
 
 void BGMapViewer::generateBGMapFramebuffer()

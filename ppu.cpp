@@ -1,6 +1,7 @@
 ﻿#include "ppu.hpp"
 #include "bus.hpp"
 #include <bitset>
+#include <algorithm>
 
 // ppu pushes for 4 pixels per NOP
 // https://www.reddit.com/r/EmuDev/comments/8uahbc/dmg_bgb_lcd_timings_and_cnt/e1iooum/
@@ -8,11 +9,7 @@
 
 PPU::PPU()
 {
-	this->fifo_bg.connectToPPU(this);
-	this->fifo_bg.fetcher.connectToPPU(this);
-	this->fifo_oam.connectToPPU(this);
-	this->fifo_oam.fetcher.connectToPPU(this);
-
+	this->fifo.connectToPPU(this);
 }
 
 // called during BUS consturctor 
@@ -24,51 +21,19 @@ void PPU::connectToBus(BUS* pBus)
 
 Byte PPU::getMemory(const Word address)
 {
-	return this->bus->getMemory(address, eMemoryAccessType::ppu);
+	return bus->getMemory(address, eMemoryAccessType::ppu);
 }
 
 void PPU::setMemory(const Word address, const Byte data)
 {
-	this->bus->setMemory(address, data, eMemoryAccessType::ppu);
+	bus->setMemory(address, data, eMemoryAccessType::ppu);
 }
 
-// this function takes over updateFIFO from both of the fifos
-// we have to pull pixels from both fifos and combine them for rendering.
-void PPU::clockFIFOmCycle()
+// sorts the array based on the x pos of each OAM entry
+void PPU::sortOAMPriority()
 {
-	if (this->fifo_bg.fetcher.rendering_sprite)
-		return;
-
-	for (int i = 0; i < 4; i++)
-	{
-		// while background fifo not empty
-		if (!fifo_bg.empty)
-		{
-			const Byte ly = *registers.ly;
-
-			// between 0 and 159 pixels portion of the scanline
-			if (scanline_x < 160)
-			{
-				/*
-					Check scx register, % 8 gives the amount of pixels we are within a tile, if not 0, pop the fifo by the result
-				*/
-				const Byte scx_pop = *registers.scx % 8;
-				if ((scanline_x == 0) && (scx_pop != 0))
-				{
-					fifo_bg.popBy(scx_pop);
-				}
-				/*
-				The scroll registers are re - read on each tile fetch, except for the low 3 bits of SCX, which are only read at the beginning of the scanline(for the initial shifting of pixels).
-
-					All models before the CGB - D read the Y coordinate once for each bitplane(so a very precisely timed SCY write allows �desyncing� them), but CGB - D and later use the same Y coordinate for both no matter what.
-					*/
-				if (ly < 144 && scanline_x < 160)
-					addToFramebuffer(scanline_x, ly, fifo_bg.pop());
-
-				scanline_x++;
-			}
-		}
-	}
+	int size = oam_priority.size() - 1;
+	std::sort(oam_priority.queue.begin(), oam_priority.queue.begin() + size, [](OAMentry* a, OAMentry* b) {return a->x_pos < b->x_pos; });
 }
 
 void PPU::setRegisters()
@@ -83,24 +48,34 @@ void PPU::setRegisters()
 	this->registers.lcdc = &this->bus->io[LCDC - IOOFFSET];
 }
 
-void PPU::updateGraphics(const int cycles)
+void PPU::updateGraphics(const int tcycles)
 {
-	// one frame takes 70221 cycles
-	// one scanline is 456 cycles 
+	// one frame takes 70221 tcycles
+	// one scanline is 456 tcycles 
 
 	// the cpu may have modified the registers since the last cycle, it is time to check and update any changes of the lcd stat.
 	//this->update_lcdstat();
 
+	/*
+		every cpu machine cycle is eqv to 2 tcycles of the 
+
+		dot to mcycle -> / 4
+		scanline is 456 dots, or 114 mcycles
+		oam scan is 20 mcycles
+
+		70221 dots is a single frame
+	*/
+
 	if (this->lcdEnabled())
 	{
 
-		this->cycle_counter += cycles;
+		this->cycle_counter += tcycles;
 
 		switch (*registers.stat & 0b00000011)
 		{
 		case ePPUstate::h_blank: // h blank
 		{
-			if (this->cycle_counter >= (456 / 4))
+			if (this->cycle_counter >= (456))
 			{
 				this->newScanline();
 			}
@@ -108,7 +83,7 @@ void PPU::updateGraphics(const int cycles)
 
 		case ePPUstate::v_blank: // v blank
 		{
-			if (this->cycle_counter >= (456 / 4))
+			if (this->cycle_counter >= (456))
 			{
 				this->newScanline();
 			}
@@ -116,25 +91,18 @@ void PPU::updateGraphics(const int cycles)
 
 		case ePPUstate::oam_search: // oam search
 		{
-			Byte* oam_base_ptr = this->bus->oam_ram.get();
-			for (int i = 0; i < 40; i++)
-			{
-				oam_base_ptr;
-				Byte y_position = *oam_base_ptr++;
-				Byte x_position = *oam_base_ptr++;
-				Byte tile_index = *oam_base_ptr++;
-				Byte flags		= *oam_base_ptr++;
-			}
-			// do stuff
 			if (*registers.wy == *registers.ly)
 				this->window_wy_triggered = true;
 
 			int sprite_height = (*registers.lcdc & 0b1 << 2) ? 16 : 8;
-			for (int i = 0; i < cycles * 2; i++)
+			for (int i = 0; i < tcycles / 2; i++)
 			{
 				struct OAMentry* entry = (OAMentry*)this->bus->oam_ram.get() + oam_scan_iterator++;
 				if (entry->x_pos != 0)
 				{
+					//printf("%02i | %x %x %x %x\n", oam_scan_iterator, entry->y_pos, entry->x_pos, entry->tile_no, entry->attribute);
+					//if (*registers.ly == 0x64)
+					//	NO_OP;
 					// this will by very buggy
 					if (*registers.ly >= (entry->y_pos - 16) && *registers.ly < (entry->y_pos - 16) + sprite_height)
 					{
@@ -149,29 +117,27 @@ void PPU::updateGraphics(const int cycles)
 			// the scan will go through the OAM sequentially, checking if an entry's Y is within LY and making sure that we check the lcdc.2 obj size.
 			// I will scan the oam and if we find matches I will store them in an array that the fetcher can access when needed.
 
-			if (this->cycle_counter >= (80 / 4))
+			if (this->cycle_counter >= (80))
 			{
 				if (oam_scan_iterator != 40)
-					exit(40);
+				{
+					fprintf(stderr, "OAM scan should have checked 40 objs, not %i", oam_scan_iterator);  exit(-40);
+				}
+
+				if (oam_priority.size() > 1)
+					this->sortOAMPriority();
 				this->updateState(ePPUstate::graphics_transfer);
 			}
 		} break;
 
 		case ePPUstate::graphics_transfer: // graphics transfer
 		{
-			// update bg/win fetcher and fifo
-			
-			// Need to write special fetcher for sprites
-			this->fifo_bg.fetcher.updateFetcher(cycles);
-			//this->fifo_sprite.fetcher.updateFetcher(cycles);
-
-			clockFIFOmCycle();
+			//fetch and then render pixels
+			this->fifo.fetchPixels(tcycles);
+			this->fifo.renderPixels(tcycles);
 
 			if (this->scanline_x >= 160)
 				this->updateState(ePPUstate::h_blank);
-
-			//if (this->scanline_x >= 8)
-				//this->newScanline();
 		} break;
 
 		default: fprintf(stderr, "Unreachable PPU STAT");  exit(-1); break;
@@ -190,12 +156,9 @@ void PPU::updateGraphics(const int cycles)
 	return;
 }
 
-
-
 bool PPU::lcdEnabled()
 {
 	return (bool)(*registers.lcdc & (0b1 << 7));
-
 }
 
 
@@ -242,38 +205,16 @@ void PPU::addToFramebuffer(const int x, const int y, const FIFOPixel fifo_pixel)
 
 FramebufferPixel PPU::dmgFramebufferPixelToRGB(const FIFOPixel fifo_pixel)
 {
-
 	Byte palette_register = this->getMemory(0xFF47);
 
-	Byte id_to_palette_id = 0;
-	switch (fifo_pixel.colour)
-	{
-	case 0:
-		id_to_palette_id = (palette_register & 0b00000011); break;
-	case 1:
-		id_to_palette_id = (palette_register & 0b00001100) >> 2; break;
-	case 2:
-		id_to_palette_id = (palette_register & 0b00110000) >> 4; break;
-	case 3:
-		id_to_palette_id = (palette_register & 0b11000000) >> 6; break;
-	};
+	Byte id_to_palette_id = (palette_register & 0b11 << 2 * fifo_pixel.colour) >> 2 * fifo_pixel.colour;
 
-	switch (id_to_palette_id)
-	{
-	case 0:
-		return FramebufferPixel(GB_PALLETE_00_r, GB_PALLETE_00_g, GB_PALLETE_00_b); // white
-	case 1:
-		return FramebufferPixel(GB_PALLETE_01_r, GB_PALLETE_01_g, GB_PALLETE_01_b); // light gray
-	case 2:
-		return FramebufferPixel(GB_PALLETE_10_r, GB_PALLETE_10_g, GB_PALLETE_10_b); // dark gray
-	case 3:
-		return FramebufferPixel(GB_PALLETE_11_r, GB_PALLETE_11_g, GB_PALLETE_11_b); // black
-	default: fprintf(stderr, "Unreachable id_to_palette_id");  exit(-1); break;
-	}
+	return palette_array[current_palette][id_to_palette_id];
 }
 
 void PPU::newScanline()
 {
+	//std::cout << cycle_counter << "\n";
 	(*registers.ly)++;
 	this->updateState(2);
 
@@ -288,8 +229,7 @@ void PPU::newScanline()
 
 	this->cycle_counter = 0;
 	this->scanline_x = 0;
-	this->fifo_bg.reset();
-	this->fifo_oam.reset();
+	this->fifo.reset();
 	this->window_wy_triggered = false;
 	oam_priority.reset();
 	oam_scan_iterator = 0;
@@ -388,14 +328,13 @@ Tile::Tile()
 
 void PPU::debugAddToBGFIFO(FIFOPixel pixel)
 {
-	this->fifo_bg.push(pixel);
+	this->fifo.push(pixel);
 }
 
-void PPU::debugAddToOAMFIFO(FIFOPixel pixel)
+void PPU::incrementPalette()
 {
-	this->fifo_oam.push(pixel);
-}
-
+	current_palette = (current_palette + 1) % palette_array_size;
+};
 
 //void PPU::update_lcdstat()
 //{

@@ -27,13 +27,16 @@ endfunction()
 
 
 # Add source to this project's executable.
-add_executable (emuboy "main.cpp" "Window.cpp" "Window.hpp" "WindowManager.hpp" "WindowManager.cpp" "config.hpp" "bus.hpp" "bus.cpp" "cpu.hpp" "cpu.cpp" "dma_controller.hpp" "dma_controller.cpp" "fetcher.hpp" "fetcher.cpp" "fifo.hpp" "fifo.cpp" "FIFO_pixel.hpp" "gamepak.hpp" "gamepak.cpp" "joypad_mapping.hpp" "ppu.hpp" "ppu.cpp" "VRAMViewer.cpp" "VRAMViewer.hpp" "BGMapViewer.cpp" "BGMapViewer.hpp" "EmulatorWindow.cpp" "EmulatorWindow.hpp" )
+add_executable (emuboy "main.cpp" "Window.cpp" "WindowManager.cpp" "bus.cpp" "cpu.cpp" "dma_controller.cpp"  "gamepak.cpp"  "ppu.cpp" "VRAMViewer.cpp" "BGMapViewer.cpp"  "EmulatorWindow.cpp" "fifo.cpp")
+target_include_directories(emuboy PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(emuboy ${SDL2_LIBRARIES})
 
-add_executable (emuboycpu "cputest.cpp" "config.hpp" "bus.hpp" "bus.cpp" "cpu.hpp" "cpu.cpp" "dma_controller.hpp" "dma_controller.cpp" "fetcher.hpp" "fetcher.cpp" "fifo.hpp" "fifo.cpp" "FIFO_pixel.hpp" "gamepak.hpp" "gamepak.cpp" "joypad_mapping.hpp" "ppu.hpp" "ppu.cpp" )
-target_link_libraries(emuboycpu ${SDL2_LIBRARIES})
+#add_executable (emuboycpu "cputest.cpp" "config.hpp" "bus.hpp" "bus.cpp" "cpu.hpp" "cpu.cpp" "dma_controller.hpp" "dma_controller.cpp" "fifo.hpp"  "FIFO_pixel.hpp" "gamepak.hpp" "gamepak.cpp" "joypad_mapping.hpp" "ppu.hpp" "ppu.cpp"  "fifo.cpp" "logger.cpp")
+#target_link_libraries(emuboycpu ${SDL2_LIBRARIES})
 
-add_executable (fifotest "fifotest.cpp" "config.hpp" "bus.hpp" "bus.cpp" "cpu.hpp" "cpu.cpp" "dma_controller.hpp" "dma_controller.cpp" "fetcher.hpp" "fetcher.cpp" "fifo.hpp" "fifo.cpp" "FIFO_pixel.hpp" "gamepak.hpp" "gamepak.cpp" "joypad_mapping.hpp" "ppu.hpp" "ppu.cpp" "stack.hpp" )
-target_link_libraries(fifotest ${SDL2_LIBRARIES})
+#add_executable (fifotest "fifotest.cpp" "config.hpp" "bus.hpp" "bus.cpp" "cpu.hpp" "cpu.cpp" "dma_controller.hpp" "dma_controller.cpp" "fifo.hpp"  "FIFO_pixel.hpp" "gamepak.hpp" "gamepak.cpp" "joypad_mapping.hpp" "ppu.hpp" "ppu.cpp" "stack.hpp"  "fifo.cpp" "logger.cpp")
+#target_link_libraries(fifotest ${SDL2_LIBRARIES})
 
-# TODO: Add tests and install targets if needed.
+
+
+#set_target_properties(emuboy PROPERTIES WIN32_EXECUTABLE 1)

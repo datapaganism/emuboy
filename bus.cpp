@@ -10,39 +10,15 @@
 
 void BUS::cycleSystemOneFrame()
 {
-    int current_cycles = 0;
-
-    while (current_cycles <= CYCLES_PER_FRAME)
+    for (int i = 0; i < CPU_TCYCLES_PER_FRAME; i += 4)
     {
-        // att ffb8 there is an instruction to load data into oam
-        // need to find out why it doesnt execute
-        if (cpu.registers.pc == 0xFFB8)
-            __debugbreak();
-
         this->cpu.mStepCPU();
-        this->cpu.updateTimers();
-        
+        this->cpu.updateTimers(4);
+
         this->dma_controller.updateDMA(4);
 
         this->ppu.updateGraphics(4);
-
-        current_cycles++;
-
-        // Serial monitoring
-        if ((this->io[0xFF02 - IOOFFSET] & ~0x7E) == 0x81)
-        {
-            char c = this->io[0xFF01 - IOOFFSET];
-            if (c == ' ')
-            {
-                this->cpu.debug_toggle = true;
-                printf("");
-            }
-            if (c != 0)
-            {
-                printf("%c", c);
-                this->io[0xFF02 - IOOFFSET] = 0x0;
-            }
-        }
+        DEBUG_print_ASCII_from_serial();
     }
 }
 
@@ -248,8 +224,48 @@ void BUS::DEBUG_nintendo_logo()
 
 }
 
+void BUS::DEBUG_print_ASCII_from_serial()
+{
+    // Serial monitoring
+    if ((this->io[0xFF02 - IOOFFSET] & ~0x7E) == 0x81)
+    {
+        char c = this->io[0xFF01 - IOOFFSET];
+        if (c == ' ')
+        {
+            this->cpu.debug_toggle = true;
+            printf("");
+        }
+        if (c != 0)
+        {
+            printf("%c", c);
+            this->io[0xFF02 - IOOFFSET] = 0x0;
+        }
+    }
+}
+
+void BUS::saveState()
+{
+    std::string state_path = rom_path + ".state";
+
+   /*
+   std::ofstream state_file(state_path);
+   if (state_file.is_open())
+   {
+        for (int i = 0; i < sizeof(cpu.registers); i++)
+        {
+            Registers* regptr = &cpu.registers;
+            Byte buf = *((Byte*)(regptr + i));
+            state_file << buf;
+        }
+   }
+   */
+}
+
 BUS::BUS(const std::string rom_path, const std::string bios_path)
 {
+    this->rom_path = rom_path;
+    this->bios_path = bios_path;
+
     this->cpu.connectToBus(this);
     this->ppu.connectToBus(this);
     this->dma_controller.connectToBus(this);
@@ -259,9 +275,8 @@ BUS::BUS(const std::string rom_path, const std::string bios_path)
     this->loadBios(bios_path);
 
     //fill framebuffer
-    FramebufferPixel blank(GB_PALLETE_00_r, GB_PALLETE_00_g, GB_PALLETE_00_b);
     for (int i = 0; i < XRES * YRES; i++)
-        this->framebuffer[i] = blank;
+        this->framebuffer[i] = palette_array[ppu.current_palette][0];
 }
 
 
@@ -329,7 +344,7 @@ Byte BUS::getMemory(const Word address, enum eMemoryAccessType access_type)
     if (address <= 0x00FF) //from 0x0000
     {
         // if the bios has never been loaded or if the register at 0xFF50 is set 1 (which is done by the bios program) we need to access the cartridge bank
-        if (this->io[(0xFF50) - IOOFFSET] == 0x1|| !bios_loaded)
+        if (this->io[(0xFF50) - IOOFFSET] == 0x1 || !bios_loaded)
             return gamepak.getMemory(address);
         
         
