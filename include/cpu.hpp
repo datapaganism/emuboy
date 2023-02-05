@@ -114,7 +114,6 @@ public:
 	const Byte getByteFromPC();
 	void mStepCPU();
 	void haltHandler();
-	void updateTimers();
 	void updateTimers(const int cycles);
 	void requestInterrupt(const eInterruptTypes type);
 	

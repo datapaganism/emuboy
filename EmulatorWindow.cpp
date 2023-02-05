@@ -1,4 +1,5 @@
 #include "EmulatorWindow.hpp"
+#include "joypad.hpp"
 
 void EmulatorWindow::handleEvent(SDL_Event& e)
 {
@@ -21,14 +22,14 @@ void EmulatorWindow::handleEvent(SDL_Event& e)
             }
             enum eJoypadButtons pressed = keyToEnum(keyPressed);
             if (pressed != UNKNOWN)
-                this->pressButton(pressed);
+                this->pressButton(button_to_bit(pressed));
         } break;
         case SDL_KEYUP:
         {
             int keyPressed = e.key.keysym.sym;
             enum eJoypadButtons pressed = keyToEnum(keyPressed);
             if (pressed != UNKNOWN)
-                this->depressButton(pressed);
+                this->depressButton(button_to_bit(pressed));
         } break;
         };
     }

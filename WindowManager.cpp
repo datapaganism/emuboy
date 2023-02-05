@@ -3,6 +3,8 @@
 #include "VRAMViewer.hpp"
 #include "BGMapViewer.hpp"
 #include "EmulatorWindow.hpp"
+#include "joypad.hpp"
+
 
 WindowManager::WindowManager(const std::string rom_path, const std::string bios_path)
 {

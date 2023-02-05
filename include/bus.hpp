@@ -7,7 +7,6 @@
 #include "gamepak.hpp"
 #include "ppu.hpp"
 #include "config.hpp"
-#include "joypad_mapping.hpp"
 #include "dma_controller.hpp"
 
 
@@ -56,9 +55,9 @@ public:
     void setMemory(const Word address, const Byte data, enum eMemoryAccessType access_type);
     
     Byte joypad_state = 0xFF;
-    void setJoypadState(const enum eJoypadButtons button, bool value);
-    void pressButton(const enum eJoypadButtons button);
-    void depressButton(const enum eJoypadButtons button);
+    void setJoypadState(const int button_bit, bool value);
+    void pressButton(const int button_bit);
+    void depressButton(const int button_bit);
     Byte getActionButtonNibble();
     Byte getDirectionButtonNibble();
     

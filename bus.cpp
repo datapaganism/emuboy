@@ -24,26 +24,13 @@ void BUS::cycleSystemOneFrame()
 
 
 
-void BUS::setJoypadState(const enum eJoypadButtons button, bool value)
+void BUS::setJoypadState(const int button_bit, bool value)
 {
     // joypadstate
     // 0000 0000
     // ACT  DIR
     
-    Byte bit = 0;
-    switch (button)
-    {
-    case d_right:    {bit = 0b00000001; break;}
-    case d_left:     {bit = 0b00000010; break;}
-    case d_up:       {bit = 0b00000100; break;}
-    case d_down:     {bit = 0b00001000; break;}
-    case b_a:        {bit = 0b00010000; break;}
-    case b_b:        {bit = 0b00100000; break;}
-    case b_select:   {bit = 0b01000000; break;}
-    case b_start:    {bit = 0b10000000; break;}
-    default: fprintf(stderr, "Unreachable button press");  exit(-1); break;
-    }
-    this->joypad_state = (value) ? (this->joypad_state | bit) : (this->joypad_state & ~bit);
+    this->joypad_state = (value) ? (this->joypad_state | button_bit) : (this->joypad_state & ~button_bit);
 }
 
 
@@ -281,15 +268,15 @@ BUS::BUS(const std::string rom_path, const std::string bios_path)
 
 
 
-void BUS::depressButton(const enum eJoypadButtons button)
+void BUS::depressButton(const int button_bit)
 {
-    this->setJoypadState(button, 1);
+    this->setJoypadState(button_bit, 1);
 }
 
 
-void BUS::pressButton(const enum eJoypadButtons button)
+void BUS::pressButton(const int button_bit)
 {
-    this->setJoypadState(button, 0);
+    this->setJoypadState(button_bit, 0);
     this->cpu.requestInterrupt(joypad);
 }
 
