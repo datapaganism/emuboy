@@ -3,13 +3,13 @@
 #include <iostream>
 
 #include "Window.hpp"
-#include "bus.hpp"
+#include "../../core/include/bus.hpp"
 
 
-class BGMapViewer : public Window
+class VRAMViewer : public Window
 {
 public:
-	BGMapViewer(BUS* bus_ptr,int width, int height, int scaling, const char* title, bool shownOnStart);
+	VRAMViewer(BUS* bus_ptr,int width, int height, int scaling, const char* title, bool shownOnStart);
 	std::unique_ptr<FramebufferPixel[]> framebuffer;
 
 	void handleEvent(SDL_Event& e);
@@ -18,7 +18,7 @@ public:
 
 	BUS* bus_ptr = nullptr;
 
-	void generateBGMapFramebuffer();
+	void generateVRAMFramebuffer();
 private:
 
 };

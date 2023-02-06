@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Window.hpp"
-#include "bus.hpp"
+#include "../../core/include/bus.hpp"
 
 class EmulatorWindow : public BUS , public Window 
 {

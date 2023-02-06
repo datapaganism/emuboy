@@ -1,5 +1,5 @@
 #include "WindowManager.hpp"
-#include "config.hpp"
+#include "../../core/include/config.hpp"
 #include "VRAMViewer.hpp"
 #include "BGMapViewer.hpp"
 #include "EmulatorWindow.hpp"
