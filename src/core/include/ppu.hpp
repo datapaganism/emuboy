@@ -7,8 +7,6 @@
 #include "stack.hpp"
 
 
-#define TEST 1
-
 constexpr int oam_priority_max = 10;
 
 class BUS;
