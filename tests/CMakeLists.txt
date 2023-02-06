@@ -9,7 +9,7 @@ FetchContent_MakeAvailable(googletest)
 add_library(GTest::GTest INTERFACE IMPORTED)
 target_link_libraries(GTest::GTest INTERFACE gtest_main)
 
-add_executable(cpu_test cpu_test.cpp)
+add_executable(cpu_test cpu_test.cpp "timer_test.cpp")
 
 target_link_libraries(cpu_test
  PRIVATE
