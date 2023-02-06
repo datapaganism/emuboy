@@ -1,10 +1,12 @@
 #include <gtest/gtest.h>
+#include "cpu.hpp"
 
-TEST(MultiplyTests, TestIntegerOne_One)
+TEST(CPUTest, setRegisterA)
 {
-    const auto expected = 1;
-    const auto actual =  1;
-    ASSERT_EQ(expected, actual);
+    CPU cpu;
+    cpu.registers.a = 5;
+
+    ASSERT_EQ(5, cpu.registers.a);
 }
 
 
