@@ -1,6 +1,7 @@
 #pragma once
 #include "BGMapViewer.hpp"
-#include "config.hpp"
+#include "../../core/include/config.hpp"
+
 
 
 BGMapViewer::BGMapViewer(BUS* bus_ptr, int width, int height, int scaling, const char* title, bool shownOnStart) : Window(width, height, scaling, title, shownOnStart)

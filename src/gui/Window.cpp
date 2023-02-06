@@ -1,7 +1,8 @@
 #include "Window.hpp"
 #include <iostream>
 #include <sstream>    
-#include "config.hpp"
+#include "../../core/include/config.hpp"
+
 
 Window::Window(int width, int height, int scaling, const char* title, bool shown_on_start)
 {
