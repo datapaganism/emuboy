@@ -13,6 +13,10 @@ add_executable(${PROJECT_NAME} main.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE core gui ${SDL2_LIBRARIES})
 #set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE 1)
 
+enable_testing()
+
+add_subdirectory(tests)
+
 
     
 
