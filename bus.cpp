@@ -248,22 +248,26 @@ void BUS::saveState()
    */
 }
 
-BUS::BUS(const std::string rom_path, const std::string bios_path)
+BUS::BUS()
 {
-    this->rom_path = rom_path;
-    this->bios_path = bios_path;
-
     this->cpu.connectToBus(this);
     this->ppu.connectToBus(this);
     this->dma_controller.connectToBus(this);
     this->init();
 
-    this->gamepak = GamePak(rom_path);
-    this->loadBios(bios_path);
-
     //fill framebuffer
     for (int i = 0; i < XRES * YRES; i++)
         this->framebuffer[i] = palette_array[ppu.current_palette][0];
+}
+
+BUS::BUS(const std::string rom_path, const std::string bios_path) : BUS::BUS()
+{
+    this->rom_path = rom_path;
+    this->bios_path = bios_path;
+
+    this->gamepak = GamePak(rom_path);
+    this->loadBios(bios_path);
+
 }
 
 

@@ -50,6 +50,9 @@ Byte GamePak::getRamSize()
 
 Byte GamePak::getMemory(const Word address)
 {
+	if (!gamepak_loaded)
+		return 0xFF;
+
 	if (address <= 0x3FFF) // if address is within rom bank 0
 		return this->rom[address];
 
@@ -69,6 +72,9 @@ Byte GamePak::getMemory(const Word address)
 
 void GamePak::setMemory(const Word address, const Byte data)
 {
+	if (!gamepak_loaded)
+		return;
+
 	if (address <= 0x1FFF)
 	{ // enable ram bank writing
 		this->ramBankEnableHandler(address, data);

@@ -25,6 +25,7 @@ private:
     std::string rom_path;
     std::string bios_path;
 public:
+    BUS();
     BUS(const std::string rom_path, const std::string bios_path);
 
     PPU ppu;
