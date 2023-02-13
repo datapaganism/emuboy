@@ -21,10 +21,53 @@ void BGMapViewer::updateRender()
         SDL_RenderCopy(this->renderer, this->texture, NULL, NULL);
 
         SDL_SetRenderDrawColor(this->renderer, 255, 0, 0, 255);
-        SDL_RenderDrawLine(this->renderer,scx,scy,scx+XRES*scaling,scy);
-        SDL_RenderDrawLine(this->renderer,scx,scy,scx,scy+YRES*scaling);
-        SDL_RenderDrawLine(this->renderer, scx + XRES * scaling,scy, scx + XRES * scaling,scy+YRES*scaling);
-        SDL_RenderDrawLine(this->renderer,scx, scy + YRES * scaling,scx+XRES*scaling,scy+YRES*scaling);
+
+        // draw top line 
+        
+        int x_s_pos = scx * scaling; // x_start_position
+        int x_e_pos = (scx + XRES) * scaling; // x_end_position
+        int x_w_s_pos = 0 * scaling; // x_wrapping_start_position
+        int x_w_e_pos = (XRES - (256 - scx)) * scaling; // x_wrapping_end_position
+
+        int y_s_pos = scy * scaling; // y_start_position
+        int y_e_pos = (scy + YRES) * scaling; // y_end_position
+        int y_w_s_pos = 0 * scaling; // y_wrapping_start_position
+        int y_w_e_pos = (YRES - (256 - scy)) * scaling; // y_wrapping_end_position
+
+
+        //SDL_Rect rect;
+
+        //rect.x = x_s_pos;
+        //rect.y = y_s_pos;
+        //rect.w = XRES * scaling;
+        //rect.h = YRES * scaling;
+
+        //SDL_RenderDrawRect(this->renderer, &rect);
+
+        SDL_RenderDrawLine(this->renderer, x_s_pos, y_s_pos, x_e_pos, y_s_pos);
+        if (scx + XRES > 256)
+        {
+            SDL_RenderDrawLine(this->renderer, x_w_s_pos, scy, x_w_e_pos, scy);
+        }
+      
+        // draw bottom line
+     /*   SDL_RenderDrawLine(this->renderer, x_s_pos, y_e_pos, x_e_pos, y_e_pos);
+        if (scx + XRES > 256)
+        {
+            SDL_RenderDrawLine(this->renderer, x_w_s_pos, y_e_pos, x_w_e_pos, y_e_pos);
+        }*/
+
+        SDL_SetRenderDrawColor(this->renderer, 0, 0, 255, 255);
+
+         
+        // draw left line
+        SDL_RenderDrawLine(this->renderer, x_s_pos, y_s_pos, x_s_pos, y_e_pos);
+        if (scy + XRES > 256)
+        {
+            SDL_RenderDrawLine(this->renderer, x_w_s_pos, y_w_s_pos, x_w_s_pos, y_w_e_pos);
+        }
+
+        //SDL_RenderDrawLine(this->renderer, scx + XRES * scaling,scy, scx + XRES * scaling,scy+YRES*scaling);
 }
 
 void BGMapViewer::generateBGMapFramebuffer()
