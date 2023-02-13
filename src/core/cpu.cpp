@@ -368,8 +368,8 @@ void CPU::setNibble(Byte* reigster_one, const Byte value, const bool setHi)
 
 
 void CPU::updateTimers(const int tcycles)
-
 {
+	//https://www.reddit.com/r/EmuDev/comments/5qa3x1/comment/dcykiwt/?utm_source=share&utm_medium=web2x&context=3
 	/*
 		Timestep is 4 tcycles, 4.2M cycles in a second
 		div overflows 16384 times a second
@@ -423,10 +423,10 @@ int CPU::getTACFrequency()
 {
 	switch (this->getTMCFrequency())
 	{
-	case 0: { return GB_CPU_TCYCLE_CLOCKSPEED / 4096; } break;
-	case 1: { return GB_CPU_TCYCLE_CLOCKSPEED / 262144; } break;
-	case 2: { return GB_CPU_TCYCLE_CLOCKSPEED / 65536; } break;
-	case 3: { return GB_CPU_TCYCLE_CLOCKSPEED / 16384; } break;
+	case 0b00: { return GB_CPU_TCYCLE_CLOCKSPEED / 4096;   } break;
+	case 0b01: { return GB_CPU_TCYCLE_CLOCKSPEED / 262144; } break;
+	case 0b10: { return GB_CPU_TCYCLE_CLOCKSPEED / 65536;  } break;
+	case 0b11: { return GB_CPU_TCYCLE_CLOCKSPEED / 16384;  } break;
 	default: fprintf(stderr, "Unreachable timer frequency");  exit(-1); break;
 	}
 
