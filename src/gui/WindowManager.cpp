@@ -5,6 +5,8 @@
 #include "EmulatorWindow.hpp"
 #include "joypad.hpp"
 
+#undef VSYNCd
+
 
 WindowManager::WindowManager(const std::string rom_path, const std::string bios_path)
 {
@@ -100,7 +102,7 @@ void WindowManager::run()
         }
 
         // tick at custom frequency
-
+#ifdef VSYNCd
         ticks_now = SDL_GetTicks64();
         tick_delta = ticks_now - ticks_previous;
 
@@ -108,7 +110,7 @@ void WindowManager::run()
         if (tick_delta >= FRAMETIME)
         {
             ticks_previous = ticks_now;
-
+#endif
                 // render each window
             if (!pause)
             {
@@ -118,8 +120,9 @@ void WindowManager::run()
                     window.get()->render();
                 }
             }
+#ifdef VSYNCd
         }
-
+#endif
         //bool allWindowsClosed = true;
 
         //for (auto& window : this->windows)
