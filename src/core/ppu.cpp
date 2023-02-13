@@ -97,7 +97,7 @@ void PPU::updateGraphics(const int tcycles)
 			int sprite_height = (*registers.lcdc & 0b1 << 2) ? 16 : 8;
 			for (int i = 0; i < tcycles / 2; i++)
 			{
-				struct OAMentry* entry = (OAMentry*)this->bus->oam_ram.get() + oam_scan_iterator++;
+				struct OAMentry* entry = (OAMentry*)this->bus->oam_ram + oam_scan_iterator++;
 				if (entry->x_pos != 0)
 				{
 					//printf("%02i | %x %x %x %x\n", oam_scan_iterator, entry->y_pos, entry->x_pos, entry->tile_no, entry->attribute);

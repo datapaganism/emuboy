@@ -44,7 +44,7 @@ void EmulatorWindow::updateRender()
 {
     if (this->ppu.lcdEnabled())
     {
-        SDL_UpdateTexture(this->texture, NULL, this->framebuffer.get(), XRES * sizeof(FramebufferPixel));
+        SDL_UpdateTexture(this->texture, NULL, this->framebuffer, XRES * sizeof(FramebufferPixel));
         SDL_RenderCopy(this->renderer, this->texture, NULL, NULL);
     }
 }

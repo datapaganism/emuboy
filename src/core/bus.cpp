@@ -642,7 +642,7 @@ void BUS::loadBios(const std::string bios_name)
         std::ifstream::pos_type pos = file.tellg();
 
         file.seekg(0, std::ios::beg);
-        file.read((char*)this->bios.get(), pos);
+        file.read((char*)this->bios, pos);
 
         //set the program counter of the cpu to execute the bios program
         this->cpu.biosInit();
