@@ -5,7 +5,6 @@
 #include "EmulatorWindow.hpp"
 #include "joypad.hpp"
 
-#undef VSYNCd
 
 
 WindowManager::WindowManager(const std::string rom_path, const std::string bios_path)
@@ -97,20 +96,32 @@ void WindowManager::run()
                 case eJoypadButtonsDebug::pause:
                     pause = !pause;
                     break;
+                case eJoypadButtonsDebug::fast_forward:
+                    fast_forward = !fast_forward;
+                    break;
                 }
             }
         }
 
         // tick at custom frequency
-#ifdef VSYNCd
         ticks_now = SDL_GetTicks64();
         tick_delta = ticks_now - ticks_previous;
 
         // every 16.7ms we update the emulation state
-        if (tick_delta >= FRAMETIME)
+        if (fast_forward)
+        {
+            if (!pause)
+            {
+                for (auto& window : this->windows)
+                {
+                    window.get()->updateState();
+                    window.get()->render();
+                }
+            }
+        }
+        else if (tick_delta >= FRAMETIME)
         {
             ticks_previous = ticks_now;
-#endif
                 // render each window
             if (!pause)
             {
@@ -120,9 +131,8 @@ void WindowManager::run()
                     window.get()->render();
                 }
             }
-#ifdef VSYNCd
         }
-#endif
+
         //bool allWindowsClosed = true;
 
         //for (auto& window : this->windows)

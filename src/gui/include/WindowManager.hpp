@@ -17,4 +17,5 @@ public:
     bool getInitSuccess();
 private:
     bool init_success = false;
+    bool fast_forward = false;
 };

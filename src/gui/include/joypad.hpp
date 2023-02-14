@@ -20,6 +20,7 @@ enum eJoypadButtonsDebug
 {
     pause = SDLK_p,
     showVRAM = SDLK_o,
+    fast_forward = SDLK_SPACE,
 };
 
 
