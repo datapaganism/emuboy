@@ -2568,7 +2568,8 @@ void CPU::ins_BIT_b_r_bHLb(Byte bit)
 	switch (this->mcycles_used)
 	{
 	case 0: this->mcycles_used++; break;
-	case 1:
+	case 1: this->mcycles_used++; break;
+	case 2:
 
 		this->instruction_cache[0] = this->getMemory(this->registers.getHL());
 		this->registers.setFlag(n, 0);
