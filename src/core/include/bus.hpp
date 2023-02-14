@@ -35,15 +35,15 @@ public:
     //Logger logger;
 
     bool bios_loaded = false;
-    std::unique_ptr<Byte[]> work_ram  = std::make_unique<Byte[]>(0x2000);
-    std::unique_ptr<Byte[]> bios      = std::make_unique<Byte[]>(0x100);
-    std::unique_ptr<Byte[]> io        = std::make_unique<Byte[]>(0x80);
-    std::unique_ptr<Byte[]> high_ram  = std::make_unique<Byte[]>(0x7F);
-    std::unique_ptr<Byte[]> video_ram = std::make_unique<Byte[]>(0x2000);
-    std::unique_ptr<Byte[]> oam_ram   = std::make_unique<Byte[]>(0x100);
+    Byte work_ram[0x2000] = { 0, };
+    Byte bios[0x100] = { 0, };
+    Byte io[0x80] = { 0, };
+    Byte high_ram[0x80] = {0,};
+    Byte video_ram[0x2000] = { 0, };
+    Byte oam_ram[0x100] = { 0, };
     Byte interrupt_enable_register = 0;
 
-    std::unique_ptr<FramebufferPixel[]> framebuffer = std::make_unique<FramebufferPixel[]>(XRES * YRES);
+    FramebufferPixel framebuffer[XRES * YRES];
 
     uint64_t DEBUG_mCycle_counter = 0;
    
