@@ -13,11 +13,12 @@ void BUS::cycleSystemOneFrame()
     for (int i = 0; i < CPU_TCYCLES_PER_FRAME; i += 4)
     {
         this->cpu.mStepCPU();
-        this->cpu.updateTimers(4);
 
         this->dma_controller.updateDMA(4);
 
         this->ppu.updateGraphics(4);
+        this->cpu.updateTimers(4);
+
         DEBUG_print_ASCII_from_serial();
     }
 }
