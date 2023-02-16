@@ -14,7 +14,7 @@ public:
 	Byte current_rom_bank = 1;
 	Byte current_ram_bank = 0;
 	std::vector<Byte> rom;
-	std::unique_ptr<Byte[]> ram = nullptr;
+	std::vector<Byte> ram;
 	bool gamepak_loaded = false;
 	bool save_loaded = false;
 	bool ram_bank_enable = false;

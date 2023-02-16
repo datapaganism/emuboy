@@ -58,7 +58,7 @@ Byte GamePak::getMemory(const Word address)
 
 	if (address <= 0x7FFF) // otherwise return calculate the address by the rom bank used and return that data
 	{
-		int new_address = (address - 0x4000) + (current_rom_bank * 0x4000);
+		Word new_address = (address - 0x4000) + (current_rom_bank * 0x4000);
 		return rom[new_address];
 
 	}
@@ -97,7 +97,7 @@ void GamePak::allocateRam()
 {
 	if (cartridge_type == 0x05 || cartridge_type == 0x06)
 	{
-		this->ram = std::make_unique<Byte[]>(256);
+		ram.resize(256);
 		return;
 	}
 
@@ -105,10 +105,10 @@ void GamePak::allocateRam()
 	{
 	case 0: break;
 	case 1: break;
-	case 2: this->ram = std::make_unique<Byte[]>(1 * 0x2000); break;
-	case 3: this->ram = std::make_unique<Byte[]>(4 * 0x2000); break;
-	case 4: this->ram = std::make_unique<Byte[]>(16 * 0x2000); break;
-	case 5: this->ram = std::make_unique<Byte[]>(8 * 0x2000); break;
+	case 2: this->ram.resize(1 * 0x2000); break;
+	case 3: this->ram.resize(4 * 0x2000); break;
+	case 4: this->ram.resize(16 * 0x2000); break;
+	case 5: this->ram.resize(8 * 0x2000); break;
 	default: fprintf(stderr, "Unreachable number of banks");  exit(-1);;
 	}
 }
@@ -283,7 +283,7 @@ void GamePak::cartridgeTypeInit()
 	case 0x10: break; // MBC3 + RAM
 	case 0x11: break;
 	case 0x12: break;
-	case 0x13: break;
+	case 0x13:  current_rom_bank = 1; break;
 	case 0x19: break;
 	case 0x1A: break;
 	case 0x1B: break;
