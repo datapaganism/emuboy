@@ -37,6 +37,7 @@ void CPU::mStepCPU()
 		//if finished instruction after this execution, prefetch
 		if (!this->is_executing_instruction)
 		{
+			is_instruction_complete = true;
 			if (!this->is_halted)
 			{
 				if (this->ei_triggered && this->current_running_opcode != 0xFB)

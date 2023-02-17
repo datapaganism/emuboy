@@ -50,6 +50,9 @@ public:
     void init();
     void biosInit();
     void loadBios(const std::string bios_name);
+    
+    int cycleSystemOneInstruction();
+    void cycleSystemOneMCycle();
     void cycleSystemOneFrame();
 
     Byte getMemory(const Word address, enum eMemoryAccessType access_type);

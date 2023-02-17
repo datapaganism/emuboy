@@ -7,19 +7,37 @@
 #include <sstream>
 #include <fstream>
 
+int BUS::cycleSystemOneInstruction()
+{
+    int i = 0;
+    cpu.is_instruction_complete = false;
+    while (!cpu.is_instruction_complete)
+    {
+        cycleSystemOneMCycle();
+        i++;
+    }
+    cpu.is_instruction_complete = false;
+    return i;
+}
+
+
+void BUS::cycleSystemOneMCycle()
+{
+    this->cpu.mStepCPU();
+
+    this->dma_controller.updateDMA(4);
+
+    this->ppu.updateGraphics(4);
+    this->cpu.updateTimers(4);
+
+    DEBUG_print_ASCII_from_serial();
+}
 
 void BUS::cycleSystemOneFrame()
 {
     for (int i = 0; i < CPU_TCYCLES_PER_FRAME; i += 4)
     {
-        this->cpu.mStepCPU();
-
-        this->dma_controller.updateDMA(4);
-
-        this->ppu.updateGraphics(4);
-        this->cpu.updateTimers(4);
-
-        DEBUG_print_ASCII_from_serial();
+        cycleSystemOneMCycle();
     }
 }
 
