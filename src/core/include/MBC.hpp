@@ -35,7 +35,7 @@ public:
 
 	void allocateRam();
 
-	virtual Byte getMemory(const Word address);
+	virtual Byte getMemory(const Word address) = 0;
 	virtual void setMemory(const Word address, const Byte data);
 
 	virtual void ramBankEnableHandler(const Word address, const Byte data);

@@ -27,6 +27,7 @@ void MBC::allocateRam()
 
 Byte MBC::getMemory(const Word address)
 {
+	/*
 	if (address <= 0x3FFF) // if address is within rom bank 0
 		return rom[address];
 
@@ -40,10 +41,13 @@ Byte MBC::getMemory(const Word address)
 
 	if (address >= 0xA000 && address <= 0xBFFF)
 		return ram[(address - 0x2000) + (current_ram_bank * 0x2000)];
+		*/
+	return 0;
 }
 
 void MBC::setMemory(const Word address, const Byte data)
 {
+	/*
 	if (address <= 0x1FFF)
 	{ 
 		ramBankEnableHandler(address, data); // enable ram bank writing
@@ -67,6 +71,7 @@ void MBC::setMemory(const Word address, const Byte data)
 		bankingModeSelect(address, data);
 		return;
 	}
+	*/
 }
 
 void MBC::ramBankEnableHandler(const Word address, const Byte data)

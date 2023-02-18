@@ -31,7 +31,7 @@ void MBC3::ramBankChange(const Word address, const Byte data)
 
 void MBC3::romBankChange(const Word address, const Byte data)
 {
-	Byte rom_bank_to_select = data;
+	Byte rom_bank_to_select = data & 0x7F;
 
 	if (rom_bank_to_select == 0)
 	{
@@ -45,4 +45,54 @@ void MBC3::romBankChange(const Word address, const Byte data)
 	//}
 	current_rom_bank = rom_bank_to_select;
 	return;
+}
+
+Byte MBC3::getMemory(const Word address)
+{
+	if (address <= 0x3FFF) // if address is within rom bank 0
+		return rom[address];
+
+	if (address >= 0x4000 && address <= 0x7FFF) // otherwise return calculate the address by the rom bank used and return that data
+	{
+		return rom[(address - 0x4000) + (current_rom_bank * 0x4000)];
+	}
+
+	if (!ram_bank_enable)
+		return 0;
+
+	if (address >= 0xA000 && address <= 0xBFFF)
+		return ram[(address - 0x2000) + (current_ram_bank * 0x2000)];
+}
+
+void MBC3::setMemory(const Word address, const Byte data)
+{
+	if (address <= 0x1FFF)
+	{
+		ramBankEnableHandler(address, data); // enable ram bank writing
+		return;
+	}
+
+	if (address >= 0x2000 && address <= 0x3FFF) // rom bank change
+	{
+		romBankChange(address, data);
+		return;
+	}
+
+	if (address >= 0x4000 && address <= 0x5FFF) // rom / ram bank change
+	{
+		ramBankChange(address, data);
+		return;
+	}
+
+	if (address >= 0x6000 && address <= 0x7FFF) // rom / ram bank change
+	{
+		bankingModeSelect(address, data);
+		return;
+	}
+
+	if (address >= 0xA000 && address <= 0xBFFF && ram_bank_enable) // ram write
+	{
+		ram[(address - 0x2000) + (current_ram_bank * 0x2000)] = data;
+	}
+
 }

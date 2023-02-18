@@ -109,4 +109,9 @@ void MBC1::setMemory(const Word address, const Byte data)
 		bankingModeSelect(address, data);
 		return;
 	}
+
+	if (address >= 0xA000 && address <= 0xBFFF && ram_bank_enable) // ram write
+	{
+		ram[(address - 0x2000) + (current_ram_bank * 0x2000)] = data;
+	}
 }
