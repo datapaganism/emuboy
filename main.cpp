@@ -48,11 +48,13 @@ int main(int argc, char* argv[])
     //std::string rom_path = ((argv[1] != NULL) ? argv[1] : "D:\\afk\\Downloads\\bgbw64\\bgbtest.gb");
 
     //std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\metasprites.gb");
-   // std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\empty.gb");
-    std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\Super Mario Land.gb");
-    //std::string rom_path = ((argv[1] != NULL) ? argv[1] : "C:\\Users\\afk\\Downloads\\Nintendo - Game Boy\\Catrap (USA).gb");
+    //std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\empty.gb");
+    //std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\Super Mario Land.gb");
+    //std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\TETRIS.gb");
+    std::string rom_path = ((argv[1] != NULL) ? argv[1] : "C:\\Users\\afk\\Downloads\\Nintendo - Game Boy\\Pokemon - Blue Version (USA, Europe) (SGB Enhanced).gb");
+    //std::string rom_path = ((argv[1] != NULL) ? argv[1] : "C:\\Users\\afk\\Downloads\\Nintendo - Game Boy\\Pocket Monsters - Midori (Japan) (SGB Enhanced).gb");
     // std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\empty.gb");
-    std::string bios_path = "..\\..\\..\\bios\\bios.bin";
+    std::string bios_path = "..\\..\\..\\bios\\bios.binx";
     
     WindowManager application(rom_path, bios_path);
 
