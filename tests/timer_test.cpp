@@ -75,3 +75,11 @@ TEST_F(CPUtest, increment_timers_tima_256KHz_to_overflow)
 	ASSERT_EQ(bus.getMemory(TIMA, debug), 0x00);
 
 }
+
+TEST_F(CPUtest, increment_timers_tima_256KHz_to_overflow2)
+{
+	bus.cpu.registers.pc = WORKRAMOFFSET;
+	bus.setMemory(WORKRAMOFFSET,0,debug);
+	ASSERT_EQ(bus.cycleSystemOneInstruction(),1);
+
+}
