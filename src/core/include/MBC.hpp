@@ -22,6 +22,7 @@ public:
 	Byte rom_size = 0;
 	Byte ram_size = 0;
 	Byte number_of_rom_banks = 0;
+	Byte number_of_ram_banks = 0;
 	bool banking_mode = false;
 
 	/*

@@ -23,6 +23,8 @@ void MBC::allocateRam()
 	case 5: this->ram.resize(8 * 0x2000); break;
 	default: fprintf(stderr, "Unreachable number of banks");  exit(-1);;
 	}
+
+	number_of_ram_banks = ram.size() / 0x4000;
 }
 
 Byte MBC::getMemory(const Word address)

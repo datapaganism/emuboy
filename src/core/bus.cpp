@@ -366,7 +366,7 @@ Byte BUS::getMemory(const Word address, enum eMemoryAccessType access_type)
         // if the bios has never been loaded or if the register at 0xFF50 is set 1 (which is done by the bios program) we need to access the cartridge bank
         if (this->io[(0xFF50) - IOOFFSET] == 0x1 || !bios_loaded)
             return gamepak.getMemory(address);
-        
+                
         
         return this->bios[address];
     }
@@ -387,14 +387,8 @@ Byte BUS::getMemory(const Word address, enum eMemoryAccessType access_type)
   //      return 0b0;
     }
 
-    if (address <= 0x97FF) // from 0x8000         
-    {       
-        return this->video_ram[address - VIDEORAMOFFSET];
-    }
-
     if (address <= 0x9FFF) // from 0x9800
     {
-        // background map region
         return this->video_ram[address - VIDEORAMOFFSET];
     }
 
@@ -463,7 +457,6 @@ Byte BUS::getMemory(const Word address, enum eMemoryAccessType access_type)
         return this->high_ram[address - HIGHRAMOFFSET];
     }
     
-    // temp return
     fprintf(stderr, "getMemory no return");  exit(-1);
 };
 

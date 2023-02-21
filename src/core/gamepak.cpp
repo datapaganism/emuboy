@@ -55,7 +55,7 @@ void GamePak::initMBC(std::vector<Byte>& rom_data)
 	memory_bank_controller->cartridge_type = rom_data[0x147];
 	memory_bank_controller->rom_size = rom_data[0x148];
 	memory_bank_controller->ram_size = rom_data[0x149];
-	memory_bank_controller->number_of_rom_banks = 2 << memory_bank_controller->rom_size;
+	memory_bank_controller->number_of_rom_banks = rom_data.size() / 0x4000;
 
 	memory_bank_controller->rom = std::move(rom_data);
 

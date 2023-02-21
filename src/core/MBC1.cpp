@@ -2,54 +2,45 @@
 
 void MBC1::ramBankEnableHandler(const Word address, const Byte data)
 {
-	if ((data & 0xF) == 0xA)
-	{
-		ram_bank_enable = true;
-		return;
-	}
-	if ((data & 0xF) == 0x0)
-	{
-		ram_bank_enable = false;
-		return;
-	}
+	ram_bank_enable = (data & 0xF) == 0xA;
 }
 
 
 void MBC1::ramBankChange(const Word address, const Byte data)
 {
+	Byte new_ram_bank = data & 3;
 	if (banking_mode == 1)
 	{
-		current_rom_bank = data;
-		return;
+		current_rom_bank &= 0x1F;
+		current_rom_bank |= new_ram_bank << 5;
+
+		current_ram_bank = 0;
 	}
-	if (data <= 0x03)
+	else
 	{
 		current_ram_bank = data;
-		return;
+		current_rom_bank &= 0x1F;
 	}
+	
+	current_rom_bank %= number_of_rom_banks;
+	if (ram_bank_enable)
+		current_ram_bank %= number_of_ram_banks;
 }
 
 void MBC1::romBankChange(const Word address, const Byte data)
 {
 	Byte rom_bank_to_select = data & 0x1F;
+	if (rom_bank_to_select % 0x20 == 0)
+		rom_bank_to_select++;
 
-	if (rom_bank_to_select == 0)
-	{
-		current_rom_bank = 1;
-		return;
-	}
-	if (rom_bank_to_select > number_of_rom_banks)
-	{
-		current_rom_bank = (rom_bank_to_select & number_of_rom_banks);
-		return;
-	}
-	current_rom_bank = rom_bank_to_select;
-	return;
+	current_rom_bank &= 0x60;
+	current_rom_bank |= rom_bank_to_select;
+	current_rom_bank %= number_of_rom_banks;
 }
 
 void MBC1::bankingModeSelect(Word address, Byte data)
 {
-	banking_mode = data & 0x1;
+	banking_mode = (data & 0x1) == 0;
 	/*
 		00 = Simple Banking Mode (default)
 		0000–3FFF and A000–BFFF locked to bank 0 of ROM/RAM
@@ -60,15 +51,6 @@ void MBC1::bankingModeSelect(Word address, Byte data)
 
 Byte MBC1::getMemory(const Word address)
 {
-	//if (banking_mode == 0)
-	//{
-	//	if (address <= 0x3FFF) // if address is within rom bank 0
-	//		return rom[address];
-
-	//	if (address >= 0xA000 && address <= 0xBFFF)
-	//		return ram[(address - 0x2000) + (current_rom_bank * 0x2000)];
-	//}
-
 	if (address <= 0x3FFF) // if address is within rom bank 0
 		return rom[address];
 
@@ -78,10 +60,10 @@ Byte MBC1::getMemory(const Word address)
 	}
 
 	if (!ram_bank_enable)
-		return 0;
+		return 0xFF;
 
 	if (address >= 0xA000 && address <= 0xBFFF)
-		return ram[(address - 0x2000) + (current_ram_bank * 0x2000)];
+		return ram[(address - 0xA000) + (current_ram_bank * 0x2000)];
 }
 
 void MBC1::setMemory(const Word address, const Byte data)
@@ -112,6 +94,6 @@ void MBC1::setMemory(const Word address, const Byte data)
 
 	if (address >= 0xA000 && address <= 0xBFFF && ram_bank_enable) // ram write
 	{
-		ram[(address - 0x2000) + (current_ram_bank * 0x2000)] = data;
+		ram[(address - 0xA000) + (current_ram_bank * 0x2000)] = data;
 	}
 }

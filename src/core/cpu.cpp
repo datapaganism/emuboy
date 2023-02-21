@@ -380,12 +380,12 @@ bool CPU::checkJumpCondition(enum eJumpCondition condition)
 
 Byte CPU::getMemory(const Word address)
 {
-	return this->bus->getMemory(address, eMemoryAccessType::cpu);
+	return bus->getMemory(address, eMemoryAccessType::cpu);
 }
 
 void CPU::setMemory(const Word address, const Byte data)
 {
-	this->bus->setMemory(address, data, eMemoryAccessType::cpu);
+	bus->setMemory(address, data, eMemoryAccessType::cpu);
 }
 
 Byte CPU::getNibble(const Byte input, const bool getHi)
@@ -1111,11 +1111,38 @@ void CPU::instructionHandlerCB()
 }
 void CPU::instructionHandlerSTOP()
 {
-
-	switch (this->getByteFromPC())
+	if (mcycles_used == 1)
 	{
-	case 0x00: {  4; } // STOP ins but there might be something more important needed to be done here
+		setMemory(DIV, 0);
+		if (getMemory(0xFF00))
+			is_executing_instruction = false;
+		return;
 	}
+
+	// first m-cycle
+	if (getMemory(0xFF00))
+	{
+		if ((getMemory(IF_REGISTER) & getMemory(IE_REGISTER)) != 0)
+		{
+			is_executing_instruction = false;
+			return;
+		}
+		// stop is a two byte opcode, halt mode entered, div not reset
+		current_running_opcode = 0x76;
+		return;
+	}
+	// if (speed_switch_requested){}
+
+
+	if ((getMemory(IF_REGISTER) & getMemory(IE_REGISTER)) != 0)
+	{
+		// stop one byte opcode, stop mode is entered, div is reset
+		return;
+	}
+	mcycles_used++;
+	//stop is a 2 byte opcode
+	//stop mode is entrered
+	//div is reset
 }
 
 
