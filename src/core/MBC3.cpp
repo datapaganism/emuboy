@@ -1,50 +1,23 @@
 #include "MBC3.hpp"
-#include <iostream>
-
-
 
 void MBC3::ramBankEnableHandler(const Word address, const Byte data)
 {
-	if ((data & 0xF) == 0xA)
-	{
-		ram_bank_enable = true;
-		return;
-	}
-	if ((data & 0xF) == 0x0)
-	{
-		ram_bank_enable = false;
-		return;
-	}
-	return;
+	ram_bank_enable = (data & 0xF) == 0xA;
 }
 
 
 void MBC3::ramBankChange(const Word address, const Byte data)
 {
-	if (data <= 0x7)
-	{
-		current_ram_bank = data;
-		return;
-	}
-	std::cout << "RTC register select\n";
+	current_ram_bank = data;
 }
 
 void MBC3::romBankChange(const Word address, const Byte data)
 {
 	Byte rom_bank_to_select = data & 0x7F;
-
 	if (rom_bank_to_select == 0)
-	{
-		current_rom_bank = 1;
-		return;
-	}
-	//if (rom_bank_to_select > number_of_rom_banks)
-	//{
-	//	current_rom_bank = (rom_bank_to_select & number_of_rom_banks);
-	//	return;
-	//}
+		rom_bank_to_select++;
+
 	current_rom_bank = rom_bank_to_select;
-	return;
 }
 
 Byte MBC3::getMemory(const Word address)
@@ -58,10 +31,16 @@ Byte MBC3::getMemory(const Word address)
 	}
 
 	if (!ram_bank_enable)
-		return 0;
+		return 0xFF;
 
 	if (address >= 0xA000 && address <= 0xBFFF)
-		return ram[(address - 0x2000) + (current_ram_bank * 0x2000)];
+	{
+		if (current_ram_bank < 8)
+		{
+			return ram[(address - 0xA000) + (current_ram_bank * 0x2000)];
+		}
+		fprintf(stderr, "MBC3 RTC not implemented");  exit(-1);
+	}
 }
 
 void MBC3::setMemory(const Word address, const Byte data)
@@ -92,7 +71,6 @@ void MBC3::setMemory(const Word address, const Byte data)
 
 	if (address >= 0xA000 && address <= 0xBFFF && ram_bank_enable) // ram write
 	{
-		ram[(address - 0x2000) + (current_ram_bank * 0x2000)] = data;
+		ram[(address - 0xA000) + (current_ram_bank * 0x2000)] = data;
 	}
-
 }
