@@ -118,6 +118,7 @@ public:
 	void requestInterrupt(const eInterruptTypes type);
 	
 	void DEBUG_printCurrentState(Word pc);
+	void DEBUG_printCurrentState();
 	void DEBUG_print_IO();
 
 	bool is_instruction_complete = false;

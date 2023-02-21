@@ -232,6 +232,39 @@ void CPU::DEBUG_printCurrentState(Word pc)
 		this->debug_toggle = true;
 }
 
+void CPU::DEBUG_printCurrentState()
+{
+	if (this->debug_toggle)
+	{
+		printf("%s:0x%.4X  ", "pc", this->registers.pc);
+		//printf("%s:0x%.2X  ", "cyclesused", this->mcycles_used);
+		printf("op:0x%.2X | ", this->getMemory(this->registers.pc));
+		printf("%s:0x%.2X%.2X  ", "AF", this->registers.a, this->registers.f);
+		printf("%s:0x%.2X%.2X  ", "BC", this->registers.b, this->registers.c);
+		printf("%s:0x%.2X%.2X  ", "DE", this->registers.d, this->registers.e);
+		printf("%s:0x%.2X%.2X  ", "HL", this->registers.h, this->registers.l);
+		printf("%s:0x%.4X  ", "SP", this->registers.sp);
+		printf("%s:0x%.4X  ", "STAT", this->getMemory(STAT));
+		printf("%s:%i  ", "IME", this->interrupt_master_enable);
+		//printf("%s:%x  ", "DIV", this->bus->io[4]);
+		//printf("%s:%x  ", "TIMA", this->bus->io[5]);
+		//printf("%s:%x  ", "TMA", this->bus->io[6]);
+		//printf("%s:%x  ", "TAC", this->bus->io[7]);
+		//printf("%s:%x  ", "divC", this->divtimer_counter);
+		//printf("%s:%x  ", "timC", this->timer_counter);
+
+
+		/*printf("%s:%i  ","z", this->registers.get_flag(z));
+		printf("%s:%i  ","n", this->registers.get_flag(n));
+		printf("%s:%i  ","h", this->registers.get_flag(h));
+		printf("%s:%i  ","c", this->registers.get_flag(c));
+		printf("%s:","0xFF00");
+		std::cout << std::bitset<8>(this->bus->io[0]);*/
+
+		printf("\n");
+	}
+}
+
 /// <summary>
 /// sets the registers of the cpu to their initial power up state, program counter is set to skip the bios program by default
 /// </summary>

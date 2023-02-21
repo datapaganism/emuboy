@@ -19,6 +19,10 @@ void EmulatorWindow::handleEvent(SDL_Event& e)
             {
                 this->saveState();
                 break;
+            }if (keyPressed == SDLK_F1)
+            {
+                this->cpu.debug_toggle = !cpu.debug_toggle;
+                break;
             }
             enum eJoypadButtons pressed = keyToEnum(keyPressed);
             if (pressed != UNKNOWN)
@@ -37,7 +41,8 @@ void EmulatorWindow::handleEvent(SDL_Event& e)
 
 void EmulatorWindow::updateState()
 {
-    this->cycleSystemOneFrame();
+    //this->cycleSystemOneFrame();
+    this->cycleSystemOneFrameByInstruction();
 }
 
 void EmulatorWindow::updateRender()

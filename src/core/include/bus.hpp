@@ -54,6 +54,7 @@ public:
     int cycleSystemOneInstruction();
     void cycleSystemOneMCycle();
     void cycleSystemOneFrame();
+    void cycleSystemOneFrameByInstruction();
 
     Byte getMemory(const Word address, enum eMemoryAccessType access_type);
     void setMemory(const Word address, const Byte data, enum eMemoryAccessType access_type);

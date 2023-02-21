@@ -16,6 +16,7 @@ constexpr double VSYNC = 59.73; // Hz, basically 60 but I want to be accurate;
 constexpr double FRAMETIME = 1000.0 / VSYNC;
 
 constexpr int CPU_TCYCLES_PER_FRAME = GB_CPU_TCYCLE_CLOCKSPEED / VSYNC; // used to figure out how many CPU operations can be done before we need update the screen a single frame
+constexpr int CPU_MCYCLES_PER_FRAME = GB_CPU_MCYCLE_CLOCKSPEED / VSYNC; // used to figure out how many CPU operations can be done before we need update the screen a single frame
 
 // the CPU uses cycles 70221 times per video frame
 // a video frame takes 70221/4 cycles to render.

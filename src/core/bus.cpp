@@ -35,9 +35,19 @@ void BUS::cycleSystemOneMCycle()
 
 void BUS::cycleSystemOneFrame()
 {
-    for (int i = 0; i < CPU_TCYCLES_PER_FRAME; i += 4)
+    for (int i = 0; i < CPU_MCYCLES_PER_FRAME; i ++)
     {
         cycleSystemOneMCycle();
+    }
+}
+
+void BUS::cycleSystemOneFrameByInstruction()
+{
+    int i = 0;
+    while (i < CPU_MCYCLES_PER_FRAME)
+    {
+        i += cycleSystemOneInstruction();
+        cpu.DEBUG_printCurrentState();
     }
 }
 
