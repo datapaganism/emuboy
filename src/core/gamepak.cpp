@@ -23,7 +23,9 @@ GamePak::GamePak(const std::string filename) : GamePak::GamePak()
 		initMBC(rom_data);
 
 		gamepak_loaded = true;
+		return;
 	}
+	fprintf(stderr, "cannot load cartridge");  exit(-1);
 }
 
 GamePak::GamePak()
@@ -33,25 +35,43 @@ GamePak::GamePak()
 void GamePak::initMBC(std::vector<Byte>& rom_data)
 {
 	Byte cartridge_type = rom_data[0x147];
-	switch (cartridge_type)
-	{
-	case 0x0:
+
+	if (cartridge_type == 0)
 		memory_bank_controller = std::make_unique<MBC_ROM_ONLY>();
-		break;
-
-	case 0x1:
-	case 0x2:
-	case 0x3:
+	else if (cartridge_type <= 0x3)
 		memory_bank_controller = std::make_unique<MBC1>();
-		break;
-
-	case 0x13:
+	else if (cartridge_type <= 0x6)
+	{
+		fprintf(stderr, "MBC2 Not implemented");  exit(-1);
+	}
+	else if (cartridge_type <= 0x9)
+	{
+		fprintf(stderr, "ROM + RAM + BAT Not implemented");  exit(-1);
+	}
+	else if (cartridge_type <= 0x0D)
+	{
+		fprintf(stderr, "MMM01 Not implemented");  exit(-1);
+	}
+	else if (cartridge_type <= 0x13)
 		memory_bank_controller = std::make_unique<MBC3>();
-		break;
-	default:
-		break;
+	else if (cartridge_type <= 0x1E)
+	{
+		fprintf(stderr, "MBC5 Not implemented");  exit(-1);
+	}
+	else if (cartridge_type <= 0x20)
+	{
+		fprintf(stderr, "MBC6 Not implemented");  exit(-1);
+	}
+	else if (cartridge_type <= 0x22)
+	{
+		fprintf(stderr, "MBC7 Not implemented");  exit(-1);
+	}
+	else if (cartridge_type <= 0xFF)
+	{
+		fprintf(stderr, "misc MBC Not implemented");  exit(-1);
 	}
 
+	
 	memory_bank_controller->cartridge_type = rom_data[0x147];
 	memory_bank_controller->rom_size = rom_data[0x148];
 	memory_bank_controller->ram_size = rom_data[0x149];
