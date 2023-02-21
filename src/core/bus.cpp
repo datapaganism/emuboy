@@ -50,8 +50,8 @@ void BUS::cycleSystemOneFrameByInstruction()
 
         i += cycleSystemOneInstruction();
         Word pc = cpu.registers.pc;
-        if (pc == 0x42A6)
-            cpu.debug_toggle = true;
+        //if (pc == 0x42A6)
+        //    cpu.debug_toggle = true;
     }
 }
 
