@@ -236,9 +236,9 @@ void CPU::DEBUG_printCurrentState()
 {
 	if (this->debug_toggle)
 	{
-		printf("%s:0x%.4X  ", "pc", this->registers.pc);
+		printf("%s:0x%.4X  ", "pc", this->registers.pc - 1);
 		//printf("%s:0x%.2X  ", "cyclesused", this->mcycles_used);
-		printf("op:0x%.2X | ", this->getMemory(this->registers.pc));
+		printf("op:0x%.2X | ", this->getMemory(this->registers.pc - 1));
 		printf("%s:0x%.2X%.2X  ", "AF", this->registers.a, this->registers.f);
 		printf("%s:0x%.2X%.2X  ", "BC", this->registers.b, this->registers.c);
 		printf("%s:0x%.2X%.2X  ", "DE", this->registers.d, this->registers.e);

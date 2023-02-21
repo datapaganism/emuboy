@@ -38,7 +38,7 @@ public:
     Byte work_ram[0x2000] = { 0, };
     Byte bios[0x100] = { 0, };
     Byte io[0x80] = { 0, };
-    Byte high_ram[0x80] = {0,};
+    Byte high_ram[0x7F] = {0,};
     Byte video_ram[0x2000] = { 0, };
     Byte oam_ram[0x100] = { 0, };
     Byte interrupt_enable_register = 0;

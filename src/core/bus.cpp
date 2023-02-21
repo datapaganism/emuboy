@@ -46,8 +46,12 @@ void BUS::cycleSystemOneFrameByInstruction()
     int i = 0;
     while (i < CPU_MCYCLES_PER_FRAME)
     {
-        i += cycleSystemOneInstruction();
         cpu.DEBUG_printCurrentState();
+
+        i += cycleSystemOneInstruction();
+        Word pc = cpu.registers.pc;
+        if (pc == 0x42A6)
+            cpu.debug_toggle = true;
     }
 }
 
@@ -248,7 +252,7 @@ void BUS::DEBUG_print_ASCII_from_serial()
         char c = this->io[0xFF01 - IOOFFSET];
         if (c == ' ')
         {
-            this->cpu.debug_toggle = true;
+            //this->cpu.debug_toggle = true;
             printf("");
         }
         if (c != 0)
@@ -360,103 +364,78 @@ Byte BUS::getMemory(const Word address, enum eMemoryAccessType access_type)
     }
     */
 
-    // boot rom area, or rom bank 0
+    
+
+        // boot rom area, or rom bank 0
     if (address <= 0x00FF) //from 0x0000
     {
         // if the bios has never been loaded or if the register at 0xFF50 is set 1 (which is done by the bios program) we need to access the cartridge bank
-        if (this->io[(0xFF50) - IOOFFSET] == 0x1 || !bios_loaded)
+        if (io[(0xFF50) - IOOFFSET] == 0x1 || !bios_loaded)
             return gamepak.getMemory(address);
-                
-        
-        return this->bios[address];
+
+        return bios[address];
     }
-
-    if (address <= 0x3FFF) //from 0x0100
+    else if (address <= 0x7FFF)
     {
-
-        // game rom bank 0
-        return this->gamepak.getMemory(address);
+        return gamepak.getMemory(address);
     }
-
-    if (address <= 0x7FFF) // from 0x4000
+    else if (address <= 0x9FFF) // from 0x8000
     {
-        // game rom bank N
-
-        //banking is not implemented but we will just now read the whole cart
-        return this->gamepak.getMemory(address);
-  //      return 0b0;
+        return video_ram[address - VIDEORAMOFFSET];
     }
-
-    if (address <= 0x9FFF) // from 0x9800
+    else if (address <= 0xBFFF) // from 0xA000
     {
-        return this->video_ram[address - VIDEORAMOFFSET];
+        return gamepak.getMemory(address);
     }
-
-    if (address <= 0xBFFF) // from 0xA000
+    else if (address <= 0xDFFF) // from 0xC000
     {
-        return this->gamepak.getMemory(address);
+        return work_ram[address - 0xC000];
     }
-
-    if (address <= 0xDFFF) // from 0xC000
+    else if (address <= 0xFDFF) // from 0xE000 // echo ram, it is a copy of the ram above, we will just read memory 2000 addresses above instead
     {
-        // working ram
-        return this->work_ram[address - 0xC000];
+        return getMemory(address - 0x2000, access_type);
     }
-
-    if (address <= 0xFDFF) // from 0xE000
+    else if (address <= 0xFE9F) // from 0xFE00
     {
-        // echo ram, it is a copy of the ram above, we will just read memory 2000 addresses above instead
-        return this->getMemory(address - 0x2000,access_type);
+        return oam_ram[address - OAMOFFSET];
     }
-
-    if (address <= 0xFE9F) // from 0xFE00
+    else if (address >= 0xFEA0 && address <= 0xFEFF) // from 0xFEA0
     {
-        // object attribute memory
-        //if ppu in pixel transfer mode
-        
-        return this->oam_ram[address - OAMOFFSET];
-    }
-
-    if (address <= 0xFEFF) // from 0xFEA0
-    {
-        // unused part of the map, must retun 0
         return 0;
     }
-    if (address <= 0xFF4B) // from 0xFF00
+    else if (address <= 0xFF7F) // from 0xFF00
     {
         switch (address)
         {
-            case 0xFF00:
-            {
-                Byte requestedJOYP = this->io[0];
-                if (requestedJOYP & 0x10) {
-                    return 0xD0 | this->getActionButtonNibble();
-                }
-                if (requestedJOYP & 0x20) {
-                    return 0xE0 | this->getDirectionButtonNibble();
-                }
-                 fprintf(stderr, "cannot return input");  exit(-1);
+        case 0xFF00:
+        {
+            Byte requestedJOYP = this->io[0];
+            if (requestedJOYP & 0x10) {
+                return 0xD0 | this->getActionButtonNibble();
             }
-            //case 0xFF26:// NR52
-            //{
-            //    break;
-            //}
-            default: 
-                return this->io[address - IOOFFSET];
+            if (requestedJOYP & 0x20) {
+                return 0xE0 | this->getDirectionButtonNibble();
+            }
+            fprintf(stderr, "cannot return input");  exit(-1);
+        }
+        //case 0xFF26:// NR52
+        //{
+        //    break;
+        //}
+        default:
+            return io[address - IOOFFSET];
 
         }
     }
-    if (address <= 0xFF7F) // from 0xFF4C
-    {
-        // unused part of the map, just return
-        return 0b0;
-    }
-    if (address <= 0xFFFF) // from 0xFF80
+    else if (address <= 0xFFFE) // from 0xFF80
     {
         // high ram area
-        return this->high_ram[address - HIGHRAMOFFSET];
+        return high_ram[address - HIGHRAMOFFSET];
     }
-    
+    else if (address == 0xFFFF)
+    {
+        return interrupt_enable_register;
+    }
     fprintf(stderr, "getMemory no return");  exit(-1);
 };
 
@@ -486,168 +465,136 @@ void BUS::setMemory(const Word address, const Byte data, enum eMemoryAccessType 
     default: break;
     }
     */
-
-    //Set to non-zero to disable boot ROM
     if (address == 0xFF50)
     {
-        this->io[0xFF50 - IOOFFSET] = 0x1;
+        io[0xFF50 - IOOFFSET] = 0x1;
         return;
     }
-
-    if (address <= 0x00ff)
+    else if (address <= 0x00FF) //from 0x0000
     {
-        // boot rom area, or rom bank 0
-        if (this->io[(0xFF50) - IOOFFSET] == 0x1 || !this->bios_loaded)
-            this->gamepak.setMemory(address,data);
+        if (io[(0xFF50) - IOOFFSET] == 0x1 || !bios_loaded)
+            gamepak.setMemory(address, data);
         return;
     }
-
-    if (address <= 0x3fff)
+    else if (address <= 0x7FFF)
     {
-        this->gamepak.setMemory(address, data);
+        gamepak.setMemory(address,data);
         return;
     }
-
-    if (address <= 0x7fff)
+    else if (address <= 0x9FFF) // from 0x8000
     {
-        this->gamepak.setMemory(address, data);
+        video_ram[address - VIDEORAMOFFSET] = data;
         return;
     }
-
-    if (address <= 0x97ff)
+    else if (address <= 0xBFFF) // from 0xA000
     {
-       // Tile Ram region
-        this->video_ram[address - VIDEORAMOFFSET] = data;
+        gamepak.setMemory(address,data);
         return;
     }
-
-    if (address <= 0x9FFF)
+    else if (address <= 0xDFFF) // from 0xC000
     {
-        // background map region
-        this->video_ram[address - VIDEORAMOFFSET] = data;
+        work_ram[address - 0xC000] = data;
         return;
     }
-
-    if (address <= 0xBFFF)
+    else if (address <= 0xFDFF) // from 0xE000 // echo ram, it is a copy of the ram above, we will just read memory 2000 addresses above instead
     {
-        return this->gamepak.setMemory(address,data);
-    }
-
-    if (address <= 0xDFFF)
-    {
-        // working ram
-        /*if (address == 0xC242) {
-            auto workramm = this->work_ram.get() + 0x0242;
-            workramm = workramm;
-        }*/
-        this->work_ram[address - 0xC000] = data;
-        
+        setMemory(address - 0x2000,data, access_type);
         return;
     }
-
-    if (address <= 0xFDFF)
+    else if (address <= 0xFE9F) // from 0xFE00
     {
-        // echo ram, it is a copy of the ram above, any calls to this address space will be redirected to address - 2000 spaces above
-        return this->setMemory(address - 0x2000, data, access_type);
-    }
-
-    if (address <= 0xFE9F) // from 0xFE00
-    {
-       this->oam_ram[address - OAMOFFSET] = data;
-       return;
-    }
-
-    if (address <= 0xFEFF)
-    {
-        // unused part of the map, just return
+        oam_ram[address - OAMOFFSET] = data;
         return;
     }
-    if (address <= 0xFF4B) // from ff00
+    else if (address >= 0xFEA0 && address <= 0xFEFF) // from 0xFEA0
+    {
+        return;
+    }
+    else if (address <= 0xFF7F) // from 0xFF00
     {
         switch (address)
         {
         case 0xFF00:
-            this->io[address - 0xFF00] = data & 0x30; break;              
+            io[address - 0xFF00] = data & 0x30; break;
         case 0xFF02:
-            this->io[address - 0xFF00] = (data | 0x7E);
+            io[address - 0xFF00] = (data | 0x7E);
             break;
         case 0xFF04:
-            this->io[address - 0xFF00] = 0;
+            io[address - 0xFF00] = 0;
             break;
         case 0xFF07:
-            this->io[address - 0xFF00] = (data | 0xF8);
-            //this->cpu.update_timerCounter();
+            io[address - 0xFF00] = (data | 0xF8);
+            //cpu.update_timerCounter();
             break;
         case 0xFF0F:
-            this->io[address - 0xFF00] = (data | 0xE0);
+            io[address - 0xFF00] = (data | 0xE0);
             break;
         case 0xFF10:
-            this->io[address - 0xFF00] = (data | 0x80);
+            io[address - 0xFF00] = (data | 0x80);
             break;
         case 0xFF14:
-            this->io[address - 0xFF00] = (data | 0xB8);
+            io[address - 0xFF00] = (data | 0xB8);
             break;
         case 0xFF15:
-            this->io[address - 0xFF00] = 0xFF;
+            io[address - 0xFF00] = 0xFF;
             break;
         case 0xFF19:
-            this->io[address - 0xFF00] = (data | 0xB8);
+            io[address - 0xFF00] = (data | 0xB8);
             break;
         case 0xFF1A:
-            this->io[address - 0xFF00] = (data | 0x7F);
+            io[address - 0xFF00] = (data | 0x7F);
             break;
         case 0xFF1C:
-            this->io[address - 0xFF00] = (data | 0x9F);
+            io[address - 0xFF00] = (data | 0x9F);
             break;
         case 0xFF1E:
-            this->io[address - 0xFF00] = (data | 0xB8);
+            io[address - 0xFF00] = (data | 0xB8);
             break;
         case 0xFF1F:
-            this->io[address - 0xFF00] = 0xFF;
+            io[address - 0xFF00] = 0xFF;
             break;
         case 0xFF20:
-            this->io[address - 0xFF00] = (data | 0xC0);
+            io[address - 0xFF00] = (data | 0xC0);
             break;
         case 0xFF23:
-            this->io[address - 0xFF00] = (data | 0xBF);
+            io[address - 0xFF00] = (data | 0xBF);
             break;
         case 0xFF26:
-            this->io[address - 0xFF00] = (data | 0x70);
-            if ((this->io[0xFF26 - IOOFFSET] & 0x8F) == 0)
+            io[address - 0xFF00] = (data | 0x70);
+            if ((io[0xFF26 - IOOFFSET] & 0x8F) == 0)
             {
                 //destroy sound registers.
             }
             break;
         case 0xFF41:
-            this->io[address - 0xFF00] = (data | 0x80);
+            io[address - 0xFF00] = (data | 0x80);
             break;
         case 0xFF44: // LY
             break;
         case 0xFF46: // dma
-           this->dma_controller.requestDMA(data);
-           break;
+            dma_controller.requestDMA(data);
+            break;
         case 0xFF50:
-            this->io[0xFF50 - IOOFFSET] = 0x1; // disable bootrom
+            io[0xFF50 - IOOFFSET] = 0x1; // disable bootrom
             break;
 
 
         default:
-            this->io[address - 0xFF00] = data;
+            io[address - 0xFF00] = data;
         }
         return;
     }
-    if (address <= 0xFF7F)
-    {
-        // unused part of the map, just return
-        return;
-    }
-    if (address <= 0xFFFF)
+    else if (address <= 0xFFFE) // from 0xFF80
     {
         // high ram area
-        this->high_ram[address - HIGHRAMOFFSET] = data;
+        high_ram[address - HIGHRAMOFFSET] = data;
         return;
     }
-
+    else if (address == 0xFFFF)
+    {
+        interrupt_enable_register = data;
+        return;
+    }
     fprintf(stderr, "set memory fail");  exit(-1);
 }
 
