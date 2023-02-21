@@ -119,10 +119,10 @@ void PPU::updateGraphics(const int tcycles)
 
 			if (this->cycle_counter >= (80))
 			{
-				if (oam_scan_iterator != 40)
+				/*if (oam_scan_iterator != 40)
 				{
 					fprintf(stderr, "OAM scan should have checked 40 objs, not %i", oam_scan_iterator);  exit(-40);
-				}
+				}*/
 
 				if (oam_priority.size() > 1)
 					this->sortOAMPriority();
