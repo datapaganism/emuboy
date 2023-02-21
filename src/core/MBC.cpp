@@ -9,7 +9,8 @@ void MBC::allocateRam()
 {
 	if (cartridge_type == 0x05 || cartridge_type == 0x06)
 	{
-		ram.resize(256);
+		//ram.resize(256);
+		ram.resize(512); // nibbles in bytes
 		return;
 	}
 

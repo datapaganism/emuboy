@@ -7,6 +7,7 @@
 
 #include "MBC_ROM_ONLY.hpp"
 #include "MBC1.hpp"
+#include "MBC2.hpp"
 #include "MBC3.hpp"
 
 

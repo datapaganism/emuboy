@@ -41,9 +41,7 @@ void GamePak::initMBC(std::vector<Byte>& rom_data)
 	else if (cartridge_type <= 0x3)
 		memory_bank_controller = std::make_unique<MBC1>();
 	else if (cartridge_type <= 0x6)
-	{
-		fprintf(stderr, "MBC2 Not implemented");  exit(-1);
-	}
+		memory_bank_controller = std::make_unique<MBC2>();
 	else if (cartridge_type <= 0x9)
 	{
 		fprintf(stderr, "ROM + RAM + BAT Not implemented");  exit(-1);
