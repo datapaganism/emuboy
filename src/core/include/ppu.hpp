@@ -49,9 +49,11 @@ struct FramebufferPixel
 	Byte alpha = 0xFF;
 };
 
+
 const FramebufferPixel palette_array[][4] =
 {
 	{FramebufferPixel(0x89, 0xC0, 0x77), FramebufferPixel(0x4D, 0xA3, 0x50) , FramebufferPixel(0x37, 0x76, 0x4A), FramebufferPixel(0x22, 0x49, 0x39) },
+	{FramebufferPixel(218, 211, 175),FramebufferPixel(213, 136, 99), FramebufferPixel(194, 58, 115) , FramebufferPixel(44,30,116) },
 	{FramebufferPixel(00, 00, 00), FramebufferPixel(84, 252, 252) , FramebufferPixel(252, 84, 252), FramebufferPixel(0xFF, 0xff, 0xff) },
 };
 
