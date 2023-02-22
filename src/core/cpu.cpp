@@ -805,7 +805,13 @@ void CPU::instructionHandler()
 	//case 0xFD: { } break;
 	case 0xFE: { this->ins_CP_A_u8(); } break;
 	case 0xFF: { this->ins_RST(0x38); } break;
-	default: { printf("ILLEGAL OPCODE CALL %0.2X \n", this->current_running_opcode); }
+	default:
+		{
+			printf("ILLEGAL OPCODE CALL %0.2X \n", this->current_running_opcode);
+			// treat as nop
+			is_executing_instruction = false;
+			break;
+		}
 	}
 }
 void CPU::instructionHandlerCB()
