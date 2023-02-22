@@ -9,6 +9,7 @@
 #include "MBC1.hpp"
 #include "MBC2.hpp"
 #include "MBC3.hpp"
+#include "MBC5.hpp"
 
 
 class GamePak

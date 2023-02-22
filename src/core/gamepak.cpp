@@ -54,7 +54,7 @@ void GamePak::initMBC(std::vector<Byte>& rom_data)
 		memory_bank_controller = std::make_unique<MBC3>();
 	else if (cartridge_type <= 0x1E)
 	{
-		fprintf(stderr, "MBC5 Not implemented");  exit(-1);
+		memory_bank_controller = std::make_unique<MBC5>();
 	}
 	else if (cartridge_type <= 0x20)
 	{
