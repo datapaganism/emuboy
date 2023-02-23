@@ -422,6 +422,19 @@ Byte BUS::getMemory(const Word address, enum eMemoryAccessType access_type)
         //{
         //    break;
         //}
+        case 0xFF04:
+            return cpu.timer_registers.div;
+            break;
+        case 0xFF05:
+            return cpu.timer_registers.tima;
+            break;
+        case 0xFF06:
+            return cpu.timer_registers.tma;
+            break;
+        case 0xFF07:
+            return cpu.timer_registers.tac;
+            break;
+
         default:
             return io[address - IOOFFSET];
 
@@ -520,12 +533,18 @@ void BUS::setMemory(const Word address, const Byte data, enum eMemoryAccessType 
             io[address - 0xFF00] = (data | 0x7E);
             break;
         case 0xFF04:
-            io[address - 0xFF00] = 0;
+             cpu.timer_registers.div = 0;
+            break;
+        case 0xFF05:
+            cpu.timer_registers.tima = data;
+            break;
+        case 0xFF06:
+            cpu.timer_registers.tma = data;
             break;
         case 0xFF07:
-            io[address - 0xFF00] = (data | 0xF8);
-            //cpu.update_timerCounter();
+            cpu.timer_registers.tac = (data | 0xF8);
             break;
+
         case 0xFF0F:
             io[address - 0xFF00] = (data | 0xE0);
             break;
@@ -629,10 +648,14 @@ void BUS::init()
     this->io[0xFF00 - IOOFFSET] = 0xCF; // P1
     this->io[0xFF01 - IOOFFSET] = 0x00; // SB
     this->io[0xFF02 - IOOFFSET] = 0x7E; // SC
-    this->io[0xFF04 - IOOFFSET] = 0xAB; // DIV
-    this->io[0xFF05 - IOOFFSET] = 0x00; // TIMA
-    this->io[0xFF06 - IOOFFSET] = 0x00; // TMA
-    this->io[0xFF07 - IOOFFSET] = 0xF8; // TAC
+    //this->io[0xFF04 - IOOFFSET] = 0xAB; // DIV
+    cpu.timer_registers.div = 0xAB;
+    cpu.timer_registers.tima = 0x00;
+    cpu.timer_registers.tma = 0x00;
+    cpu.timer_registers.tac = 0xF8;
+    //this->io[0xFF05 - IOOFFSET] = 0x00; // TIMA
+    //this->io[0xFF06 - IOOFFSET] = 0x00; // TMA
+    //this->io[0xFF07 - IOOFFSET] = 0xF8; // TAC
     this->io[0xFF0F - IOOFFSET] = 0xE1; // IF
     this->io[0xFF10 - IOOFFSET] = 0x80; // NR10
     this->io[0xFF11 - IOOFFSET] = 0xBF; // NR11
@@ -691,10 +714,15 @@ void BUS::biosInit()
     this->io[0xFF00 - IOOFFSET ] = 0xCF; // P1
     this->io[0xFF01 - IOOFFSET ] = 0x00; // SB
     this->io[0xFF02 - IOOFFSET ] = 0x7E; // SC
-    this->io[0xFF04 - IOOFFSET ] = 0x00; // DIV
-    this->io[0xFF05 - IOOFFSET ] = 0x00; // TIMA
-    this->io[0xFF06 - IOOFFSET ] = 0x00; // TMA
-    this->io[0xFF07 - IOOFFSET ] = 0xF8; // TAC
+    //this->io[0xFF04 - IOOFFSET ] = 0x00; // DIV
+    //this->io[0xFF05 - IOOFFSET ] = 0x00; // TIMA
+    //this->io[0xFF06 - IOOFFSET ] = 0x00; // TMA
+    //this->io[0xFF07 - IOOFFSET ] = 0xF8; // TAC
+    cpu.timer_registers.div = 0x00;
+    cpu.timer_registers.tima = 0x00;
+    cpu.timer_registers.tma = 0x00;
+    cpu.timer_registers.tac = 0xF8;
+
     this->io[0xFF0F - IOOFFSET ] = 0xE1; // IF
     this->io[0xFF10 - IOOFFSET ] = 0x80; // NR10
     this->io[0xFF11 - IOOFFSET ] = 0x00; // NR11

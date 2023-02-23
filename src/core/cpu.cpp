@@ -24,9 +24,15 @@ Yes! Not implementing the HALT instruction will cause your timings to be wildly 
 */
 
 
-
 void CPU::mStepCPU()
 {	
+
+	if (!is_executing_instruction && !is_halted)
+	{
+		this->current_running_opcode = this->getByteFromPC();
+		this->setupForNextInstruction();
+	}
+	
 	if (this->is_executing_instruction)
 	{
 		//DEBUG_printCurrentState(0x101);
@@ -55,7 +61,7 @@ void CPU::mStepCPU()
 					return;
 				}
 
-				this->prefetchInstruction();
+				//this->prefetchInstruction();
 			}
 		}
 
@@ -74,12 +80,24 @@ void CPU::mStepCPU()
 	}
 
 	// if we havent prefetched anything, fetch instruction // takes a cycle
-	this->current_running_opcode = this->getByteFromPC();
-	this->setupForNextInstruction();
+	//this->current_running_opcode = this->getByteFromPC();
+	//this->setupForNextInstruction();
 	return;
 
 };
 
+int CPU::mStepCPUOneInstruction()
+{
+	int i = 0;
+	is_instruction_complete = false;
+	while (!is_instruction_complete)
+	{
+		mStepCPU();
+		i++;
+	}
+	is_instruction_complete = false;
+	return i;
+}
 void CPU::haltHandler()
 {
 
@@ -141,6 +159,7 @@ void CPU::checkForInterrupts()
 			if (this->getInterruptFlag(type, IF_REGISTER) && this->getInterruptFlag(type, IE_REGISTER))
 			{
 				//disable interrupts in general and for this type
+
 				this->setInterruptFlag(type, 0, IF_REGISTER);
 				this->interrupt_master_enable = false;
 
@@ -413,23 +432,23 @@ void CPU::updateTimers(const int tcycles)
 	if (this->divtimer_counter >= DIV_INC_RATE)
 	{
 		this->divtimer_counter = 0;
-		this->bus->io[DIV - IOOFFSET]++;
+		timer_registers.div++;
 	}
 
 	// if TMC bit 2 is set, this means that the timer is enabled
-	if (this->bus->io[TAC - IOOFFSET] & (0b00000100))
+	if (timer_registers.tac & (0b00000100))
 	{
 		this->timer_counter += tcycles;
 		if (this->timer_counter >= this->getTACFrequency())
 		{
 			this->timer_counter = 0;
-			if (this->bus->io[TIMA - IOOFFSET] == 0xFF)
+			if (timer_registers.tima == 0xFF)
 			{
-				this->bus->io[TIMA - IOOFFSET] = this->bus->io[TMA - IOOFFSET]; //TIMA gets reset to TMA on overflow
+				timer_registers.tima = timer_registers.tma;
 				this->requestInterrupt(timer);
 				return;
 			}
-			this->bus->io[TIMA - IOOFFSET]++;
+			timer_registers.tima++;
 		}
 	}
 }
@@ -450,7 +469,7 @@ void CPU::updateTimers(const int tcycles)
 
 Byte CPU::getTMCFrequency()
 {
-	return this->getMemory(TAC) & 0x3;
+	return timer_registers.tac & 0x3;
 }
 
 int CPU::getTACFrequency()
@@ -821,7 +840,7 @@ void CPU::instructionHandlerCB()
 	{
 		this->current_running_cb = this->getByteFromPC();
 		this->is_executing_cb = true;
-		//return;
+		return;
 	}
 
 	switch (this->current_running_cb)
@@ -2223,6 +2242,8 @@ void CPU::ins_ADD_SP_i8()
 		{
 			this->registers.setFlag(c, ((this->registers.sp + value) & 0xFF) <= (this->registers.sp & 0xFF));
 			this->registers.setFlag(h, ((this->registers.sp + value) & 0xF) <= (this->registers.sp & 0xF));
+			//this->registers.setFlag(c, (((registers.sp + value & 0xff) + (registers.sp & 0xff)) & 0x100) == 0x100);
+			//this->registers.setFlag(h, (((registers.sp + value & 0xf) + (registers.sp & 0xf)) & 0x10) == 0x10);
 		}
 		else
 		{
@@ -2329,9 +2350,8 @@ void CPU::ins_RLC_bHLb()
 	switch (this->mcycles_used)
 	{
 	case 0: this->mcycles_used++; break;
-	case 1: this->mcycles_used++; break;
-	case 2: this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
-	case 3:
+	case 1: this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
+	case 2:
 
 		this->registers.setFlag(n, 0);
 		this->registers.setFlag(h, 0);
@@ -2635,8 +2655,7 @@ void CPU::ins_BIT_b_r_bHLb(Byte bit)
 	switch (this->mcycles_used)
 	{
 	case 0: this->mcycles_used++; break;
-	case 1: this->mcycles_used++; break;
-	case 2:
+	case 1:
 
 		this->instruction_cache[0] = this->getMemory(this->registers.getHL());
 		this->registers.setFlag(n, 0);

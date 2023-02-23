@@ -96,6 +96,14 @@ public:
 	}
 };
 
+struct TimerRegisters
+{
+	Byte div = 0xAB;
+	Byte tima = 0x00;
+	Byte tma = 0x00;
+	Byte tac = 0xF8;
+};
+
 
 class CPU
 {
@@ -106,6 +114,7 @@ public:
 	CPU();
 
 	Registers registers;
+	TimerRegisters timer_registers;
 
 	bool interrupt_master_enable = 0;
 	bool is_halted = 0;
@@ -113,6 +122,7 @@ public:
 	void connectToBus(BUS* pBus);
 	const Byte getByteFromPC();
 	void mStepCPU();
+	int mStepCPUOneInstruction();
 	void haltHandler();
 	void updateTimers(const int cycles);
 	void requestInterrupt(const eInterruptTypes type);
