@@ -17,3 +17,20 @@ target_link_libraries(cpu_test
   core)
 
 add_test(cpu_gtests cpu_test)
+
+
+add_subdirectory(SM83_tests)
+
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+
+# Add tests
+function(set_test TESTNAME)
+    add_executable(${TESTNAME} ${ARGN})
+    target_link_libraries(${TESTNAME} gtest gtest_main core)
+    add_test(NAME ${TESTNAME} COMMAND ${TESTNAME} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    target_include_directories(${TESTNAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+endfunction()
+
+set_test(cpu_sm83_tests cpu_sm83_test.cpp)

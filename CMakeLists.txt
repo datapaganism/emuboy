@@ -22,6 +22,7 @@ enable_testing()
 
 add_subdirectory(tests)
 
+
 add_executable(heap_vs_stack tests/heap_vs_stack.cpp)
 target_link_libraries(heap_vs_stack PRIVATE core)
 
