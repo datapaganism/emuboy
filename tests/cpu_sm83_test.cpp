@@ -275,11 +275,11 @@ std::vector<Test> ManyTests(std::vector<std::string> paths)
 
 
 
-INSTANTIATE_TEST_SUITE_P(Json, SM83Test,
-	testing::ValuesIn(
-		GetTests(folder_path + "\\c3.json")
-	), testing::PrintToStringParamName()
-);
+//INSTANTIATE_TEST_SUITE_P(Json, SM83Test,
+//	testing::ValuesIn(
+//		GetTests(folder_path + "\\c3.json")
+//	), testing::PrintToStringParamName()
+//);
 
 
 //INSTANTIATE_TEST_SUITE_P(Json, SM83Test,
@@ -288,8 +288,25 @@ INSTANTIATE_TEST_SUITE_P(Json, SM83Test,
 //	), testing::PrintToStringParamName()
 //);
 
+const std::vector<std::string> reduced_tests
+{
+	folder_path + "\\C3.json",
+	folder_path + "\\CB 0C.json",
+	folder_path + "\\CB 61.json",
+	folder_path + "\\E8.json",
+	folder_path + "\\F2.json",
+};
+
+INSTANTIATE_TEST_SUITE_P(, SM83Test,
+	testing::ValuesIn(
+		ManyTests(reduced_tests)
+	), testing::PrintToStringParamName()
+);
+
 //INSTANTIATE_TEST_SUITE_P(Json, SM83Test,
 //	testing::ValuesIn(
 //		ManyTests(pathsOfJSONTests(folder_path))
 //	), testing::PrintToStringParamName()
 //);
+//
+//

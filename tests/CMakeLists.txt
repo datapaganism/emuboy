@@ -19,8 +19,6 @@ target_link_libraries(cpu_test
 add_test(cpu_gtests cpu_test)
 
 
-add_subdirectory(SM83_tests)
-
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 
