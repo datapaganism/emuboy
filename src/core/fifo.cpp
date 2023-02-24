@@ -300,7 +300,8 @@ void PixelFIFO::fetchPixels(const int cycles)
 
 				// can check underlying pixel to see if it is a sprite pixel and compare about
 				// priority
-				for (int i = 0; i < 8; i++)
+				Byte loop_till = (original_fifo_pixels.size() < 8) ? original_fifo_pixels.size() : 8;
+				for (int i = 0; i < loop_till; i++)
 				{
 					if ( 
 						pixels[i].colour != 0
