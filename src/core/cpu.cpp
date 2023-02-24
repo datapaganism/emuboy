@@ -26,21 +26,19 @@ Yes! Not implementing the HALT instruction will cause your timings to be wildly 
 
 void CPU::mStepCPU()
 {	
-
+	// fetch
 	if (!is_executing_instruction && !is_halted)
 	{
-		this->current_running_opcode = this->getByteFromPC();
-		this->setupForNextInstruction();
+		current_running_opcode = getByteFromPC();	
+		setupForNextInstruction();
 	}
 	
 	if (this->is_executing_instruction)
 	{
-		//DEBUG_printCurrentState(0x101);
-
 		//decode and execute instruction // takes a cycle
 		this->instructionHandler();
 			
-		//if finished instruction after this execution, prefetch
+		//if finished instruction after this execution
 		if (!this->is_executing_instruction)
 		{
 			is_instruction_complete = true;
@@ -52,16 +50,12 @@ void CPU::mStepCPU()
 					this->ei_triggered = false;
 				}
 
-				
-
-				this->checkForInterrupts();
-				if (this->interrupt_vector != 0)
+				checkForInterrupts();
+				if (interrupt_vector != 0)
 				{
-					this->setupForNextInstruction();
+					setupForNextInstruction();
 					return;
 				}
-
-				//this->prefetchInstruction();
 			}
 		}
 
@@ -78,12 +72,6 @@ void CPU::mStepCPU()
 		this->haltHandler();
 		return;
 	}
-
-	// if we havent prefetched anything, fetch instruction // takes a cycle
-	//this->current_running_opcode = this->getByteFromPC();
-	//this->setupForNextInstruction();
-	return;
-
 };
 
 int CPU::mStepCPUOneInstruction()
@@ -485,13 +473,10 @@ int CPU::getTACFrequency()
 
 }
 
-
 void CPU::requestInterrupt(const eInterruptTypes type)
 {
 	this->setInterruptFlag(type, 1, IF_REGISTER);
 }
-
-
 
 Byte CPU::getInterruptFlag(const enum eInterruptTypes type, Word address)
 {
@@ -2238,18 +2223,9 @@ void CPU::ins_ADD_SP_i8()
 	case 2:
 	{
 		Byte_s value = (Byte_s)this->instruction_cache[0];
-		if (value < 0)
-		{
-			this->registers.setFlag(c, ((this->registers.sp + value) & 0xFF) <= (this->registers.sp & 0xFF));
-			this->registers.setFlag(h, ((this->registers.sp + value) & 0xF) <= (this->registers.sp & 0xF));
-			//this->registers.setFlag(c, (((registers.sp + value & 0xff) + (registers.sp & 0xff)) & 0x100) == 0x100);
-			//this->registers.setFlag(h, (((registers.sp + value & 0xf) + (registers.sp & 0xf)) & 0x10) == 0x10);
-		}
-		else
-		{
-			this->registers.setFlag(c, ((this->registers.sp & 0xFF) + value) > 0xFF);
-			this->registers.setFlag(h, ((this->registers.sp & 0xF) + (value & 0xF)) > 0xF);
-		}
+		registers.setFlag(h, (registers.sp & 0xF) + (value & 0xF) > 0xF);
+		registers.setFlag(c, (registers.sp & 0xFF) + (value & 0xFF) > 0xFF);
+
 		this->registers.setFlag(z, 0);
 		this->registers.setFlag(n, 0);
 
@@ -2276,16 +2252,9 @@ void CPU::ins_LD_HL_SP_i8()
 		Word sum = this->registers.sp + value;
 		this->registers.setFlag(z, 0);
 		this->registers.setFlag(n, 0);
-		if (value < 0)
-		{
-			this->registers.setFlag(c, (sum & 0xFF) <= (this->registers.sp & 0xFF));
-			this->registers.setFlag(h, (sum & 0xF) <= (this->registers.sp & 0xF));
-		}
-		else
-		{
-			this->registers.setFlag(c, ((this->registers.sp & 0xFF) + value) > 0xFF);
-			this->registers.setFlag(h, ((this->registers.sp & 0xF) + (value & 0xF)) > 0xF);
-		}
+		registers.setFlag(h, (registers.sp & 0xF) + (value & 0xF) > 0xF);
+		registers.setFlag(c, (registers.sp & 0xFF) + (value & 0xFF) > 0xFF);
+
 		this->registers.setHL(sum);
 
 		this->is_executing_instruction = false;
