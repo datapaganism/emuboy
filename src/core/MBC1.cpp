@@ -23,8 +23,8 @@ void MBC1::ramBankChange(const Word address, const Byte data)
 	}
 	
 	current_rom_bank %= number_of_rom_banks;
-	if (ram_bank_enable)
-		current_ram_bank %= number_of_ram_banks;
+	/*if (ram_bank_enable)
+		current_ram_bank %= number_of_ram_banks;*/
 }
 
 void MBC1::romBankChange(const Word address, const Byte data)
@@ -70,7 +70,7 @@ void MBC1::setMemory(const Word address, const Byte data)
 {
 	if (address <= 0x1FFF)
 	{
-		ramBankEnableHandler(address, data); // enable ram bank writing
+		ramBankEnable(address, data); // enable ram bank writing
 		return;
 	}
 
@@ -92,7 +92,7 @@ void MBC1::setMemory(const Word address, const Byte data)
 		return;
 	}
 
-	if (address >= 0xA000 && address <= 0xBFFF && ram_bank_enable) // ram write
+	if (address >= 0xA000 && address <= 0xBFFF && ram_bank_enable && rom_size) // ram write
 	{
 		ram[(address - 0xA000) + (current_ram_bank * 0x2000)] = data;
 	}

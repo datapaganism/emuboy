@@ -133,6 +133,7 @@ public:
 
 	bool is_instruction_complete = false;
 
+
 private:
 	BUS* bus = nullptr;
 	void init();

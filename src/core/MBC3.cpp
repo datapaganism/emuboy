@@ -47,7 +47,7 @@ void MBC3::setMemory(const Word address, const Byte data)
 {
 	if (address <= 0x1FFF)
 	{
-		ramBankEnableHandler(address, data); // enable ram bank writing
+		ramBankEnable(address, data); // enable ram bank writing
 		return;
 	}
 

@@ -182,10 +182,7 @@ std::string bios_path = "..\\..\\..\\bios\\bios.binx";
 TEST_P(SM83Test, opcode)
 {
 
-	if (GetParam().test_name == "C3_002B")
-	{
-		NO_OP;
-	}
+	
 	// setup
 	BUS bus;
 
@@ -205,6 +202,7 @@ TEST_P(SM83Test, opcode)
 
 	bus.cpu.interrupt_master_enable = params.init_ime;
 
+	//bus.setMemory(IF_REGISTER, 0xE1, debug);
 	bus.setMemory(IE_REGISTER, params.init_ie, debug);
 	
 	for (ram ram : params.init_rams)
@@ -215,6 +213,13 @@ TEST_P(SM83Test, opcode)
 
 	// exectute
 	int cycles_executed = 0;
+
+	if (GetParam().test_name == "E8_02B9")
+	{
+		NO_OP;
+		//return;
+	}
+
 	cycles_executed += bus.cpu.mStepCPUOneInstruction();
 
 
@@ -290,23 +295,24 @@ std::vector<Test> ManyTests(std::vector<std::string> paths)
 
 const std::vector<std::string> reduced_tests
 {
-	folder_path + "\\C3.json",
-	folder_path + "\\CB 0C.json",
-	folder_path + "\\CB 61.json",
-	folder_path + "\\E8.json",
-	folder_path + "\\F2.json",
+	folder_path + "\\76.json",
+	//folder_path + "\\C3.json",
+	//folder_path + "\\CB 0C.json",
+	//folder_path + "\\CB 61.json",
+	//folder_path + "\\E8.json",
+	//folder_path + "\\F2.json",
 };
 
-INSTANTIATE_TEST_SUITE_P(, SM83Test,
+//INSTANTIATE_TEST_SUITE_P(, SM83Test,
+//	testing::ValuesIn(
+//		ManyTests(reduced_tests)
+//	), testing::PrintToStringParamName()
+//);
+
+INSTANTIATE_TEST_SUITE_P(Json, SM83Test,
 	testing::ValuesIn(
-		ManyTests(reduced_tests)
+		ManyTests(pathsOfJSONTests(folder_path))
 	), testing::PrintToStringParamName()
 );
 
-//INSTANTIATE_TEST_SUITE_P(Json, SM83Test,
-//	testing::ValuesIn(
-//		ManyTests(pathsOfJSONTests(folder_path))
-//	), testing::PrintToStringParamName()
-//);
-//
-//
+
