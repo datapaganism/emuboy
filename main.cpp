@@ -52,14 +52,14 @@ int main(int argc, char* argv[])
     //rom_path = "..\\..\\..\\roms\\Super Mario Land.gb";
     //rom_path = "..\\..\\..\\roms\\Prince of Persia.gb";
     rom_path = "..\\..\\..\\roms\\TETRIS.gb";
-    rom_path = "..\\..\\..\\roms\\POKEMON YELLOW.gbc";
+    //rom_path = "..\\..\\..\\roms\\POKEMON YELLOW.gbc";
     //rom_path = "C:\\Users\\afk\\Downloads\\Nintendo - Game Boy\\Pokemon - Blue Version (USA, Europe) (SGB Enhanced).gb";
     //rom_path = "C:\\Users\\afk\\Downloads\\Nintendo - Game Boy\\Pocket Monsters - Midori (Japan) (SGB Enhanced).gb";
     //rom_path = "C:\\Users\\afk\\Downloads\\Nintendo - Game Boy\\Balloon Kid (USA, Europe).gb";
     //rom_path =  "..\\..\\..\\roms\\empty.gb";
     
     //rom_path = "C:\\Users\\afk\\Downloads\\Nintendo - Game Boy\\Wave Race (USA, Europe).gb";
-    //rom_path = "C:\\Users\\afk\\Downloads\\Nintendo - Game Boy\\Super Mario Land 2 - 6 Golden Coins (USA, Europe) (Rev A).gb";
+    //rom_path = "C:\\Users\\afk\\Downloads\\dmg-acid2.gb";
 
     if (argv[1] != NULL)
         rom_path = argv[1];
