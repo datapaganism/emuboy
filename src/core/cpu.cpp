@@ -41,9 +41,11 @@ void CPU::mStepCPU()
 		//if finished instruction after this execution
 		if (!this->is_executing_instruction)
 		{
-			is_instruction_complete = true;
-			if (!this->is_halted)
+			if (!is_halted)
 			{
+				is_instruction_complete = true;
+
+
 				if (this->ei_triggered && this->current_running_opcode != 0xFB)
 				{
 					this->interrupt_master_enable = true;
@@ -73,6 +75,23 @@ void CPU::mStepCPU()
 		return;
 	}
 };
+
+/*
+// run mode, fetch decode and part execute
+	else if (!is_executing_instruction)
+	{
+		current_running_opcode = getByteFromPC(); // fetch
+		setupForNextInstruction(); //restart counting mcycles, change state to execute instruction
+		if (halt_bug)
+		{
+			registers.pc--;
+			halt_bug = false;
+		}
+		executePartOfInstruction();
+		return;
+	}
+*/
+
 
 int CPU::mStepCPUOneInstruction()
 {
@@ -104,8 +123,10 @@ void CPU::haltHandler()
 			this->is_halted = false;
 			prefetchInstruction();
 			this->checkForInterrupts();
-			return;
 		}
+		is_halted = false;
+		is_instruction_complete = true;
+		return;
 	}
 	if (any_pending_interrupts && this->halt_bug)
 	{
