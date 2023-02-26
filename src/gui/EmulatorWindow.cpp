@@ -41,8 +41,8 @@ void EmulatorWindow::handleEvent(SDL_Event& e)
 
 void EmulatorWindow::updateState()
 {
-    //this->cycleSystemOneFrame();
-    this->cycleSystemOneFrameByInstruction();
+    this->cycleSystemOneFrame();
+    //this->cycleSystemOneFrameByInstruction();
 }
 
 void EmulatorWindow::updateRender()
