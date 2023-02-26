@@ -19,7 +19,7 @@ public:
 	GamePak();
 
 	bool gamepak_loaded = false;
-
+	
 
 	void initMBC(std::vector<Byte>& rom_data);
 	
@@ -28,10 +28,12 @@ public:
 	Byte getMemory(const Word address);
 	void setMemory(const Word address, const Byte data);
 
+	void checkAndLoadSave();
+
+	
+
 private:
 
 	std::string filename;
-
-
 };
 

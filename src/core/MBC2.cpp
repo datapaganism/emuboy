@@ -42,7 +42,7 @@ void MBC2::setMemory(const Word address, const Byte data)
 			romBankChange(address,data);
 			return;
 		}
-		ramBankEnableHandler(address, data);
+		ramBankEnable(address, data);
 		return;
 	}
 

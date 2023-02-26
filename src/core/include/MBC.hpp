@@ -9,13 +9,13 @@ class MBC
 {
 public:
 	MBC();
+	~MBC();
 
 	Byte current_rom_bank = 1;
 	Byte current_ram_bank = 0;
 	std::vector<Byte> rom;
 	std::vector<Byte> ram;
 	
-	bool save_loaded = false;
 	bool ram_bank_enable = false;
 
 	Byte cartridge_type = 0;
@@ -24,6 +24,8 @@ public:
 	Byte number_of_rom_banks = 0;
 	Byte number_of_ram_banks = 0;
 	bool banking_mode = false;
+
+	bool has_battery = false;
 
 	/*
 	virtual void readSave();
@@ -40,13 +42,13 @@ public:
 	virtual void setMemory(const Word address, const Byte data);
 
 	virtual void ramBankEnableHandler(const Word address, const Byte data);
+	void ramBankEnable(const Word address, const Byte data);
 
 	virtual void ramBankChange(const Word address, const Byte data);
 	virtual void romBankChange(const Word address, const Byte data);
 	virtual void bankingModeSelect(const Word address, const Byte data);
 
-
-	
+	void saveData();
 	
 	
 	//void cartridgeTypeInit();

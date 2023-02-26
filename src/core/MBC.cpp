@@ -1,7 +1,13 @@
 #include "MBC.hpp"
+#include <fstream>
 
 MBC::MBC()
 {
+}
+
+MBC::~MBC()
+{
+	saveData();
 }
 
 
@@ -81,6 +87,14 @@ void MBC::ramBankEnableHandler(const Word address, const Byte data)
 {
 }
 
+void MBC::ramBankEnable(const Word address, const Byte data)
+{
+	ramBankEnableHandler(address, data);
+	
+	if (!ram_bank_enable)
+		saveData();
+}
+
 void MBC::ramBankChange(const Word address, const Byte data)
 {
 }
@@ -91,4 +105,18 @@ void MBC::romBankChange(const Word address, const Byte data)
 
 void MBC::bankingModeSelect(const Word address, const Byte data)
 {
+}
+
+void MBC::saveData()
+{
+	if (has_battery)
+	{
+		std::ofstream file(filename + ".sav", std::ios::binary | std::ios::out | std::ios::trunc); //check for exisiting save, load in data
+		if (file.is_open())
+		{
+			file.write((char*)ram.data(), ram.size());
+			file.close();
+			return;
+		}
+	}
 }
