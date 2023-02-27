@@ -122,9 +122,7 @@ void Window::handleWindowEvent(SDL_Event& e)
 
 		if (update_caption)
 		{
-			std::stringstream caption;
-			caption << this->title << " - ID: " << this->window_id << " MouseFocus:" << ((this->mouse_focus) ? "On" : "Off") << " KeyboardFocus:" << ((this->keyboard_focus) ? "On" : "Off");
-			SDL_SetWindowTitle(this->window, caption.str().c_str());
+			updateCaption();
 		}
 	}
 }
@@ -191,4 +189,11 @@ bool Window::isShown()
 bool Window::initSuccess()
 {
 	return this->window != nullptr && this->renderer != nullptr;;
+}
+
+void Window::updateCaption()
+{
+	std::stringstream caption;
+	caption << this->title << " - ID: " << this->window_id << " MouseFocus:" << ((this->mouse_focus) ? "On" : "Off") << " KeyboardFocus:" << ((this->keyboard_focus) ? "On" : "Off");
+	SDL_SetWindowTitle(this->window, caption.str().c_str());
 }

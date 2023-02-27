@@ -17,9 +17,12 @@ public:
 	void updateState();
 	void updateRender();
 
+	void updateCaption() override {};
+
 	BUS* bus_ptr = nullptr;
 
 	void generateBGMapFramebuffer();
 private:
-
+	bool map_address_use_alternate = false;
+	bool tile_address_use_alternate = false;
 };

@@ -42,6 +42,8 @@ public:
 
 	bool initSuccess();
 
+	virtual void updateCaption();
+
 
 	int window_id = -1;
 	SDL_Renderer* renderer = nullptr;

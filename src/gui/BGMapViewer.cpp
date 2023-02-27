@@ -1,6 +1,7 @@
 #pragma once
 #include "BGMapViewer.hpp"
 #include "../../core/include/config.hpp"
+#include <sstream>
 
 
 
@@ -10,7 +11,51 @@ BGMapViewer::BGMapViewer(BUS* bus_ptr, int width, int height, int scaling, const
 	this->framebuffer = std::make_unique<FramebufferPixel[]>(8 * 32 * 8 * 32);
 }
 
-void BGMapViewer::handleEvent(SDL_Event& e) {}
+void BGMapViewer::handleEvent(SDL_Event& e)
+{
+    if (e.window.windowID == this->window_id)
+    {
+        bool update_caption = false;
+        switch (e.type)
+        {
+        case SDL_KEYDOWN:
+        {
+            int keyPressed = e.key.keysym.sym;
+            if (keyPressed == SDLK_LEFTBRACKET)
+            {
+                update_caption = true;
+                this->map_address_use_alternate = !map_address_use_alternate;
+                break;
+            }
+            if (keyPressed == SDLK_RIGHTBRACKET)
+            {
+                update_caption = true;
+                this->tile_address_use_alternate = !tile_address_use_alternate;
+                break;
+            }
+        } break;
+        };
+
+        if (update_caption)
+        {
+            std::stringstream caption;
+            caption << "MAP ADDR: ";
+            if (map_address_use_alternate)
+                caption << "9C00";
+            else
+                caption << "9800";
+
+            caption << " TILE ADDR: ";
+            if (tile_address_use_alternate)
+                caption << "8800";
+            else
+                caption << "8900";
+
+
+            SDL_SetWindowTitle(this->window, caption.str().c_str());
+        }
+    }
+}
 void BGMapViewer::updateState() {}
 void BGMapViewer::updateRender()
 {
@@ -68,6 +113,7 @@ void BGMapViewer::updateRender()
         }
 
         //SDL_RenderDrawLine(this->renderer, scx + XRES * scaling,scy, scx + XRES * scaling,scy+YRES*scaling);
+
 }
 
 void BGMapViewer::generateBGMapFramebuffer()
@@ -75,8 +121,8 @@ void BGMapViewer::generateBGMapFramebuffer()
     int temp_framebuffer_buffer_itr = 0;
     FIFOPixel temp_pixel_buffer;
 
-    Word start_tile_no_address = 0x9800;
-    Word start_memory_address = 0x8000;
+    Word start_tile_no_address = (map_address_use_alternate) ? 0x9C00 : 0x9800;
+    Word start_memory_address = (tile_address_use_alternate) ? 0x8800 : 0x8000;
 
     //Byte tile_no_x = 0, tile_no_y = 0, scanline_y = 0, tile_x = 0;
     Byte data0 = 0, data1 = 0;
@@ -101,7 +147,20 @@ void BGMapViewer::generateBGMapFramebuffer()
         {
             Word tile_map_cell_pointer = start_tile_no_address + (1 * x) + (0x20 * y);
             Byte tilenumber = this->bus_ptr->getMemory(tile_map_cell_pointer, eMemoryAccessType::debug);
-            Word tile_address = this->bus_ptr->ppu.getTileAddressFromNumber(tilenumber, PPU::background);
+            
+            Word tile_address = 0;
+
+            // LCDC.4 = 1, $8000 addressing
+            if (!tile_address_use_alternate)
+            {
+                tile_address = 0x8000 + (tilenumber * 16);
+            }
+            else
+            {
+                tile_address = (tilenumber > 127) ? (0x8800 + (tilenumber - 128) * 16) : (0x9000 + tilenumber * 16);
+            }
+
+
             Tile tile(this->bus_ptr, tile_address);
             FramebufferPixel tile_pixels_scanline_worth[8];
 
