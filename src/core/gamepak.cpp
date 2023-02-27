@@ -9,10 +9,15 @@
 
 GamePak::GamePak(const std::string filename) : GamePak::GamePak()
 {
-	this->filename = filename;
-	std::ifstream file(this->filename, std::ios::binary | std::ios::ate);
+	std::ifstream file(filename, std::ios::binary | std::ios::ate);
 	if (file.is_open())
 	{
+		rom_path = filename;
+		size_t last_index = rom_path.find_last_of(".");
+		save_path = rom_path.substr(0, last_index) + ".sav";
+
+
+
 		std::vector<Byte> rom_data;
 		std::ifstream::pos_type pos = file.tellg();
 		rom_data.resize(pos); //reallocate memory space to fit entire rom
@@ -79,6 +84,9 @@ void GamePak::initMBC(std::vector<Byte>& rom_data)
 
 	memory_bank_controller->allocateRam();
 
+	if (!save_path.empty())
+		memory_bank_controller->save_path = save_path;
+
 	checkAndLoadSave();
 
 
@@ -123,7 +131,7 @@ void GamePak::checkAndLoadSave()
 
 	if (memory_bank_controller->has_battery)
 	{
-		std::ifstream file(filename + ".sav", std::ios::binary | std::ios::in); //check for exisiting save, load in data
+		std::ifstream file(save_path, std::ios::binary | std::ios::in); //check for exisiting save, load in data
 		if (file.is_open())
 		{
 			file.read((char*)memory_bank_controller->ram.data(), memory_bank_controller->ram.size());

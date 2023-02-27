@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <filesystem>
 
 #include "config.hpp"
 
@@ -18,10 +19,11 @@ public:
 	GamePak(const std::string filename);
 	GamePak();
 
+	void initMBC(std::vector<Byte>& rom_data);
+
 	bool gamepak_loaded = false;
 	
 
-	void initMBC(std::vector<Byte>& rom_data);
 	
 	std::unique_ptr<MBC> memory_bank_controller;
 	
@@ -34,6 +36,7 @@ public:
 
 private:
 
-	std::string filename;
+	std::string rom_path;
+	std::string save_path;
 };
 

@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <filesystem>
 
 #include "config.hpp"
 
@@ -38,7 +39,7 @@ public:
 
 	void allocateRam();
 
-	virtual Byte getMemory(const Word address) = 0;
+	virtual Byte getMemory(const Word address);
 	virtual void setMemory(const Word address, const Byte data);
 
 	virtual void ramBankEnableHandler(const Word address, const Byte data);
@@ -49,12 +50,12 @@ public:
 	virtual void bankingModeSelect(const Word address, const Byte data);
 
 	void saveData();
-	
+	std::string save_path;
+
 	
 	//void cartridgeTypeInit();
 protected:
 
-	std::string filename;
 
 
 };

@@ -1,5 +1,6 @@
 #include "MBC.hpp"
 #include <fstream>
+#include <iostream>
 
 MBC::MBC()
 {
@@ -8,6 +9,8 @@ MBC::MBC()
 MBC::~MBC()
 {
 	saveData();
+	std::cout << "MBC destructor called";
+
 }
 
 
@@ -111,7 +114,7 @@ void MBC::saveData()
 {
 	if (has_battery)
 	{
-		std::ofstream file(filename + ".sav", std::ios::binary | std::ios::out | std::ios::trunc); //check for exisiting save, load in data
+		std::ofstream file(save_path, std::ios::binary | std::ios::out | std::ios::trunc); //check for exisiting save, load in data
 		if (file.is_open())
 		{
 			file.write((char*)ram.data(), ram.size());
