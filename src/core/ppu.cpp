@@ -136,7 +136,7 @@ void PPU::updateGraphics(const int tcycles)
 			this->fifo.fetchPixels(tcycles);
 			this->fifo.renderPixels(tcycles);
 
-			if (this->scanline_x >= 160)
+			if (current_x_of_scanline >= 160)
 				this->updateState(ePPUstate::h_blank);
 		} break;
 
@@ -228,7 +228,7 @@ void PPU::newScanline()
 		*registers.ly = 0;
 
 	this->cycle_counter = 0;
-	this->scanline_x = 0;
+	this->current_x_of_scanline = 0;
 	this->fifo.reset();
 	this->window_wy_triggered = false;
 	oam_priority.reset();
@@ -328,7 +328,8 @@ Tile::Tile()
 
 void PPU::debugAddToBGFIFO(FIFOPixel pixel)
 {
-	this->fifo.push(pixel);
+	//this->fifo.push(pixel);
+	this->fifo.fifo_stack.push(pixel);
 }
 
 void PPU::incrementPalette()

@@ -119,7 +119,7 @@ public:
 	PPU();
 
 	enum eTileType { background, window, sprite };
-	Byte scanline_x = 0;
+	Byte current_x_of_scanline = 0;
 	Tile tile;
 	
 	BUS* bus = nullptr;

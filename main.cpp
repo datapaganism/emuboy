@@ -44,16 +44,20 @@
 int main(int argc, char* argv[])
 {
     std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\blargg\\full.gb");
-    //rom_path = "..\\..\\..\\roms\\blargg\\full.gb";
-    rom_path = "..\\..\\..\\roms\\blargg\\interrupt_time.gb";
+    //rom_path = "..\\..\\..\\roms\\blargg\\instr_timing.gb";
+    //rom_path = "..\\..\\..\\roms\\blargg\\halt_bug.gb";
+    //rom_path = "..\\..\\..\\roms\\blargg\\interrupt_time.gb";
     //rom_path = "D:\\afk\\Downloads\\bgbw64\\bgbtest.gb";
     //rom_path = "..\\..\\..\\roms\\metasprites.gb";
     //rom_path = "..\\..\\..\\roms\\empty.gb";
-    //rom_path = "..\\..\\..\\roms\\Super Mario Land.gb";
+    rom_path = "..\\..\\..\\roms\\Super Mario Land.gb";
     //rom_path = "..\\..\\..\\roms\\Prince of Persia.gb";
-    rom_path = "..\\..\\..\\roms\\TETRIS.gb";
-    //rom_path = "..\\..\\..\\roms\\POKEMON YELLOW.gbc";
+    //rom_path = "..\\..\\..\\roms\\DR.MARIO.gb";
+    //rom_path = "C:\\Users\\afk\\Downloads\\Nintendo - Game Boy\\Metroid II - Return of Samus (World).gb";
+    rom_path = "..\\..\\..\\roms\\POKEMON YELLOW.gbc";
     //rom_path = "C:\\Users\\afk\\Downloads\\Nintendo - Game Boy\\Pokemon - Blue Version (USA, Europe) (SGB Enhanced).gb";
+    //rom_path = "C:\\Users\\afk\\Downloads\\Nintendo - Game Boy\\Legend of Zelda, The - Link's Awakening (USA, Europe).gb";
+    //rom_path = "C:\\Users\\afk\\Downloads\\Pokemon - Gold Version (USA, Europe) (SGB Enhanced).gbc";
     //rom_path = "C:\\Users\\afk\\Downloads\\Nintendo - Game Boy\\Pocket Monsters - Midori (Japan) (SGB Enhanced).gb";
     //rom_path = "C:\\Users\\afk\\Downloads\\Nintendo - Game Boy\\Balloon Kid (USA, Europe).gb";
     //rom_path =  "..\\..\\..\\roms\\empty.gb";

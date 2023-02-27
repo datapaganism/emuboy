@@ -1,6 +1,9 @@
 #pragma once
 
 #include <array>
+#include <queue>
+#include <vector>
+#include <stack>
 
 #include "config.hpp"
 #include "FIFO_pixel.hpp"
@@ -37,7 +40,8 @@ constexpr int fifo_max_size = 16;
 template <class T = FIFOPixel, int max_size = fifo_max_size>
 using FIFOStack = Stack<FIFOPixel, fifo_max_size>;
 
-class PixelFIFO : public FIFOStack<>
+//: public FIFOStack<>
+class PixelFIFO 
 {
 public:
 	PixelFIFO();
@@ -49,24 +53,34 @@ public:
 	Byte data1 = 0;
 	Byte fetcher_x_tile = 0; // ranges between 0 - 31
 	Byte fetcher_y_line = 0; // ranges between 0 - 255
-	Byte fetcher_scanline_x = 0; // increments by 1 per pixel fetch, 0 to 159 range, independent of x's pushed 
+	Byte fetcher_scanline_x_tiles = 0; // increments by 8 per pixel fetch, 0 to 21 range, independent of x's pushed
+	Byte fetcher_scanline_wx_tiles = 0;
 	Byte state = 0;
 	std::array<FIFOPixel, 8> pixels;
+
+	std::queue<FIFOPixel> fetcher_pixels;
+	std::queue<FIFOPixel> fifo_stack;
+	
+	Byte window_internal_line_counter = 0;
+
 	int cycle_counter = 0;
 	PPU* ppu = nullptr;
+	bool rendering_window = false;
 	bool rendering_sprite = false;
 	bool fifo_needs_more_bgwin_pixels = false;
 	OAMentry* current_sprite = nullptr;
 
 	void connectToPPU(PPU* ppu_ptr);
-	Word scRegistersToTopLeftBGMapAddress();
-	Byte getTileNumber(Word address);
+	Byte getTileNumber(Word base_tilemap_address);
 	void renderPixels(const int cycles);
 	void fetchPixels(const int cycles);
 	void reset();
 	void incAddress();
 	bool isWindowActive();
 
-private:
+	void fetchPixels_state1_window();
+	void fetchPixels_state1_background();
 
+private:
+	void reverse_queue(std::queue<FIFOPixel>& queue);
 };
