@@ -119,10 +119,11 @@ void PixelFIFO::fetchPixels(const int cycles)
 			current_sprite = ppu->oam_priority.getBack();
 			if (current_sprite != nullptr)
 			{
-				if (ppu->current_x_of_scanline >= (current_sprite->x_pos - 8)            // its like this is correct but the 
-					&& ppu->current_x_of_scanline < (current_sprite->x_pos - 8) + 8
-					&& ly >= (current_sprite->y_pos - 16)
-					&& ly < (current_sprite->y_pos - 16) + 8
+				if (
+					   ppu->current_x_of_scanline >= (current_sprite->x_pos - 8)            // if ppu's x is at sprite's x or bigger
+					&& ppu->current_x_of_scanline < (current_sprite->x_pos - 8) + 8      // and ppu's x not passed sprite width
+					&& ly >= (current_sprite->y_pos - 16)                                // if ly is at sprites ly
+					&& ly < (current_sprite->y_pos - 16) +  16                    // and if ly is not passed sprite height
 					)
 				{
 					// if there is a sprite on this line
@@ -151,7 +152,7 @@ void PixelFIFO::fetchPixels(const int cycles)
 					break;
 				}
 				else
-				if (*ppu->registers.lcdc & (0b1 << 5) && ly >= *ppu->registers.wy && fetcher_scanline_x_tiles >= *ppu->registers.wx / 8) // window enabled and its going to be somewhere on this line
+				if (*ppu->registers.lcdc & (0b1 << 5) && ppu->window_wy_triggered && fetcher_scanline_x_tiles >= *ppu->registers.wx / 8) // window enabled and its going to be somewhere on this line
 				{
 					fetchPixels_state1_window();
 				}
@@ -174,7 +175,18 @@ void PixelFIFO::fetchPixels(const int cycles)
 			if (rendering_sprite && !fifo_needs_more_bgwin_pixels)
 			{
 				Byte current_scanline_y_offset = (ly - (current_sprite->y_pos - 16));
-				(current_sprite->getYFlip()) ? this->tile_address += 16 - (2 * current_scanline_y_offset) : this->tile_address += (2 * current_scanline_y_offset);
+				Byte sprite_height = (*ppu->registers.lcdc & 0b1 << 2) ? 32 : 16;
+
+				if (current_sprite->getYFlip())
+				{
+					tile_address += sprite_height;
+					tile_address -= (2 * current_scanline_y_offset);
+				}
+				else
+					tile_address += (2 * current_scanline_y_offset);
+
+
+
 				this->data0 = ppu->getMemory(this->tile_address);
 				this->state++;
 				break;

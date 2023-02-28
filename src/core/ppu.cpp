@@ -91,20 +91,19 @@ void PPU::updateGraphics(const int tcycles)
 
 		case ePPUstate::oam_search: // oam search
 		{
-			if (*registers.wy == *registers.ly)
-				this->window_wy_triggered = true;
+			if (*registers.ly >= *registers.wy)
+				window_wy_triggered = true;
 
-			int sprite_height = (*registers.lcdc & 0b1 << 2) ? 16 : 8;
+			Byte sprite_height = (*registers.lcdc & 0b1 << 2) ? 16 : 8;
 			for (int i = 0; i < tcycles / 2; i++)
 			{
 				struct OAMentry* entry = (OAMentry*)this->bus->oam_ram + oam_scan_iterator++;
 				if (entry->x_pos != 0)
 				{
-					//printf("%02i | %x %x %x %x\n", oam_scan_iterator, entry->y_pos, entry->x_pos, entry->tile_no, entry->attribute);
-					//if (*registers.ly == 0x64)
-					//	NO_OP;
-					// this will by very buggy
-					if (*registers.ly >= (entry->y_pos - 16) && *registers.ly < (entry->y_pos - 16) + sprite_height)
+					if (
+						   *registers.ly >= (entry->y_pos - 16)
+						&& *registers.ly < (entry->y_pos - 16) + sprite_height
+						)
 					{
 						oam_priority.push(entry);
 						if (oam_priority.full)
