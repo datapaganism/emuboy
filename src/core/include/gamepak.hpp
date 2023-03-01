@@ -6,7 +6,7 @@
 
 #include "config.hpp"
 
-#include "MBC_ROM_ONLY.hpp"
+#include "NO_MBC.hpp"
 #include "MBC1.hpp"
 #include "MBC2.hpp"
 #include "MBC3.hpp"
@@ -23,16 +23,10 @@ public:
 
 	bool gamepak_loaded = false;
 	
-
-	
 	std::unique_ptr<MBC> memory_bank_controller;
 	
 	Byte getMemory(const Word address);
 	void setMemory(const Word address, const Byte data);
-
-	void checkAndLoadSave();
-
-	
 
 private:
 

@@ -20,7 +20,7 @@ class Window
 {
 public:
 	Window(int width, int height, int scaling, const char* title, bool shown_on_start);
-	~Window();
+	virtual ~Window();
 
 	void handleWindowEvent(SDL_Event& e);
 

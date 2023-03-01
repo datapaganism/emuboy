@@ -39,7 +39,7 @@ Byte MBC3::getMemory(const Word address)
 		{
 			return ram[(address - 0xA000) + (current_ram_bank * 0x2000)];
 		}
-		fprintf(stderr, "MBC3 RTC not implemented");  exit(-1);
+		//fprintf(stderr, "MBC3 RTC not implemented");  exit(-1);
 	}
 }
 

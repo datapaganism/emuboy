@@ -42,7 +42,7 @@ void GamePak::initMBC(std::vector<Byte>& rom_data)
 	Byte cartridge_type = rom_data[0x147];
 
 	if (cartridge_type == 0)
-		memory_bank_controller = std::make_unique<MBC_ROM_ONLY>();
+		memory_bank_controller = std::make_unique<NO_MBC>();
 	else if (cartridge_type <= 0x3)
 		memory_bank_controller = std::make_unique<MBC1>();
 	else if (cartridge_type <= 0x6)
@@ -87,7 +87,7 @@ void GamePak::initMBC(std::vector<Byte>& rom_data)
 	if (!save_path.empty())
 		memory_bank_controller->save_path = save_path;
 
-	checkAndLoadSave();
+	memory_bank_controller->checkAndLoadSave();
 
 
 }
@@ -105,40 +105,3 @@ void GamePak::setMemory(const Word address, const Byte data)
 		return;
 	memory_bank_controller->setMemory(address,data);
 }
-
-void GamePak::checkAndLoadSave()
-{
-	// check if cartridge has saving
-    	switch (memory_bank_controller->cartridge_type)
-	{
-	case 0x03:
-	case 0x06:
-	case 0x09:
-	case 0x0D:
-	case 0x0F:
-	case 0x10:
-	case 0x13:
-	case 0x1B:
-	case 0x1E:
-	case 0x22:
-	case 0xFC:
-	case 0xFF:
-		memory_bank_controller->has_battery = true;
-		break;
-	default:
-		break;
-	}
-
-	if (memory_bank_controller->has_battery)
-	{
-		std::ifstream file(save_path, std::ios::binary | std::ios::in); //check for exisiting save, load in data
-		if (file.is_open())
-		{
-			file.read((char*)memory_bank_controller->ram.data(), memory_bank_controller->ram.size());
-			file.close();
-
-			return;
-		}
-	}
-}
-

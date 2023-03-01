@@ -1,12 +1,14 @@
 #pragma once
 #include "config.hpp"
 #include "MBC.hpp"
+#include <iostream>
 
 class MBC1 : public MBC
 {
 public:
 
 	MBC1() : MBC() {};
+	
 	void ramBankEnableHandler(Word address, Byte data) override;
 
 	void ramBankChange(Word address, Byte data) override;

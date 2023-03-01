@@ -1,6 +1,5 @@
 #include "MBC.hpp"
 #include <fstream>
-#include <iostream>
 
 MBC::MBC()
 {
@@ -9,8 +8,7 @@ MBC::MBC()
 MBC::~MBC()
 {
 	saveData();
-	std::cout << "MBC destructor called";
-
+	std::cout << "MBC destructor called\n";
 }
 
 
@@ -27,10 +25,10 @@ void MBC::allocateRam()
 	{
 	case 0: break;
 	case 1: break;
-	case 2: this->ram.resize(1 * 0x2000); break;
-	case 3: this->ram.resize(4 * 0x2000); break;
-	case 4: this->ram.resize(16 * 0x2000); break;
-	case 5: this->ram.resize(8 * 0x2000); break;
+	case 2: ram.resize(1 * 0x2000); break;
+	case 3: ram.resize(4 * 0x2000); break;
+	case 4: ram.resize(16 * 0x2000); break;
+	case 5: ram.resize(8 * 0x2000); break;
 	default: fprintf(stderr, "Unreachable number of banks");  exit(-1);;
 	}
 
@@ -114,11 +112,47 @@ void MBC::saveData()
 {
 	if (has_battery)
 	{
-		std::ofstream file(save_path, std::ios::binary | std::ios::out | std::ios::trunc); //check for exisiting save, load in data
+		std::ofstream file(save_path, std::ios::binary | std::ios::out | std::ios::trunc); //check for exisiting save file, truncate
 		if (file.is_open())
 		{
 			file.write((char*)ram.data(), ram.size());
 			file.close();
+			return;
+		}
+	}
+}
+
+void MBC::checkAndLoadSave()
+{
+	// check if cartridge has saving
+	switch (cartridge_type)
+	{
+	case 0x03:
+	case 0x06:
+	case 0x09:
+	case 0x0D:
+	case 0x0F:
+	case 0x10:
+	case 0x13:
+	case 0x1B:
+	case 0x1E:
+	case 0x22:
+	case 0xFC:
+	case 0xFF:
+		has_battery = true;
+		break;
+	default:
+		return;
+	}
+
+	if (has_battery)
+	{
+		std::ifstream file(save_path, std::ios::binary | std::ios::in); //check for exisiting save, load in data
+		if (file.is_open())
+		{
+			file.read((char*)ram.data(), ram.size());
+			file.close();
+
 			return;
 		}
 	}

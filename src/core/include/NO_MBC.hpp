@@ -2,11 +2,12 @@
 #include "config.hpp"
 #include "MBC.hpp"
 
-class MBC_ROM_ONLY : public MBC
+class NO_MBC : public MBC
 {
 public:
 	
-	MBC_ROM_ONLY() : MBC() {};
+	NO_MBC() : MBC() {};
 
 	Byte getMemory(const Word address) override;
+	void setMemory(const Word address, const Byte data) override;
 };

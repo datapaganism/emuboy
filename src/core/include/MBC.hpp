@@ -3,6 +3,7 @@
 #include <string>
 #include <memory>
 #include <filesystem>
+#include <iostream>
 
 #include "config.hpp"
 
@@ -28,15 +29,6 @@ public:
 
 	bool has_battery = false;
 
-	/*
-	virtual void readSave();
-	virtual void writeSave();
-	
-	Byte getCartridgeType();
-	Byte getRomSize();
-	Byte getRamSize();
-	*/
-
 	void allocateRam();
 
 	virtual Byte getMemory(const Word address);
@@ -50,10 +42,9 @@ public:
 	virtual void bankingModeSelect(const Word address, const Byte data);
 
 	void saveData();
+	void checkAndLoadSave();
 	std::string save_path;
 
-	
-	//void cartridgeTypeInit();
 protected:
 
 
