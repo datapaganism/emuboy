@@ -9,14 +9,21 @@
 
 GamePak::GamePak(const std::string filename) : GamePak::GamePak()
 {
+	loadROM(filename);
+}
+
+GamePak::GamePak()
+{
+}
+
+void GamePak::loadROM(const std::string filename)
+{
 	std::ifstream file(filename, std::ios::binary | std::ios::ate);
 	if (file.is_open())
 	{
 		rom_path = filename;
 		size_t last_index = rom_path.find_last_of(".");
 		save_path = rom_path.substr(0, last_index) + ".sav";
-
-
 
 		std::vector<Byte> rom_data;
 		std::ifstream::pos_type pos = file.tellg();
@@ -25,7 +32,7 @@ GamePak::GamePak(const std::string filename) : GamePak::GamePak()
 		file.read((char*)rom_data.data(), pos);
 		file.close();
 
-		initMBC(rom_data);
+		allocateMBC(rom_data);
 
 		gamepak_loaded = true;
 		return;
@@ -33,11 +40,7 @@ GamePak::GamePak(const std::string filename) : GamePak::GamePak()
 	fprintf(stderr, "cannot load cartridge");  exit(-1);
 }
 
-GamePak::GamePak()
-{
-}
-
-void GamePak::initMBC(std::vector<Byte>& rom_data)
+void GamePak::allocateMBC(std::vector<Byte>& rom_data)
 {
 	Byte cartridge_type = rom_data[0x147];
 

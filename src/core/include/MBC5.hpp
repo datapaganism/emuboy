@@ -8,7 +8,7 @@ public:
 	
 	MBC5::MBC5() : MBC() {};
 
-	void ramBankEnableHandler(Word address, Byte data) override;
+	void ramBankEnable(Word address, Byte data) override;
 
 	void ramBankChange(Word address, Byte data) override;
 	void romBankChange(Word address, Byte data) override;
@@ -16,6 +16,4 @@ public:
 
 	void setMemory(const Word address, const Byte data) override;
 	Byte getMemory(const Word address) override;
-
-	Word current_rom_bank_wide = 0;
 };

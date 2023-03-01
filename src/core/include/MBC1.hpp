@@ -9,16 +9,16 @@ public:
 
 	MBC1() : MBC() {};
 	
-	void ramBankEnableHandler(Word address, Byte data) override;
+	void ramBankEnable(Word address, Byte data) override;
 
 	void ramBankChange(Word address, Byte data) override;
 	void romBankChange(Word address, Byte data) override;
 
-	void bankingModeSelect(Word address, Byte data) override;
+	void bankingModeSelect(Word address, Byte data);
 
 	Byte getMemory(const Word address) override;
 	void setMemory(const Word address, const Byte data) override;
 
-
+	bool banking_mode = false;
 
 };

@@ -1,6 +1,6 @@
 #include "MBC5.hpp"
 
-void MBC5::ramBankEnableHandler(const Word address, const Byte data)
+void MBC5::ramBankEnable(const Word address, const Byte data)
 {
 	ram_bank_enable = (data & 0xF) == 0xA;
 }
@@ -14,12 +14,12 @@ void MBC5::ramBankChange(const Word address, const Byte data)
 
 void MBC5::romBankChange(const Word address, const Byte data)
 {
-	current_rom_bank_wide = (current_rom_bank_wide & 0xFF00) | data;
+	current_rom_bank = (current_rom_bank & 0xFF00) | data;
 }
 
 void MBC5::romBankChange9thBit(Word address, Byte data)
 {
-	current_rom_bank_wide = (current_rom_bank_wide & 0xFF) | data << 8 ;
+	current_rom_bank = (current_rom_bank & 0xFF) | data << 8 ;
 }
 
 Byte MBC5::getMemory(const Word address)
@@ -29,7 +29,7 @@ Byte MBC5::getMemory(const Word address)
 
 	if (address >= 0x4000 && address <= 0x7FFF) // otherwise return calculate the address by the rom bank used and return that data
 	{
-		return rom[(address - 0x4000) + (current_rom_bank_wide * 0x4000)];
+		return rom[(address - 0x4000) + (current_rom_bank * 0x4000)];
 	}
 
 	if (!ram_bank_enable)
@@ -45,7 +45,7 @@ void MBC5::setMemory(const Word address, const Byte data)
 {
 	if (address <= 0x1FFF)
 	{
-		ramBankEnable(address, data); // enable ram bank writing
+		ramBankEnableHandler(address, data); // enable ram bank writing
 		return;
 	}
 

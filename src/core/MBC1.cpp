@@ -1,6 +1,6 @@
 #include "MBC1.hpp"
 
-void MBC1::ramBankEnableHandler(const Word address, const Byte data)
+void MBC1::ramBankEnable(const Word address, const Byte data)
 {
 	ram_bank_enable = (data & 0xF) == 0xA;
 }
@@ -70,7 +70,7 @@ void MBC1::setMemory(const Word address, const Byte data)
 {
 	if (address <= 0x1FFF)
 	{
-		ramBankEnable(address, data); // enable ram bank writing
+		ramBankEnableHandler(address, data); // enable ram bank writing
 		return;
 	}
 

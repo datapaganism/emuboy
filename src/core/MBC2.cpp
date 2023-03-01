@@ -1,6 +1,6 @@
 #include "MBC2.hpp"
 
-void MBC2::ramBankEnableHandler(const Word address, const Byte data)
+void MBC2::ramBankEnable(const Word address, const Byte data)
 {
 	ram_bank_enable = (data == 0xA);
 }
@@ -42,7 +42,7 @@ void MBC2::setMemory(const Word address, const Byte data)
 			romBankChange(address,data);
 			return;
 		}
-		ramBankEnable(address, data);
+		ramBankEnableHandler(address, data);
 		return;
 	}
 

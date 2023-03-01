@@ -19,7 +19,8 @@ public:
 	GamePak(const std::string filename);
 	GamePak();
 
-	void initMBC(std::vector<Byte>& rom_data);
+	void loadROM(const std::string filename);
+	void allocateMBC(std::vector<Byte>& rom_data);
 
 	bool gamepak_loaded = false;
 	

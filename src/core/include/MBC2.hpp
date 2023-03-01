@@ -8,7 +8,7 @@ public:
 	
 	MBC2::MBC2() : MBC() {};
 
-	void ramBankEnableHandler(Word address, Byte data) override;
+	void ramBankEnable(Word address, Byte data) override;
 
 	void romBankChange(Word address, Byte data) override;
 
