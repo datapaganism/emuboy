@@ -9,7 +9,7 @@ public:
 
 	MBC1() : MBC() {};
 	
-	void ramBankEnable(Word address, Byte data) override;
+	void ramEnable(Word address, Byte data) override;
 
 	void ramBankChange(Word address, Byte data) override;
 	void romBankChange(Word address, Byte data) override;

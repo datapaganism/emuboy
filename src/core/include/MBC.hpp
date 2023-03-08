@@ -23,8 +23,8 @@ public:
 	Byte cartridge_type = 0;
 	Byte rom_size = 0;
 	Byte ram_size = 0;
-	Byte number_of_rom_banks = 0;
-	Byte number_of_ram_banks = 0;
+	Word number_of_rom_banks = 0;
+	Word number_of_ram_banks = 0;
 	
 
 	bool has_battery = false;
@@ -34,8 +34,8 @@ public:
 	virtual Byte getMemory(const Word address);
 	virtual void setMemory(const Word address, const Byte data);
 
-	virtual void ramBankEnable(const Word address, const Byte data);
-	void ramBankEnableHandler(const Word address, const Byte data);
+	virtual void ramEnable(const Word address, const Byte data);
+	void ramEnableHandler(const Word address, const Byte data);
 
 	virtual void ramBankChange(const Word address, const Byte data);
 	virtual void romBankChange(const Word address, const Byte data);

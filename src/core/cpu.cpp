@@ -1142,6 +1142,9 @@ void CPU::instructionHandlerCB()
 }
 void CPU::instructionHandlerSTOP()
 {
+
+	printf("STOP CALLED\n");
+
 	if (mcycles_used == 1)
 	{
 		setMemory(DIV, 0);

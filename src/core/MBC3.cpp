@@ -1,6 +1,6 @@
 #include "MBC3.hpp"
 
-void MBC3::ramBankEnable(const Word address, const Byte data)
+void MBC3::ramEnable(const Word address, const Byte data)
 {
 	ram_bank_enable = (data & 0xF) == 0xA;
 }
@@ -18,6 +18,7 @@ void MBC3::romBankChange(const Word address, const Byte data)
 		rom_bank_to_select++;
 
 	current_rom_bank = rom_bank_to_select;
+	current_rom_bank %= number_of_rom_banks;
 }
 
 Byte MBC3::getMemory(const Word address)
@@ -47,7 +48,7 @@ void MBC3::setMemory(const Word address, const Byte data)
 {
 	if (address <= 0x1FFF)
 	{
-		ramBankEnableHandler(address, data); // enable ram bank writing
+		ramEnableHandler(address, data); // enable ram bank writing
 		return;
 	}
 

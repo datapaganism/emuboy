@@ -1,6 +1,6 @@
 #include "MBC1.hpp"
 
-void MBC1::ramBankEnable(const Word address, const Byte data)
+void MBC1::ramEnable(const Word address, const Byte data)
 {
 	ram_bank_enable = (data & 0xF) == 0xA;
 }
@@ -8,28 +8,30 @@ void MBC1::ramBankEnable(const Word address, const Byte data)
 
 void MBC1::ramBankChange(const Word address, const Byte data)
 {
-	Byte new_ram_bank = data & 3;
+	Byte new_rom_bank = data & 3;
 	if (banking_mode == 1)
 	{
 		current_rom_bank &= 0x1F;
-		current_rom_bank |= new_ram_bank << 5;
+		current_rom_bank |= new_rom_bank << 5;
 
-		current_ram_bank = 0;
+		current_ram_bank = 0; // lock
+
+		current_rom_bank %= number_of_rom_banks;
 	}
 	else
 	{
 		current_ram_bank = data;
-		current_rom_bank &= 0x1F;
+		//current_rom_bank &= 0x1F;
 	}
 	
-	current_rom_bank %= number_of_rom_banks;
-	/*if (ram_bank_enable)
-		current_ram_bank %= number_of_ram_banks;*/
+	
+	if (ram_bank_enable)
+		current_ram_bank %= number_of_ram_banks;
 }
 
 void MBC1::romBankChange(const Word address, const Byte data)
 {
-	Byte rom_bank_to_select = data & 0x1F;
+	Byte rom_bank_to_select = data & 0x7F;
 	if (rom_bank_to_select % 0x20 == 0)
 		rom_bank_to_select++;
 
@@ -70,7 +72,7 @@ void MBC1::setMemory(const Word address, const Byte data)
 {
 	if (address <= 0x1FFF)
 	{
-		ramBankEnableHandler(address, data); // enable ram bank writing
+		ramEnableHandler(address, data); // enable ram bank writing
 		return;
 	}
 

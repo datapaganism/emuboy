@@ -60,7 +60,7 @@ void MBC::setMemory(const Word address, const Byte data)
 	/*
 	if (address <= 0x1FFF)
 	{ 
-		ramBankEnable(address, data); // enable ram bank writing
+		ramEnable(address, data); // enable ram bank writing
 		return;
 	}
 
@@ -84,13 +84,13 @@ void MBC::setMemory(const Word address, const Byte data)
 	*/
 }
 
-void MBC::ramBankEnable(const Word address, const Byte data)
+void MBC::ramEnable(const Word address, const Byte data)
 {
 }
 
-void MBC::ramBankEnableHandler(const Word address, const Byte data)
+void MBC::ramEnableHandler(const Word address, const Byte data)
 {
-	ramBankEnable(address, data);
+	ramEnable(address, data);
 	
 	if (!ram_bank_enable)
 		saveData();
