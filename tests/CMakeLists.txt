@@ -9,14 +9,14 @@ FetchContent_MakeAvailable(googletest)
 add_library(GTest::GTest INTERFACE IMPORTED)
 target_link_libraries(GTest::GTest INTERFACE gtest_main)
 
-add_executable(cpu_test cpu_test.cpp "timer_test.cpp")
+#add_executable(cpu_test cpu_test.cpp "timer_test.cpp")
 
-target_link_libraries(cpu_test
- PRIVATE
-  GTest::GTest
-  core)
+#target_link_libraries(cpu_test
+# PRIVATE
+#  GTest::GTest
+#  core)
 
-add_test(cpu_gtests cpu_test)
+#add_test(cpu_gtests cpu_test)
 
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -32,3 +32,4 @@ function(set_test TESTNAME)
 endfunction()
 
 set_test(cpu_sm83_tests cpu_sm83_test.cpp)
+set_test(timer_tests timer_test.cpp)
