@@ -8,9 +8,10 @@ void MBC1::ramEnable(const Word address, const Byte data)
 
 void MBC1::ramBankChange(const Word address, const Byte data)
 {
-	Byte new_rom_bank = data & 3;
 	if (banking_mode == 1)
 	{
+		Byte new_rom_bank = data;
+
 		current_rom_bank &= 0x1F;
 		current_rom_bank |= new_rom_bank << 5;
 
@@ -20,7 +21,7 @@ void MBC1::ramBankChange(const Word address, const Byte data)
 	}
 	else
 	{
-		current_ram_bank = data;
+		current_ram_bank = data & 3;
 		//current_rom_bank &= 0x1F;
 	}
 	
