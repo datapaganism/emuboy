@@ -47,14 +47,14 @@ int main(int argc, char* argv[])
     //rom_path = "..\\..\\..\\roms\\blargg\\instr_timing.gb";
     //rom_path = "..\\..\\..\\roms\\blargg\\halt_bug.gb";
     //rom_path = "..\\..\\..\\roms\\blargg\\interrupt_time.gb";
-    rom_path = "..\\..\\..\\roms\\mts\\emulator-only\\mbc1\\ram_256kb.gb";
+    //rom_path = "..\\..\\..\\roms\\mts\\emulator-only\\mbc1\\ram_256kb.gb";
     //rom_path = "D:\\afk\\Downloads\\bgbw64\\bgbtest.gb";
     //rom_path = "..\\..\\..\\roms\\metasprites.gb";
     //rom_path = "..\\..\\..\\roms\\empty.gb";
     //rom_path = "..\\..\\..\\roms\\Super Mario Land.gb";
     //rom_path = "..\\..\\..\\roms\\Prince of Persia.gb";
     //rom_path = "..\\..\\..\\roms\\DR.MARIO.gb";
-    //rom_path = "C:\\Users\\afk\\Downloads\\Nintendo - Game Boy\\Metroid II - Return of Samus (World).gb";
+    rom_path = "C:\\Users\\afk\\Downloads\\Nintendo - Game Boy\\Metroid II - Return of Samus (World).gb";
     //rom_path = "..\\..\\..\\roms\\POKEMON YELLOW.gbc";
     //rom_path = "C:\\Users\\afk\\Downloads\\Nintendo - Game Boy\\Donkey Kong (World) (Rev A) (SGB Enhanced).gb";
     //rom_path = "C:\\Users\\afk\\Downloads\\Nintendo - Game Boy\\Legend of Zelda, The - Link's Awakening (USA, Europe).gb";
@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
     if (argv[1] != NULL)
         rom_path = argv[1];
 
-    std::string bios_path = "..\\..\\..\\bios\\bios.biXn";
+    std::string bios_path = "..\\..\\..\\bios\\bios.bin";
     
     WindowManager application(rom_path, bios_path);
 

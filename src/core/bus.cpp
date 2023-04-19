@@ -373,7 +373,7 @@ Byte BUS::getMemory(const Word address, enum eMemoryAccessType access_type)
         if (io[(0xFF50) - IOOFFSET] == 0x1 || !bios_loaded)
             return gamepak.getMemory(address);
 
-        return bios[address];
+        return bootrom[address];
     }
     else if (address <= 0x7FFF)
     {
@@ -630,7 +630,7 @@ void BUS::loadBios(const std::string bios_name)
         std::ifstream::pos_type pos = file.tellg();
 
         file.seekg(0, std::ios::beg);
-        file.read((char*)this->bios, pos);
+        file.read((char*)this->bootrom, pos);
 
         //set the program counter of the cpu to execute the bios program
         this->cpu.biosInit();

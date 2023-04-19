@@ -36,7 +36,7 @@ public:
 
     bool bios_loaded = false;
     Byte work_ram[0x2000] = { 0, };
-    Byte bios[0x100] = { 0, };
+    Byte bootrom[0x100] = { 0, };
     Byte io[0x80] = { 0, };
     Byte high_ram[0x7F] = {0,};
     Byte video_ram[0x2000] = { 0, };
