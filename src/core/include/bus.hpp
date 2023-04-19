@@ -49,7 +49,7 @@ public:
    
     void init();
     void biosInit();
-    void loadBios(const std::string bios_name);
+    void loadBootrom(const std::string bootrom_name);
     
     int cycleSystemOneInstruction();
     void cycleSystemOneMCycle();

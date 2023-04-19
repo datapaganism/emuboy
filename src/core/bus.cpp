@@ -299,7 +299,7 @@ BUS::BUS(const std::string rom_path, const std::string bios_path) : BUS::BUS()
     this->bios_path = bios_path;
 
     this->gamepak = GamePak(rom_path);
-    this->loadBios(bios_path);
+    this->loadBootrom(bios_path);
 
 }
 
@@ -622,7 +622,7 @@ void BUS::setMemory(const Word address, const Byte data, enum eMemoryAccessType 
 /// however we can allow users to supply their own bios file, named bios.bin, this function will set the program counter of the CPU to execute the bios program if it exists.  
 /// </summary>
 /// <param name="bios_name"></param>
-void BUS::loadBios(const std::string bios_name)
+void BUS::loadBootrom(const std::string bios_name)
 {
     std::ifstream file(bios_name, std::ios::binary | std::ios::ate);
     if (file.is_open())
