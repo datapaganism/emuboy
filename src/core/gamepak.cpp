@@ -18,12 +18,21 @@ GamePak::GamePak()
 
 void GamePak::loadROM(const std::string filename)
 {
+	rom_path = filename;
+	size_t last_index = rom_path.find_last_of(".");
+	
+	std::string extension = rom_path.substr(last_index);
+
+	if (!(extension == ".gb" || extension == ".gbc"))
+	{
+		fprintf(stderr, "ROM file not valid");  exit(-1);
+	}
+
+	save_path = rom_path.substr(0, last_index) + ".sav";
+
 	std::ifstream file(filename, std::ios::binary | std::ios::ate);
 	if (file.is_open())
 	{
-		rom_path = filename;
-		size_t last_index = rom_path.find_last_of(".");
-		save_path = rom_path.substr(0, last_index) + ".sav";
 
 		std::vector<Byte> rom_data;
 		std::ifstream::pos_type pos = file.tellg();
