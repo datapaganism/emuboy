@@ -79,6 +79,11 @@ void WindowManager::run()
             // switch windows and perform other functions
             if (e.type == SDL_KEYDOWN)
             {
+                // if it is num key 1 to X, X being the total number of windows
+                if (e.key.keysym.sym >= SDLK_1 && e.key.keysym.sym < SDLK_1 + windows.size())
+                {
+                    windows[e.key.keysym.sym - SDLK_1].get()->focus();
+                }
                 switch (e.key.keysym.sym)
                 {
                 case SDLK_1:
