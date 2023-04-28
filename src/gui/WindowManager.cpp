@@ -18,9 +18,8 @@ WindowManager::WindowManager(const std::string rom_path, const std::string bios_
     }
     else
     {
-        // Create an EmulatorWindow object (holds the emulator and it's window) and then push it back to the Window array, however,
-        // the window array is of a base type, due to polymorphism, the objects it holds are treated as a base type instead of derived ones.
-        this->windows.push_back(std::make_unique<EmulatorWindow>(rom_path, bios_path, XRES, YRES, RES_SCALING, EMULATOR_WINDOW_TITLE, true));
+        // Create an EmulatorWindow object (holds the emulator and it's window) and then push it back to the Window array
+        windows.push_back(std::make_unique<EmulatorWindow>(rom_path, bios_path, XRES, YRES, RES_SCALING, EMULATOR_WINDOW_TITLE, true));
 
         if (!this->windows[0].get()->initSuccess())
         {
@@ -46,12 +45,12 @@ void WindowManager::run()
         std::cout << "Failed to initialize!\n";
         return;
     }
-    // Cast the base pointer back to dervied class so we can access BUS class element.
-    EmulatorWindow* emulator_window_ptr = static_cast<EmulatorWindow*>(this->windows[0].get());
+    // Cast the Window pointer back to dervied class so we can access BUS class element.
+    BUS* bus_ptr = (EmulatorWindow*)(windows[0].get());
         
     //Create and push back secondary windows, and pass the new pointer so the other windows can acess the emulator's BUS.
-    this->windows.push_back(std::make_unique<VRAMViewer>(emulator_window_ptr, (8 * 16), (8 * 24), 2, "VRAM Viewer", false));
-    this->windows.push_back(std::make_unique<BGMapViewer>(emulator_window_ptr, (8 * 32), (8 * 32), 2, "BG Map Viewer", false));
+    windows.push_back(std::make_unique<VRAMViewer>(bus_ptr, (8 * 16), (8 * 24), 2, "VRAM Viewer", false));
+    windows.push_back(std::make_unique<BGMapViewer>(bus_ptr, (8 * 32), (8 * 32), 2, "BG Map Viewer", false));
 
     bool quit = false;
     bool pause = false;
@@ -86,18 +85,6 @@ void WindowManager::run()
                 }
                 switch (e.key.keysym.sym)
                 {
-                case SDLK_1:
-                    this->windows[0].get()->focus();
-                    break;
-
-                case SDLK_2:
-                    this->windows[1].get()->focus();
-                    break;
-
-                case SDLK_3:
-                    this->windows[2].get()->focus();
-                    break;
-
                 case eJoypadButtonsDebug::pause:
                     pause = !pause;
                     break;
