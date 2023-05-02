@@ -33,23 +33,23 @@ void CPU::mStepCPU()
 		setupForNextInstruction();
 	}
 	
-	if (this->is_executing_instruction)
+	if (is_executing_instruction)
 	{
 		//decode and execute instruction // takes a cycle
-		this->instructionHandler();
+		instructionHandler();
 			
 		//if finished instruction after this execution
-		if (!this->is_executing_instruction)
+		if (!is_executing_instruction)
 		{
 			if (!is_halted)
 			{
 				is_instruction_complete = true;
 
 
-				if (this->ei_triggered && this->current_running_opcode != 0xFB)
+				if (ei_triggered && current_running_opcode != 0xFB)
 				{
-					this->interrupt_master_enable = true;
-					this->ei_triggered = false;
+					interrupt_master_enable = true;
+					ei_triggered = false;
 				}
 
 				checkForInterrupts();
@@ -61,17 +61,17 @@ void CPU::mStepCPU()
 			}
 		}
 
-		if (this->halt_bug)
+		if (halt_bug)
 		{
-			this->halt_bug = false;
-			this->registers.pc--;
+			halt_bug = false;
+			registers.pc--;
 		}
 		return;
 	}
 
-	if (this->is_halted)
+	if (is_halted)
 	{
-		this->haltHandler();
+		haltHandler();
 		return;
 	}
 };
@@ -108,38 +108,38 @@ int CPU::mStepCPUOneInstruction()
 void CPU::haltHandler()
 {
 
-	Byte interrupt_request_register = this->getMemory(IF_REGISTER);
-	Byte interrupt_types_enabled_register = this->getMemory(IE_REGISTER);
+	Byte interrupt_request_register = getMemory(IF_REGISTER);
+	Byte interrupt_types_enabled_register = getMemory(IE_REGISTER);
 	bool any_pending_interrupts = ((interrupt_request_register & interrupt_types_enabled_register) & 0x1F) != 0;
-	bool ime = this->interrupt_master_enable;
+	bool ime = interrupt_master_enable;
 
 	if (!ime && !any_pending_interrupts)
-		this->halt_bug = true;
+		halt_bug = true;
 
 	if (ime)
 	{
 		if (any_pending_interrupts)
 		{
-			this->is_halted = false;
+			is_halted = false;
 			prefetchInstruction();
-			this->checkForInterrupts();
+			checkForInterrupts();
 		}
 		is_halted = false;
 		is_instruction_complete = true;
 		return;
 	}
-	if (any_pending_interrupts && this->halt_bug)
+	if (any_pending_interrupts && halt_bug)
 	{
-		this->is_halted = false;
-		this->halt_bug = false;
+		is_halted = false;
+		halt_bug = false;
 		prefetchInstruction();
 		return;
 	}
 	if (any_pending_interrupts)
 	{
-		this->is_halted = false;
+		is_halted = false;
 		prefetchInstruction();
-		this->registers.pc--;		
+		registers.pc--;		
 		return;
 	}	
 };
@@ -159,27 +159,27 @@ void CPU::haltHandler()
 void CPU::checkForInterrupts()
 {
 	//check master to see if interrupts are enabled
-	if (this->interrupt_master_enable == true)
+	if (interrupt_master_enable == true)
 	{
 		// iterate through all types, this allows us to check each interrupt and also service them in order of priority
 		for (const auto type : eInterruptTypes_all)
 		{
 			// if it has been requested and its corresponding flag is enabled, due to priority
-			if (this->getInterruptFlag(type, IF_REGISTER) && this->getInterruptFlag(type, IE_REGISTER))
+			if (getInterruptFlag(type, IF_REGISTER) && getInterruptFlag(type, IE_REGISTER))
 			{
 				//disable interrupts in general and for this type
 
-				this->setInterruptFlag(type, 0, IF_REGISTER);
-				this->interrupt_master_enable = false;
+				setInterruptFlag(type, 0, IF_REGISTER);
+				interrupt_master_enable = false;
 
 				// set jump vector
 				switch (type)
 				{
-				case eInterruptTypes::vblank:  { this->interrupt_vector = 0x0040; } break;
-				case eInterruptTypes::lcdstat: { this->interrupt_vector = 0x0048; } break;
-				case eInterruptTypes::timer:   { this->interrupt_vector = 0x0050; } break;
-				case eInterruptTypes::serial:  { this->interrupt_vector = 0x0058; } break;
-				case eInterruptTypes::joypad:  { this->interrupt_vector = 0x0060; } break;
+				case eInterruptTypes::vblank:  { interrupt_vector = 0x0040; } break;
+				case eInterruptTypes::lcdstat: { interrupt_vector = 0x0048; } break;
+				case eInterruptTypes::timer:   { interrupt_vector = 0x0050; } break;
+				case eInterruptTypes::serial:  { interrupt_vector = 0x0058; } break;
+				case eInterruptTypes::joypad:  { interrupt_vector = 0x0060; } break;
 				default: fprintf(stderr, "Unreachable interrupt type"); exit(-1); break;
 				}
 				return;
@@ -192,32 +192,32 @@ void CPU::checkForInterrupts()
 // source on length
 void CPU::setupInterruptHandler()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
 	case 0:
-		this->mcycles_used++;
+		mcycles_used++;
 		// undocumented_internal_operation
 		break;
 	case 1:
-		this->mcycles_used++;
+		mcycles_used++;
 		// undocumented_internal_operation
 		break;
 	case 2:
-		this->setMemory(--this->registers.sp, (this->registers.pc >> 8));
-		this->mcycles_used++;
+		setMemory(--registers.sp, (registers.pc >> 8));
+		mcycles_used++;
 		break;
 
 	case 3:
-		this->setMemory(--this->registers.sp, (this->registers.pc & 0xff));
-		this->mcycles_used++;
+		setMemory(--registers.sp, (registers.pc & 0xff));
+		mcycles_used++;
 		break;
 
 	case 4:
 
-		this->registers.pc = this->interrupt_vector;
+		registers.pc = interrupt_vector;
 
-		this->interrupt_vector = 0;
-		this->is_executing_instruction = false;
+		interrupt_vector = 0;
+		is_executing_instruction = false;
 		break;
 	}
 }
@@ -225,69 +225,69 @@ void CPU::setupInterruptHandler()
 
 void CPU::DEBUG_printCurrentState(Word pc)
 {
-	if (this->registers.pc == pc)
-		this->debug_toggle = true;
-	if (this->debug_toggle)
+	if (registers.pc == pc)
+		debug_toggle = true;
+	if (debug_toggle)
 	{
-		printf("%s:0x%.4X  ", "pc", this->registers.pc);
-		//printf("%s:0x%.2X  ", "cyclesused", this->mcycles_used);
-		printf("op:0x%.2X | ", this->getMemory(this->registers.pc));
-		printf("%s:0x%.2X%.2X  ", "AF", this->registers.a, this->registers.f);
-		printf("%s:0x%.2X%.2X  ", "BC", this->registers.b, this->registers.c);
-		printf("%s:0x%.2X%.2X  ", "DE", this->registers.d, this->registers.e);
-		printf("%s:0x%.2X%.2X  ", "HL", this->registers.h, this->registers.l);
-		printf("%s:0x%.4X  ", "SP", this->registers.sp);
-		printf("%s:0x%.4X  ", "STAT", this->getMemory(STAT));
-		printf("%s:%i  ", "IME", this->interrupt_master_enable);
-		//printf("%s:%x  ", "DIV", this->bus->io[4]);
-		//printf("%s:%x  ", "TIMA", this->bus->io[5]);
-		//printf("%s:%x  ", "TMA", this->bus->io[6]);
-		//printf("%s:%x  ", "TAC", this->bus->io[7]);
-		//printf("%s:%x  ", "divC", this->divtimer_counter);
-		//printf("%s:%x  ", "timC", this->timer_counter);
+		printf("%s:0x%.4X  ", "pc", registers.pc);
+		//printf("%s:0x%.2X  ", "cyclesused", mcycles_used);
+		printf("op:0x%.2X | ", getMemory(registers.pc));
+		printf("%s:0x%.2X%.2X  ", "AF", registers.a, registers.f);
+		printf("%s:0x%.2X%.2X  ", "BC", registers.b, registers.c);
+		printf("%s:0x%.2X%.2X  ", "DE", registers.d, registers.e);
+		printf("%s:0x%.2X%.2X  ", "HL", registers.h, registers.l);
+		printf("%s:0x%.4X  ", "SP", registers.sp);
+		printf("%s:0x%.4X  ", "STAT", getMemory(STAT));
+		printf("%s:%i  ", "IME", interrupt_master_enable);
+		//printf("%s:%x  ", "DIV", bus->io[4]);
+		//printf("%s:%x  ", "TIMA", bus->io[5]);
+		//printf("%s:%x  ", "TMA", bus->io[6]);
+		//printf("%s:%x  ", "TAC", bus->io[7]);
+		//printf("%s:%x  ", "divC", divtimer_counter);
+		//printf("%s:%x  ", "timC", timer_counter);
 		
 
-		/*printf("%s:%i  ","z", this->registers.get_flag(z));
-		printf("%s:%i  ","n", this->registers.get_flag(n));
-		printf("%s:%i  ","h", this->registers.get_flag(h));
-		printf("%s:%i  ","c", this->registers.get_flag(c));
+		/*printf("%s:%i  ","z", registers.get_flag(z));
+		printf("%s:%i  ","n", registers.get_flag(n));
+		printf("%s:%i  ","h", registers.get_flag(h));
+		printf("%s:%i  ","c", registers.get_flag(c));
 		printf("%s:","0xFF00");
-		std::cout << std::bitset<8>(this->bus->io[0]);*/
+		std::cout << std::bitset<8>(bus->io[0]);*/
 
 		printf("\n");
 	}
-	if (this->registers.pc == pc)
-		this->debug_toggle = true;
+	if (registers.pc == pc)
+		debug_toggle = true;
 }
 
 void CPU::DEBUG_printCurrentState()
 {
-	if (this->debug_toggle)
+	if (debug_toggle)
 	{
-		printf("%s:0x%.4X  ", "pc", this->registers.pc - 1);
-		//printf("%s:0x%.2X  ", "cyclesused", this->mcycles_used);
-		printf("op:0x%.2X | ", this->getMemory(this->registers.pc - 1));
-		printf("%s:0x%.2X%.2X  ", "AF", this->registers.a, this->registers.f);
-		printf("%s:0x%.2X%.2X  ", "BC", this->registers.b, this->registers.c);
-		printf("%s:0x%.2X%.2X  ", "DE", this->registers.d, this->registers.e);
-		printf("%s:0x%.2X%.2X  ", "HL", this->registers.h, this->registers.l);
-		printf("%s:0x%.4X  ", "SP", this->registers.sp);
-		printf("%s:0x%.4X  ", "STAT", this->getMemory(STAT));
-		printf("%s:%i  ", "IME", this->interrupt_master_enable);
-		//printf("%s:%x  ", "DIV", this->bus->io[4]);
-		//printf("%s:%x  ", "TIMA", this->bus->io[5]);
-		//printf("%s:%x  ", "TMA", this->bus->io[6]);
-		//printf("%s:%x  ", "TAC", this->bus->io[7]);
-		//printf("%s:%x  ", "divC", this->divtimer_counter);
-		//printf("%s:%x  ", "timC", this->timer_counter);
+		printf("%s:0x%.4X  ", "pc", registers.pc - 1);
+		//printf("%s:0x%.2X  ", "cyclesused", mcycles_used);
+		printf("op:0x%.2X | ", getMemory(registers.pc - 1));
+		printf("%s:0x%.2X%.2X  ", "AF", registers.a, registers.f);
+		printf("%s:0x%.2X%.2X  ", "BC", registers.b, registers.c);
+		printf("%s:0x%.2X%.2X  ", "DE", registers.d, registers.e);
+		printf("%s:0x%.2X%.2X  ", "HL", registers.h, registers.l);
+		printf("%s:0x%.4X  ", "SP", registers.sp);
+		printf("%s:0x%.4X  ", "STAT", getMemory(STAT));
+		printf("%s:%i  ", "IME", interrupt_master_enable);
+		//printf("%s:%x  ", "DIV", bus->io[4]);
+		//printf("%s:%x  ", "TIMA", bus->io[5]);
+		//printf("%s:%x  ", "TMA", bus->io[6]);
+		//printf("%s:%x  ", "TAC", bus->io[7]);
+		//printf("%s:%x  ", "divC", divtimer_counter);
+		//printf("%s:%x  ", "timC", timer_counter);
 
 
-		/*printf("%s:%i  ","z", this->registers.get_flag(z));
-		printf("%s:%i  ","n", this->registers.get_flag(n));
-		printf("%s:%i  ","h", this->registers.get_flag(h));
-		printf("%s:%i  ","c", this->registers.get_flag(c));
+		/*printf("%s:%i  ","z", registers.get_flag(z));
+		printf("%s:%i  ","n", registers.get_flag(n));
+		printf("%s:%i  ","h", registers.get_flag(h));
+		printf("%s:%i  ","c", registers.get_flag(c));
 		printf("%s:","0xFF00");
-		std::cout << std::bitset<8>(this->bus->io[0]);*/
+		std::cout << std::bitset<8>(bus->io[0]);*/
 
 		printf("\n");
 	}
@@ -298,72 +298,72 @@ void CPU::DEBUG_printCurrentState()
 /// </summary>
 void CPU::init()
 {
-	this->registers.pc = 0x100;
-	this->registers.a = 0x01;
-	this->registers.b = 0x00;
-	this->registers.c = 0x13;
-	this->registers.d = 0x00;
-	this->registers.e = 0xd8;
-	this->registers.f = 0xb0;
-	this->registers.h = 0x01;
-	this->registers.l = 0x4d;
-	this->registers.sp = 0xFFFE;
+	registers.pc = 0x100;
+	registers.a = 0x01;
+	registers.b = 0x00;
+	registers.c = 0x13;
+	registers.d = 0x00;
+	registers.e = 0xd8;
+	registers.f = 0xb0;
+	registers.h = 0x01;
+	registers.l = 0x4d;
+	registers.sp = 0xFFFE;
 }
 
 void CPU::biosInit()
 {
-	this->registers.pc = 0;
-	this->registers.a = 0;
-	this->registers.b = 0;
-	this->registers.c = 0;
-	this->registers.d = 0;
-	this->registers.e = 0;
-	this->registers.f = 0;
-	this->registers.h = 0;
-	this->registers.l = 0;
-	this->registers.sp = 0;
+	registers.pc = 0;
+	registers.a = 0;
+	registers.b = 0;
+	registers.c = 0;
+	registers.d = 0;
+	registers.e = 0;
+	registers.f = 0;
+	registers.h = 0;
+	registers.l = 0;
+	registers.sp = 0;
 }
 
 
 CPU::CPU()
 {
-	this->init();
+	init();
 }
 
 
 const Byte CPU::getByteFromPC()
 {
-	return this->getMemory(this->registers.pc++);
+	return getMemory(registers.pc++);
 }
 
 void CPU::DEBUG_print_IO()
 {
-	std::cout << "\t0xFF00  [JOYP]: ";  printf("%.2X\n", this->getMemory(0xFF00));
-	std::cout << "\t0xFF01    [SB]: ";  printf("%.2X\n", this->getMemory(0xFF01));
-	std::cout << "\t0xFF02    [SC]: ";  printf("%.2X\n", this->getMemory(0xFF02));
-	std::cout << "\t0xFF04   [DIV]: ";  printf("%.2X\n", this->getMemory(0xFF04));
-	std::cout << "\t0xFF05  [TIMA]: ";  printf("%.2X\n", this->getMemory(0xFF05));
-	std::cout << "\t0xFF06   [TMA]: ";  printf("%.2X\n", this->getMemory(0xFF06));
-	std::cout << "\t0xFF07   [TAC]: ";  printf("%.2X\n", this->getMemory(0xFF07));
-	std::cout << "\t0xFF0F    [IF]: ";  printf("%.2X\n", this->getMemory(0xFF0F));
-	std::cout << "\t0xFF40  [LCDC]: ";  printf("%.2X\n", this->getMemory(0xFF40));
-	std::cout << "\t0xFF41  [STAT]: ";  printf("%.2X\n", this->getMemory(0xFF41));
-	std::cout << "\t0xFF42   [SCY]: ";  printf("%.2X\n", this->getMemory(0xFF42));
-	std::cout << "\t0xFF43   [SCX]: ";  printf("%.2X\n", this->getMemory(0xFF43));
-	std::cout << "\t0xFF44    [LY]: ";  printf("%.2X\n", this->getMemory(0xFF44));
-	std::cout << "\t0xFF45   [LYC]: ";  printf("%.2X\n", this->getMemory(0xFF45));
-	std::cout << "\t0xFF47   [BGP]: ";  printf("%.2X\n", this->getMemory(0xFF47));
-	std::cout << "\t0xFF48  [OPB0]: ";  printf("%.2X\n", this->getMemory(0xFF48));
-	std::cout << "\t0xFF49  [OPB1]: ";  printf("%.2X\n", this->getMemory(0xFF49));
-	std::cout << "\t0xFF4A    [WY]: ";  printf("%.2X\n", this->getMemory(0xFF4A));
-	std::cout << "\t0xFF4B    [WX]: ";  printf("%.2X\n", this->getMemory(0xFF4B));
-	std::cout << "\t0xFFFF    [IE]: ";  printf("%.2X\n", this->getMemory(0xFFFF));
-	std::cout << "\t         [IME]: ";  printf("%.2X\n", this->bus->interrupt_enable_register);
+	std::cout << "\t0xFF00  [JOYP]: ";  printf("%.2X\n", getMemory(0xFF00));
+	std::cout << "\t0xFF01    [SB]: ";  printf("%.2X\n", getMemory(0xFF01));
+	std::cout << "\t0xFF02    [SC]: ";  printf("%.2X\n", getMemory(0xFF02));
+	std::cout << "\t0xFF04   [DIV]: ";  printf("%.2X\n", getMemory(0xFF04));
+	std::cout << "\t0xFF05  [TIMA]: ";  printf("%.2X\n", getMemory(0xFF05));
+	std::cout << "\t0xFF06   [TMA]: ";  printf("%.2X\n", getMemory(0xFF06));
+	std::cout << "\t0xFF07   [TAC]: ";  printf("%.2X\n", getMemory(0xFF07));
+	std::cout << "\t0xFF0F    [IF]: ";  printf("%.2X\n", getMemory(0xFF0F));
+	std::cout << "\t0xFF40  [LCDC]: ";  printf("%.2X\n", getMemory(0xFF40));
+	std::cout << "\t0xFF41  [STAT]: ";  printf("%.2X\n", getMemory(0xFF41));
+	std::cout << "\t0xFF42   [SCY]: ";  printf("%.2X\n", getMemory(0xFF42));
+	std::cout << "\t0xFF43   [SCX]: ";  printf("%.2X\n", getMemory(0xFF43));
+	std::cout << "\t0xFF44    [LY]: ";  printf("%.2X\n", getMemory(0xFF44));
+	std::cout << "\t0xFF45   [LYC]: ";  printf("%.2X\n", getMemory(0xFF45));
+	std::cout << "\t0xFF47   [BGP]: ";  printf("%.2X\n", getMemory(0xFF47));
+	std::cout << "\t0xFF48  [OPB0]: ";  printf("%.2X\n", getMemory(0xFF48));
+	std::cout << "\t0xFF49  [OPB1]: ";  printf("%.2X\n", getMemory(0xFF49));
+	std::cout << "\t0xFF4A    [WY]: ";  printf("%.2X\n", getMemory(0xFF4A));
+	std::cout << "\t0xFF4B    [WX]: ";  printf("%.2X\n", getMemory(0xFF4B));
+	std::cout << "\t0xFFFF    [IE]: ";  printf("%.2X\n", getMemory(0xFFFF));
+	std::cout << "\t         [IME]: ";  printf("%.2X\n", bus->interrupt_enable_register);
 }
 
 void CPU::connectToBus(BUS* pBus)
 {
-	this->bus = pBus;
+	bus = pBus;
 }
 
 bool CPU::checkCarry(const int a, const int b, const int shift, const int c)
@@ -386,19 +386,19 @@ bool CPU::checkJumpCondition(enum eJumpCondition condition)
 		return true;
 		break;
 	case NZ:
-		if (!this->registers.getFlag(z))
+		if (!registers.getFlag(z))
 			return true;
 		break;
 	case Z:
-		if (this->registers.getFlag(z))
+		if (registers.getFlag(z))
 			return true;
 		break;
 	case NC:
-		if (!this->registers.getFlag(c))
+		if (!registers.getFlag(c))
 			return true;
 		break;
 	case C:
-		if (this->registers.getFlag(c))
+		if (registers.getFlag(c))
 			return true;
 		break;
 	default: fprintf(stderr, "Unreachable Jump condition");  exit(-1); break;
@@ -437,24 +437,24 @@ void CPU::updateTimers(const int tcycles)
 		div overflows 16384 times a second
 		4194304 / 16384 = 256, every 256 tcyles div will overflow
 	*/
-	this->divtimer_counter += tcycles;
-	if (this->divtimer_counter >= DIV_INC_RATE)
+	divtimer_counter += tcycles;
+	if (divtimer_counter >= DIV_INC_RATE)
 	{
-		this->divtimer_counter = 0;
+		divtimer_counter = 0;
 		timer_registers.div++;
 	}
 
 	// if TMC bit 2 is set, this means that the timer is enabled
 	if (timer_registers.tac & (0b00000100))
 	{
-		this->timer_counter += tcycles;
-		if (this->timer_counter >= this->getTACFrequency())
+		timer_counter += tcycles;
+		if (timer_counter >= getTACFrequency())
 		{
-			this->timer_counter = 0;
+			timer_counter = 0;
 			if (timer_registers.tima == 0xFF)
 			{
 				timer_registers.tima = timer_registers.tma;
-				this->requestInterrupt(timer);
+				requestInterrupt(timer);
 				return;
 			}
 			timer_registers.tima++;
@@ -483,7 +483,7 @@ Byte CPU::getTMCFrequency()
 
 int CPU::getTACFrequency()
 {
-	switch (this->getTMCFrequency())
+	switch (getTMCFrequency())
 	{
 	case 0b00: { return GB_CPU_TCYCLE_CLOCKSPEED / 4096;   } break;
 	case 0b01: { return GB_CPU_TCYCLE_CLOCKSPEED / 262144; } break;
@@ -496,20 +496,20 @@ int CPU::getTACFrequency()
 
 void CPU::requestInterrupt(const eInterruptTypes type)
 {
-	this->setInterruptFlag(type, 1, IF_REGISTER);
+	setInterruptFlag(type, 1, IF_REGISTER);
 }
 
 Byte CPU::getInterruptFlag(const enum eInterruptTypes type, Word address)
 {
-	return this->bus->getMemory(address, eMemoryAccessType::interrupt_handler) & type;
+	return bus->getMemory(address, eMemoryAccessType::interrupt_handler) & type;
 }
 
 void CPU::setInterruptFlag(const enum eInterruptTypes type, const bool value, Word address)
 {
 	auto mem_type = eMemoryAccessType::interrupt_handler;
-	auto original_value = this->bus->getMemory(address, mem_type);
+	auto original_value = bus->getMemory(address, mem_type);
 	auto new_value = (value) ? (original_value | type) : (original_value & ~type);
-	this->bus->setMemory(address, new_value, mem_type);
+	bus->setMemory(address, new_value, mem_type);
 }
 
 // some instructions only take a single cycle, peforming the fetch decode and execute in one mCycle
@@ -524,315 +524,315 @@ void CPU::setInterruptFlag(const enum eInterruptTypes type, const bool value, Wo
 
 void CPU::setupForNextInstruction()
 {
-	this->mcycles_used = 0;
-	this->is_executing_instruction = true;
+	mcycles_used = 0;
+	is_executing_instruction = true;
 }
 
 void CPU::prefetchInstruction()
 {
-	this->setupForNextInstruction();
-	this->current_running_opcode = this->getByteFromPC();
+	setupForNextInstruction();
+	current_running_opcode = getByteFromPC();
 }
 
 void CPU::instructionHandler()
 {
-	if (this->interrupt_vector != 0)
+	if (interrupt_vector != 0)
 	{
-		this->setupInterruptHandler();
+		setupInterruptHandler();
 		return;
 	}
-	switch (this->current_running_opcode)
+	switch (current_running_opcode)
 	{
-	case 0x00: { this->is_executing_instruction = false; } break; //NOP
-	case 0x01: { this->ins_LD_XX_u16(&this->registers.b, &this->registers.c); } break;
-	case 0x02: { this->ins_LD_bXXb_Y(this->registers.getBC(), &this->registers.a); } break;
-	case 0x03: { this->ins_INC_XX(&this->registers.b, &this->registers.c); } break;
-	case 0x04: { this->ins_INC_X(&this->registers.b); } break;
-	case 0x05: { this->ins_DEC_X(&this->registers.b); } break;
-	case 0x06: { this->ins_LD_X_u8(&this->registers.b); } break;
-	case 0x07: { this->ins_RLCA(); } break;
+	case 0x00: { is_executing_instruction = false; } break; //NOP
+	case 0x01: { ins_LD_XX_u16(&registers.b, &registers.c); } break;
+	case 0x02: { ins_LD_bXXb_Y(registers.getBC(), &registers.a); } break;
+	case 0x03: { ins_INC_XX(&registers.b, &registers.c); } break;
+	case 0x04: { ins_INC_X(&registers.b); } break;
+	case 0x05: { ins_DEC_X(&registers.b); } break;
+	case 0x06: { ins_LD_X_u8(&registers.b); } break;
+	case 0x07: { ins_RLCA(); } break;
 
-	case 0x08: { this->ins_LD_bu16b_SP(); } break;
-	case 0x09: { this->ins_ADD_HL_XX(&this->registers.b, &this->registers.c); } break;
-	case 0x0A: { this->ins_LD_X_bYYb(&this->registers.a, &this->registers.b, &this->registers.c);  } break;
-	case 0x0B: { this->ins_DEC_XX(&this->registers.b, &this->registers.c); } break;
-	case 0x0C: { this->ins_INC_X(&this->registers.c); } break;
-	case 0x0D: { this->ins_DEC_X(&this->registers.c); } break;
-	case 0x0E: { this->ins_LD_X_u8(&this->registers.c); } break;
-	case 0x0F: { this->ins_RRCA(); } break;
+	case 0x08: { ins_LD_bu16b_SP(); } break;
+	case 0x09: { ins_ADD_HL_XX(&registers.b, &registers.c); } break;
+	case 0x0A: { ins_LD_X_bYYb(&registers.a, &registers.b, &registers.c);  } break;
+	case 0x0B: { ins_DEC_XX(&registers.b, &registers.c); } break;
+	case 0x0C: { ins_INC_X(&registers.c); } break;
+	case 0x0D: { ins_DEC_X(&registers.c); } break;
+	case 0x0E: { ins_LD_X_u8(&registers.c); } break;
+	case 0x0F: { ins_RRCA(); } break;
 
-	case 0x10: { this->instructionHandlerSTOP(); } break;
-	case 0x11: { this->ins_LD_XX_u16(&this->registers.d, &this->registers.e); } break;
-	case 0x12: { this->ins_LD_bXXb_Y(this->registers.getDE(), &this->registers.a); } break;
-	case 0x13: { this->ins_INC_XX(&this->registers.d, &this->registers.e); } break;
-	case 0x14: { this->ins_INC_X(&this->registers.d); } break;
-	case 0x15: { this->ins_DEC_X(&this->registers.d); } break;
-	case 0x16: { this->ins_LD_X_u8(&this->registers.d); } break;
-	case 0x17: { this->ins_RLA(); } break;
+	case 0x10: { instructionHandlerSTOP(); } break;
+	case 0x11: { ins_LD_XX_u16(&registers.d, &registers.e); } break;
+	case 0x12: { ins_LD_bXXb_Y(registers.getDE(), &registers.a); } break;
+	case 0x13: { ins_INC_XX(&registers.d, &registers.e); } break;
+	case 0x14: { ins_INC_X(&registers.d); } break;
+	case 0x15: { ins_DEC_X(&registers.d); } break;
+	case 0x16: { ins_LD_X_u8(&registers.d); } break;
+	case 0x17: { ins_RLA(); } break;
 
-	case 0x18: { this->ins_JR_i8(); } break;
-	case 0x19: { this->ins_ADD_HL_XX(&this->registers.d, &this->registers.e); } break;
-	case 0x1A: { this->ins_LD_X_bYYb(&this->registers.a, &this->registers.d, &this->registers.e);  } break;
-	case 0x1B: { this->ins_DEC_XX(&this->registers.d, &this->registers.e); } break;
-	case 0x1C: { this->ins_INC_X(&this->registers.e); } break;
-	case 0x1D: { this->ins_DEC_X(&this->registers.e); } break;
-	case 0x1E: { this->ins_LD_X_u8(&this->registers.e); } break;
-	case 0x1F: { this->ins_RRA(); } break;
+	case 0x18: { ins_JR_i8(); } break;
+	case 0x19: { ins_ADD_HL_XX(&registers.d, &registers.e); } break;
+	case 0x1A: { ins_LD_X_bYYb(&registers.a, &registers.d, &registers.e);  } break;
+	case 0x1B: { ins_DEC_XX(&registers.d, &registers.e); } break;
+	case 0x1C: { ins_INC_X(&registers.e); } break;
+	case 0x1D: { ins_DEC_X(&registers.e); } break;
+	case 0x1E: { ins_LD_X_u8(&registers.e); } break;
+	case 0x1F: { ins_RRA(); } break;
 
-	case 0x20: { this->ins_JR_i8(NZ); } break;
-	case 0x21: { this->ins_LD_XX_u16(&this->registers.h, &this->registers.l); } break;
-	case 0x22: { this->ins_LD_bHLb_Apm(true); } break;
-	case 0x23: { this->ins_INC_XX(&this->registers.h, &this->registers.l); } break;
-	case 0x24: { this->ins_INC_X(&this->registers.h); } break;
-	case 0x25: { this->ins_DEC_X(&this->registers.h); } break;
-	case 0x26: { this->ins_LD_X_u8(&this->registers.h); } break;
-	case 0x27: { this->ins_DAA(); } break;
+	case 0x20: { ins_JR_i8(NZ); } break;
+	case 0x21: { ins_LD_XX_u16(&registers.h, &registers.l); } break;
+	case 0x22: { ins_LD_bHLb_Apm(true); } break;
+	case 0x23: { ins_INC_XX(&registers.h, &registers.l); } break;
+	case 0x24: { ins_INC_X(&registers.h); } break;
+	case 0x25: { ins_DEC_X(&registers.h); } break;
+	case 0x26: { ins_LD_X_u8(&registers.h); } break;
+	case 0x27: { ins_DAA(); } break;
 
-	case 0x28: { this->ins_JR_i8(Z); } break;
-	case 0x29: { this->ins_ADD_HL_XX(&this->registers.h, &this->registers.l); } break;
-	case 0x2A: { this->ins_LD_X_bYYb(&this->registers.a, &this->registers.h, &this->registers.l, +1);  } break;
-	case 0x2B: { this->ins_DEC_XX(&this->registers.h, &this->registers.l); } break;
-	case 0x2C: { this->ins_INC_X(&this->registers.l); } break;
-	case 0x2D: { this->ins_DEC_X(&this->registers.l); } break;
-	case 0x2E: { this->ins_LD_X_u8(&this->registers.l); } break;
-	case 0x2F: { this->ins_CPL(); } break;
+	case 0x28: { ins_JR_i8(Z); } break;
+	case 0x29: { ins_ADD_HL_XX(&registers.h, &registers.l); } break;
+	case 0x2A: { ins_LD_X_bYYb(&registers.a, &registers.h, &registers.l, +1);  } break;
+	case 0x2B: { ins_DEC_XX(&registers.h, &registers.l); } break;
+	case 0x2C: { ins_INC_X(&registers.l); } break;
+	case 0x2D: { ins_DEC_X(&registers.l); } break;
+	case 0x2E: { ins_LD_X_u8(&registers.l); } break;
+	case 0x2F: { ins_CPL(); } break;
 
-	case 0x30: { this->ins_JR_i8(NC); } break;
-	case 0x31: { this->ins_LD_SP_u16(&this->registers.sp); } break; //sp is a word
-	case 0x32: { this->ins_LD_bHLb_Apm(false); } break;
-	case 0x33: { this->ins_INC_SP(); } break;
-	case 0x34: { this->ins_INC_bHLb(); } break;
-	case 0x35: { this->ins_DEC_bHLb(); } break;
-	case 0x36: { this->ins_LD_bHLb_u8(); } break;
-	case 0x37: { this->ins_SCF(); } break;
+	case 0x30: { ins_JR_i8(NC); } break;
+	case 0x31: { ins_LD_SP_u16(&registers.sp); } break; //sp is a word
+	case 0x32: { ins_LD_bHLb_Apm(false); } break;
+	case 0x33: { ins_INC_SP(); } break;
+	case 0x34: { ins_INC_bHLb(); } break;
+	case 0x35: { ins_DEC_bHLb(); } break;
+	case 0x36: { ins_LD_bHLb_u8(); } break;
+	case 0x37: { ins_SCF(); } break;
 
-	case 0x38: { this->ins_JR_i8(C); } break;
-	case 0x39: { this->ins_ADD_HL_SP(); } break;
-	case 0x3A: { this->ins_LD_X_bYYb(&this->registers.a, &this->registers.h, &this->registers.l, -1);  } break;
-	case 0x3B: { this->ins_DEC_SP(); } break;
-	case 0x3C: { this->ins_INC_X(&this->registers.a); } break;
-	case 0x3D: { this->ins_DEC_X(&this->registers.a); } break;
-	case 0x3E: { this->ins_LD_X_u8(&this->registers.a); } break;
-	case 0x3F: { this->ins_CCF(); } break;
+	case 0x38: { ins_JR_i8(C); } break;
+	case 0x39: { ins_ADD_HL_SP(); } break;
+	case 0x3A: { ins_LD_X_bYYb(&registers.a, &registers.h, &registers.l, -1);  } break;
+	case 0x3B: { ins_DEC_SP(); } break;
+	case 0x3C: { ins_INC_X(&registers.a); } break;
+	case 0x3D: { ins_DEC_X(&registers.a); } break;
+	case 0x3E: { ins_LD_X_u8(&registers.a); } break;
+	case 0x3F: { ins_CCF(); } break;
 
-	case 0x40: { this->ins_LD_X_Y(&this->registers.b, &this->registers.b); } break;
-	case 0x41: { this->ins_LD_X_Y(&this->registers.b, &this->registers.c); } break;
-	case 0x42: { this->ins_LD_X_Y(&this->registers.b, &this->registers.d); } break;
-	case 0x43: { this->ins_LD_X_Y(&this->registers.b, &this->registers.e); } break;
-	case 0x44: { this->ins_LD_X_Y(&this->registers.b, &this->registers.h); } break;
-	case 0x45: { this->ins_LD_X_Y(&this->registers.b, &this->registers.l); } break;
-	case 0x46: { this->ins_LD_X_bYYb(&this->registers.b, &this->registers.h, &this->registers.l); } break;
-	case 0x47: { this->ins_LD_X_Y(&this->registers.b, &this->registers.a); } break;
+	case 0x40: { ins_LD_X_Y(&registers.b, &registers.b); } break;
+	case 0x41: { ins_LD_X_Y(&registers.b, &registers.c); } break;
+	case 0x42: { ins_LD_X_Y(&registers.b, &registers.d); } break;
+	case 0x43: { ins_LD_X_Y(&registers.b, &registers.e); } break;
+	case 0x44: { ins_LD_X_Y(&registers.b, &registers.h); } break;
+	case 0x45: { ins_LD_X_Y(&registers.b, &registers.l); } break;
+	case 0x46: { ins_LD_X_bYYb(&registers.b, &registers.h, &registers.l); } break;
+	case 0x47: { ins_LD_X_Y(&registers.b, &registers.a); } break;
 
-	case 0x48: { this->ins_LD_X_Y(&this->registers.c, &this->registers.b); } break;
-	case 0x49: { this->ins_LD_X_Y(&this->registers.c, &this->registers.c); } break;
-	case 0x4A: { this->ins_LD_X_Y(&this->registers.c, &this->registers.d); } break;
-	case 0x4B: { this->ins_LD_X_Y(&this->registers.c, &this->registers.e); } break;
-	case 0x4C: { this->ins_LD_X_Y(&this->registers.c, &this->registers.h); } break;
-	case 0x4D: { this->ins_LD_X_Y(&this->registers.c, &this->registers.l); } break;
-	case 0x4E: { this->ins_LD_X_bYYb(&this->registers.c, &this->registers.h, &this->registers.l); } break;
-	case 0x4F: { this->ins_LD_X_Y(&this->registers.c, &this->registers.a); } break;
+	case 0x48: { ins_LD_X_Y(&registers.c, &registers.b); } break;
+	case 0x49: { ins_LD_X_Y(&registers.c, &registers.c); } break;
+	case 0x4A: { ins_LD_X_Y(&registers.c, &registers.d); } break;
+	case 0x4B: { ins_LD_X_Y(&registers.c, &registers.e); } break;
+	case 0x4C: { ins_LD_X_Y(&registers.c, &registers.h); } break;
+	case 0x4D: { ins_LD_X_Y(&registers.c, &registers.l); } break;
+	case 0x4E: { ins_LD_X_bYYb(&registers.c, &registers.h, &registers.l); } break;
+	case 0x4F: { ins_LD_X_Y(&registers.c, &registers.a); } break;
 
-	case 0x50: { this->ins_LD_X_Y(&this->registers.d, &this->registers.b); } break;
-	case 0x51: { this->ins_LD_X_Y(&this->registers.d, &this->registers.c); } break;
-	case 0x52: { this->ins_LD_X_Y(&this->registers.d, &this->registers.d); } break;
-	case 0x53: { this->ins_LD_X_Y(&this->registers.d, &this->registers.e); } break;
-	case 0x54: { this->ins_LD_X_Y(&this->registers.d, &this->registers.h); } break;
-	case 0x55: { this->ins_LD_X_Y(&this->registers.d, &this->registers.l); } break;
-	case 0x56: { this->ins_LD_X_bYYb(&this->registers.d, &this->registers.h, &this->registers.l); } break;
-	case 0x57: { this->ins_LD_X_Y(&this->registers.d, &this->registers.a); } break;
+	case 0x50: { ins_LD_X_Y(&registers.d, &registers.b); } break;
+	case 0x51: { ins_LD_X_Y(&registers.d, &registers.c); } break;
+	case 0x52: { ins_LD_X_Y(&registers.d, &registers.d); } break;
+	case 0x53: { ins_LD_X_Y(&registers.d, &registers.e); } break;
+	case 0x54: { ins_LD_X_Y(&registers.d, &registers.h); } break;
+	case 0x55: { ins_LD_X_Y(&registers.d, &registers.l); } break;
+	case 0x56: { ins_LD_X_bYYb(&registers.d, &registers.h, &registers.l); } break;
+	case 0x57: { ins_LD_X_Y(&registers.d, &registers.a); } break;
 
-	case 0x58: { this->ins_LD_X_Y(&this->registers.e, &this->registers.b); } break;
-	case 0x59: { this->ins_LD_X_Y(&this->registers.e, &this->registers.c); } break;
-	case 0x5A: { this->ins_LD_X_Y(&this->registers.e, &this->registers.d); } break;
-	case 0x5B: { this->ins_LD_X_Y(&this->registers.e, &this->registers.e); } break;
-	case 0x5C: { this->ins_LD_X_Y(&this->registers.e, &this->registers.h); } break;
-	case 0x5D: { this->ins_LD_X_Y(&this->registers.e, &this->registers.l); } break;
-	case 0x5E: { this->ins_LD_X_bYYb(&this->registers.e, &this->registers.h, &this->registers.l); } break;
-	case 0x5F: { this->ins_LD_X_Y(&this->registers.e, &this->registers.a); } break;
+	case 0x58: { ins_LD_X_Y(&registers.e, &registers.b); } break;
+	case 0x59: { ins_LD_X_Y(&registers.e, &registers.c); } break;
+	case 0x5A: { ins_LD_X_Y(&registers.e, &registers.d); } break;
+	case 0x5B: { ins_LD_X_Y(&registers.e, &registers.e); } break;
+	case 0x5C: { ins_LD_X_Y(&registers.e, &registers.h); } break;
+	case 0x5D: { ins_LD_X_Y(&registers.e, &registers.l); } break;
+	case 0x5E: { ins_LD_X_bYYb(&registers.e, &registers.h, &registers.l); } break;
+	case 0x5F: { ins_LD_X_Y(&registers.e, &registers.a); } break;
 
-	case 0x60: { this->ins_LD_X_Y(&this->registers.h, &this->registers.b); } break;
-	case 0x61: { this->ins_LD_X_Y(&this->registers.h, &this->registers.c); } break;
-	case 0x62: { this->ins_LD_X_Y(&this->registers.h, &this->registers.d); } break;
-	case 0x63: { this->ins_LD_X_Y(&this->registers.h, &this->registers.e); } break;
-	case 0x64: { this->ins_LD_X_Y(&this->registers.h, &this->registers.h); } break;
-	case 0x65: { this->ins_LD_X_Y(&this->registers.h, &this->registers.l); } break;
-	case 0x66: { this->ins_LD_X_bYYb(&this->registers.h, &this->registers.h, &this->registers.l); } break;
-	case 0x67: { this->ins_LD_X_Y(&this->registers.h, &this->registers.a); } break;
+	case 0x60: { ins_LD_X_Y(&registers.h, &registers.b); } break;
+	case 0x61: { ins_LD_X_Y(&registers.h, &registers.c); } break;
+	case 0x62: { ins_LD_X_Y(&registers.h, &registers.d); } break;
+	case 0x63: { ins_LD_X_Y(&registers.h, &registers.e); } break;
+	case 0x64: { ins_LD_X_Y(&registers.h, &registers.h); } break;
+	case 0x65: { ins_LD_X_Y(&registers.h, &registers.l); } break;
+	case 0x66: { ins_LD_X_bYYb(&registers.h, &registers.h, &registers.l); } break;
+	case 0x67: { ins_LD_X_Y(&registers.h, &registers.a); } break;
 
-	case 0x68: { this->ins_LD_X_Y(&this->registers.l, &this->registers.b); } break;
-	case 0x69: { this->ins_LD_X_Y(&this->registers.l, &this->registers.c); } break;
-	case 0x6A: { this->ins_LD_X_Y(&this->registers.l, &this->registers.d); } break;
-	case 0x6B: { this->ins_LD_X_Y(&this->registers.l, &this->registers.e); } break;
-	case 0x6C: { this->ins_LD_X_Y(&this->registers.l, &this->registers.h); } break;
-	case 0x6D: { this->ins_LD_X_Y(&this->registers.l, &this->registers.l); } break;
-	case 0x6E: { this->ins_LD_X_bYYb(&this->registers.l, &this->registers.h, &this->registers.l); } break;
-	case 0x6F: { this->ins_LD_X_Y(&this->registers.l, &this->registers.a); } break;
+	case 0x68: { ins_LD_X_Y(&registers.l, &registers.b); } break;
+	case 0x69: { ins_LD_X_Y(&registers.l, &registers.c); } break;
+	case 0x6A: { ins_LD_X_Y(&registers.l, &registers.d); } break;
+	case 0x6B: { ins_LD_X_Y(&registers.l, &registers.e); } break;
+	case 0x6C: { ins_LD_X_Y(&registers.l, &registers.h); } break;
+	case 0x6D: { ins_LD_X_Y(&registers.l, &registers.l); } break;
+	case 0x6E: { ins_LD_X_bYYb(&registers.l, &registers.h, &registers.l); } break;
+	case 0x6F: { ins_LD_X_Y(&registers.l, &registers.a); } break;
 
-	case 0x70: { this->ins_LD_bXXb_Y(this->registers.getHL(), &this->registers.b); } break;
-	case 0x71: { this->ins_LD_bXXb_Y(this->registers.getHL(), &this->registers.c); } break;
-	case 0x72: { this->ins_LD_bXXb_Y(this->registers.getHL(), &this->registers.d); } break;
-	case 0x73: { this->ins_LD_bXXb_Y(this->registers.getHL(), &this->registers.e); } break;
-	case 0x74: { this->ins_LD_bXXb_Y(this->registers.getHL(), &this->registers.h); } break;
-	case 0x75: { this->ins_LD_bXXb_Y(this->registers.getHL(), &this->registers.l); } break;
-	case 0x76: { this->is_halted = true; this->is_executing_instruction = false; } break; //HALT
-	case 0x77: { this->ins_LD_bXXb_Y(this->registers.getHL(), &this->registers.a); } break;
+	case 0x70: { ins_LD_bXXb_Y(registers.getHL(), &registers.b); } break;
+	case 0x71: { ins_LD_bXXb_Y(registers.getHL(), &registers.c); } break;
+	case 0x72: { ins_LD_bXXb_Y(registers.getHL(), &registers.d); } break;
+	case 0x73: { ins_LD_bXXb_Y(registers.getHL(), &registers.e); } break;
+	case 0x74: { ins_LD_bXXb_Y(registers.getHL(), &registers.h); } break;
+	case 0x75: { ins_LD_bXXb_Y(registers.getHL(), &registers.l); } break;
+	case 0x76: { is_halted = true; is_executing_instruction = false; } break; //HALT
+	case 0x77: { ins_LD_bXXb_Y(registers.getHL(), &registers.a); } break;
 
-	case 0x78: { this->ins_LD_X_Y(&this->registers.a, &this->registers.b); } break;
-	case 0x79: { this->ins_LD_X_Y(&this->registers.a, &this->registers.c); } break;
-	case 0x7A: { this->ins_LD_X_Y(&this->registers.a, &this->registers.d); } break;
-	case 0x7B: { this->ins_LD_X_Y(&this->registers.a, &this->registers.e); } break;
-	case 0x7C: { this->ins_LD_X_Y(&this->registers.a, &this->registers.h); } break;
-	case 0x7D: { this->ins_LD_X_Y(&this->registers.a, &this->registers.l); } break;
-	case 0x7E: { this->ins_LD_X_bYYb(&this->registers.a, &this->registers.h, &this->registers.l); } break;
-	case 0x7F: { this->ins_LD_X_Y(&this->registers.a, &this->registers.a); } break;
+	case 0x78: { ins_LD_X_Y(&registers.a, &registers.b); } break;
+	case 0x79: { ins_LD_X_Y(&registers.a, &registers.c); } break;
+	case 0x7A: { ins_LD_X_Y(&registers.a, &registers.d); } break;
+	case 0x7B: { ins_LD_X_Y(&registers.a, &registers.e); } break;
+	case 0x7C: { ins_LD_X_Y(&registers.a, &registers.h); } break;
+	case 0x7D: { ins_LD_X_Y(&registers.a, &registers.l); } break;
+	case 0x7E: { ins_LD_X_bYYb(&registers.a, &registers.h, &registers.l); } break;
+	case 0x7F: { ins_LD_X_Y(&registers.a, &registers.a); } break;
 
-	case 0x80: { this->ins_ADD_A_X(&this->registers.b); } break;
-	case 0x81: { this->ins_ADD_A_X(&this->registers.c); } break;
-	case 0x82: { this->ins_ADD_A_X(&this->registers.d); } break;
-	case 0x83: { this->ins_ADD_A_X(&this->registers.e); } break;
-	case 0x84: { this->ins_ADD_A_X(&this->registers.h); } break;
-	case 0x85: { this->ins_ADD_A_X(&this->registers.l); } break;
-	case 0x86: { this->ins_ADD_A_bHLb(); } break;
-	case 0x87: { this->ins_ADD_A_X(&this->registers.a); } break;
+	case 0x80: { ins_ADD_A_X(&registers.b); } break;
+	case 0x81: { ins_ADD_A_X(&registers.c); } break;
+	case 0x82: { ins_ADD_A_X(&registers.d); } break;
+	case 0x83: { ins_ADD_A_X(&registers.e); } break;
+	case 0x84: { ins_ADD_A_X(&registers.h); } break;
+	case 0x85: { ins_ADD_A_X(&registers.l); } break;
+	case 0x86: { ins_ADD_A_bHLb(); } break;
+	case 0x87: { ins_ADD_A_X(&registers.a); } break;
 
-	case 0x88: { this->ins_ADC_A_X(&this->registers.b); } break;
-	case 0x89: { this->ins_ADC_A_X(&this->registers.c); } break;
-	case 0x8A: { this->ins_ADC_A_X(&this->registers.d); } break;
-	case 0x8B: { this->ins_ADC_A_X(&this->registers.e); } break;
-	case 0x8C: { this->ins_ADC_A_X(&this->registers.h); } break;
-	case 0x8D: { this->ins_ADC_A_X(&this->registers.l); } break;
-	case 0x8E: { this->ins_ADC_A_bHLb(); } break;
-	case 0x8F: { this->ins_ADC_A_X(&this->registers.a); } break;
+	case 0x88: { ins_ADC_A_X(&registers.b); } break;
+	case 0x89: { ins_ADC_A_X(&registers.c); } break;
+	case 0x8A: { ins_ADC_A_X(&registers.d); } break;
+	case 0x8B: { ins_ADC_A_X(&registers.e); } break;
+	case 0x8C: { ins_ADC_A_X(&registers.h); } break;
+	case 0x8D: { ins_ADC_A_X(&registers.l); } break;
+	case 0x8E: { ins_ADC_A_bHLb(); } break;
+	case 0x8F: { ins_ADC_A_X(&registers.a); } break;
 
-	case 0x90: { this->ins_SUB_A_X(&this->registers.b); } break;
-	case 0x91: { this->ins_SUB_A_X(&this->registers.c); } break;
-	case 0x92: { this->ins_SUB_A_X(&this->registers.d); } break;
-	case 0x93: { this->ins_SUB_A_X(&this->registers.e); } break;
-	case 0x94: { this->ins_SUB_A_X(&this->registers.h); } break;
-	case 0x95: { this->ins_SUB_A_X(&this->registers.l); } break;
-	case 0x96: { this->ins_SUB_A_bHLb(); } break;
-	case 0x97: { this->ins_SUB_A_X(&this->registers.a); } break;
+	case 0x90: { ins_SUB_A_X(&registers.b); } break;
+	case 0x91: { ins_SUB_A_X(&registers.c); } break;
+	case 0x92: { ins_SUB_A_X(&registers.d); } break;
+	case 0x93: { ins_SUB_A_X(&registers.e); } break;
+	case 0x94: { ins_SUB_A_X(&registers.h); } break;
+	case 0x95: { ins_SUB_A_X(&registers.l); } break;
+	case 0x96: { ins_SUB_A_bHLb(); } break;
+	case 0x97: { ins_SUB_A_X(&registers.a); } break;
 
-	case 0x98: { this->ins_SBC_A_X(&this->registers.b); } break;
-	case 0x99: { this->ins_SBC_A_X(&this->registers.c); } break;
-	case 0x9A: { this->ins_SBC_A_X(&this->registers.d); } break;
-	case 0x9B: { this->ins_SBC_A_X(&this->registers.e); } break;
-	case 0x9C: { this->ins_SBC_A_X(&this->registers.h); } break;
-	case 0x9D: { this->ins_SBC_A_X(&this->registers.l); } break;
-	case 0x9E: { this->ins_SBC_A_bHLb(); } break;
-	case 0x9F: { this->ins_SBC_A_X(&this->registers.a); } break;
+	case 0x98: { ins_SBC_A_X(&registers.b); } break;
+	case 0x99: { ins_SBC_A_X(&registers.c); } break;
+	case 0x9A: { ins_SBC_A_X(&registers.d); } break;
+	case 0x9B: { ins_SBC_A_X(&registers.e); } break;
+	case 0x9C: { ins_SBC_A_X(&registers.h); } break;
+	case 0x9D: { ins_SBC_A_X(&registers.l); } break;
+	case 0x9E: { ins_SBC_A_bHLb(); } break;
+	case 0x9F: { ins_SBC_A_X(&registers.a); } break;
 
-	case 0xA0: { this->ins_AND_A_X(&this->registers.b); } break;
-	case 0xA1: { this->ins_AND_A_X(&this->registers.c); } break;
-	case 0xA2: { this->ins_AND_A_X(&this->registers.d); } break;
-	case 0xA3: { this->ins_AND_A_X(&this->registers.e); } break;
-	case 0xA4: { this->ins_AND_A_X(&this->registers.h); } break;
-	case 0xA5: { this->ins_AND_A_X(&this->registers.l); } break;
-	case 0xA6: { this->ins_AND_A_bHLb(); } break;
-	case 0xA7: { this->ins_AND_A_X(&this->registers.a); } break;
+	case 0xA0: { ins_AND_A_X(&registers.b); } break;
+	case 0xA1: { ins_AND_A_X(&registers.c); } break;
+	case 0xA2: { ins_AND_A_X(&registers.d); } break;
+	case 0xA3: { ins_AND_A_X(&registers.e); } break;
+	case 0xA4: { ins_AND_A_X(&registers.h); } break;
+	case 0xA5: { ins_AND_A_X(&registers.l); } break;
+	case 0xA6: { ins_AND_A_bHLb(); } break;
+	case 0xA7: { ins_AND_A_X(&registers.a); } break;
 
-	case 0xA8: { this->ins_XOR_A_X(&this->registers.b); } break;
-	case 0xA9: { this->ins_XOR_A_X(&this->registers.c); } break;
-	case 0xAA: { this->ins_XOR_A_X(&this->registers.d); } break;
-	case 0xAB: { this->ins_XOR_A_X(&this->registers.e); } break;
-	case 0xAC: { this->ins_XOR_A_X(&this->registers.h); } break;
-	case 0xAD: { this->ins_XOR_A_X(&this->registers.l); } break;
-	case 0xAE: { this->ins_XOR_A_bHLb(); } break;
-	case 0xAF: { this->ins_XOR_A_X(&this->registers.a); } break;
+	case 0xA8: { ins_XOR_A_X(&registers.b); } break;
+	case 0xA9: { ins_XOR_A_X(&registers.c); } break;
+	case 0xAA: { ins_XOR_A_X(&registers.d); } break;
+	case 0xAB: { ins_XOR_A_X(&registers.e); } break;
+	case 0xAC: { ins_XOR_A_X(&registers.h); } break;
+	case 0xAD: { ins_XOR_A_X(&registers.l); } break;
+	case 0xAE: { ins_XOR_A_bHLb(); } break;
+	case 0xAF: { ins_XOR_A_X(&registers.a); } break;
 
-	case 0xB0: { this->ins_OR_A_X(&this->registers.b); } break;
-	case 0xB1: { this->ins_OR_A_X(&this->registers.c); } break;
-	case 0xB2: { this->ins_OR_A_X(&this->registers.d); } break;
-	case 0xB3: { this->ins_OR_A_X(&this->registers.e); } break;
-	case 0xB4: { this->ins_OR_A_X(&this->registers.h); } break;
-	case 0xB5: { this->ins_OR_A_X(&this->registers.l); } break;
-	case 0xB6: { this->ins_OR_A_bHLb(); } break;
-	case 0xB7: { this->ins_OR_A_X(&this->registers.a); } break;
+	case 0xB0: { ins_OR_A_X(&registers.b); } break;
+	case 0xB1: { ins_OR_A_X(&registers.c); } break;
+	case 0xB2: { ins_OR_A_X(&registers.d); } break;
+	case 0xB3: { ins_OR_A_X(&registers.e); } break;
+	case 0xB4: { ins_OR_A_X(&registers.h); } break;
+	case 0xB5: { ins_OR_A_X(&registers.l); } break;
+	case 0xB6: { ins_OR_A_bHLb(); } break;
+	case 0xB7: { ins_OR_A_X(&registers.a); } break;
 
-	case 0xB8: { this->ins_CP_A_X(&this->registers.b); } break;
-	case 0xB9: { this->ins_CP_A_X(&this->registers.c); } break;
-	case 0xBA: { this->ins_CP_A_X(&this->registers.d); } break;
-	case 0xBB: { this->ins_CP_A_X(&this->registers.e); } break;
-	case 0xBC: { this->ins_CP_A_X(&this->registers.h); } break;
-	case 0xBD: { this->ins_CP_A_X(&this->registers.l); } break;
-	case 0xBE: { this->ins_CP_A_bHLb(); } break;
-	case 0xBF: { this->ins_CP_A_X(&this->registers.a); } break;
+	case 0xB8: { ins_CP_A_X(&registers.b); } break;
+	case 0xB9: { ins_CP_A_X(&registers.c); } break;
+	case 0xBA: { ins_CP_A_X(&registers.d); } break;
+	case 0xBB: { ins_CP_A_X(&registers.e); } break;
+	case 0xBC: { ins_CP_A_X(&registers.h); } break;
+	case 0xBD: { ins_CP_A_X(&registers.l); } break;
+	case 0xBE: { ins_CP_A_bHLb(); } break;
+	case 0xBF: { ins_CP_A_X(&registers.a); } break;
 
-	case 0xC0: { this->ins_RET_CC(NZ); } break;
-	case 0xC1: { this->ins_POP_XX(&this->registers.b, &this->registers.c); } break;
-	case 0xC2: { this->ins_JP_u16(NZ); } break;
-	case 0xC3: { this->ins_JP_u16(); } break;
-	case 0xC4: { this->ins_CALL_u16(NZ); } break;
-	case 0xC5: { this->ins_PUSH_XX(this->registers.getBC()); } break;
-	case 0xC6: { this->ins_ADD_A_u8(); } break;
-	case 0xC7: { this->ins_RST(0x00); } break;
+	case 0xC0: { ins_RET_CC(NZ); } break;
+	case 0xC1: { ins_POP_XX(&registers.b, &registers.c); } break;
+	case 0xC2: { ins_JP_u16(NZ); } break;
+	case 0xC3: { ins_JP_u16(); } break;
+	case 0xC4: { ins_CALL_u16(NZ); } break;
+	case 0xC5: { ins_PUSH_XX(registers.getBC()); } break;
+	case 0xC6: { ins_ADD_A_u8(); } break;
+	case 0xC7: { ins_RST(0x00); } break;
 
-	case 0xC8: { this->ins_RET_CC(Z); } break;
-	case 0xC9: { this->ins_RET(); } break;
-	case 0xCA: { this->ins_JP_u16(Z); } break;
-	case 0xCB: { this->instructionHandlerCB(); } break;
-	case 0xCC: { this->ins_CALL_u16(Z); } break;
-	case 0xCD: { this->ins_CALL_u16(); } break;
-	case 0xCE: { this->ins_ADC_A_u8(); } break;
-	case 0xCF: { this->ins_RST(0x08); } break;
+	case 0xC8: { ins_RET_CC(Z); } break;
+	case 0xC9: { ins_RET(); } break;
+	case 0xCA: { ins_JP_u16(Z); } break;
+	case 0xCB: { instructionHandlerCB(); } break;
+	case 0xCC: { ins_CALL_u16(Z); } break;
+	case 0xCD: { ins_CALL_u16(); } break;
+	case 0xCE: { ins_ADC_A_u8(); } break;
+	case 0xCF: { ins_RST(0x08); } break;
 
-	case 0xD0: { this->ins_RET_CC(NC); } break;
-	case 0xD1: { this->ins_POP_XX(&this->registers.d, &this->registers.e); } break;
-	case 0xD2: { this->ins_JP_u16(NC); } break;
-		//case 0xD3: { this->ins_SBC_A_n(nullptr, this->get_byte_from_pc()); } break;
-	case 0xD4: { this->ins_CALL_u16(NC); } break;
-	case 0xD5: { this->ins_PUSH_XX(this->registers.getDE()); } break;
-	case 0xD6: { this->ins_SUB_A_u8();  } break;
-	case 0xD7: { this->ins_RST(0x10); } break;
+	case 0xD0: { ins_RET_CC(NC); } break;
+	case 0xD1: { ins_POP_XX(&registers.d, &registers.e); } break;
+	case 0xD2: { ins_JP_u16(NC); } break;
+		//case 0xD3: { ins_SBC_A_n(nullptr, get_byte_from_pc()); } break;
+	case 0xD4: { ins_CALL_u16(NC); } break;
+	case 0xD5: { ins_PUSH_XX(registers.getDE()); } break;
+	case 0xD6: { ins_SUB_A_u8();  } break;
+	case 0xD7: { ins_RST(0x10); } break;
 
-	case 0xD8: { this->ins_RET_CC(C); } break; //35
-	case 0xD9: { this->ins_RETI(); } break;
-	case 0xDA: { this->ins_JP_u16(C); } break;
+	case 0xD8: { ins_RET_CC(C); } break; //35
+	case 0xD9: { ins_RETI(); } break;
+	case 0xDA: { ins_JP_u16(C); } break;
 		//case 0xDB: { } break;
-	case 0xDC: { this->ins_CALL_u16(C); } break;
+	case 0xDC: { ins_CALL_u16(C); } break;
 		//case 0xDD: { } break;
-	case 0xDE: { this->ins_SBC_A_u8(); } break;
-	case 0xDF: { this->ins_RST(0x18); } break;
+	case 0xDE: { ins_SBC_A_u8(); } break;
+	case 0xDF: { ins_RST(0x18); } break;
 
 	case 0xE0: { ins_LD_bFF00_u8b_A(); } break;
-	case 0xE1: { this->ins_POP_XX(&this->registers.h, &this->registers.l); } break;
-	case 0xE2: { this->ins_LD_bXXb_Y(0xFF00 + this->registers.c, &this->registers.a); } break;
+	case 0xE1: { ins_POP_XX(&registers.h, &registers.l); } break;
+	case 0xE2: { ins_LD_bXXb_Y(0xFF00 + registers.c, &registers.a); } break;
 		//case 0xE3: { } break;
 		//case 0xE4: { } break;
-	case 0xE5: { this->ins_PUSH_XX(this->registers.getHL()); } break;
-	case 0xE6: { this->ins_AND_A_u8(); } break;
-	case 0xE7: { this->ins_RST(0x20); } break;
+	case 0xE5: { ins_PUSH_XX(registers.getHL()); } break;
+	case 0xE6: { ins_AND_A_u8(); } break;
+	case 0xE7: { ins_RST(0x20); } break;
 
-	case 0xE8: { this->ins_ADD_SP_i8(); } break;
-	case 0xE9: { this->ins_JP_HL(); } break;
-	case 0xEA: { this->ins_LD_bu16b_A(); } break;
+	case 0xE8: { ins_ADD_SP_i8(); } break;
+	case 0xE9: { ins_JP_HL(); } break;
+	case 0xEA: { ins_LD_bu16b_A(); } break;
 		//case 0xEB: { } break;
 		//case 0xEC: { } break;
 		//case 0xED: { } break;
-	case 0xEE: { this->ins_XOR_A_u8(); } break;
-	case 0xEF: { this->ins_RST(0x28); } break;
+	case 0xEE: { ins_XOR_A_u8(); } break;
+	case 0xEF: { ins_RST(0x28); } break;
 
 	case 0xF0: { ins_LD_A_bFF00_u8b(); } break;
-	case 0xF1: { this->ins_POP_XX(&this->registers.a, &this->registers.f); } break;
-	case 0xF2: { this->ins_LD_A_bFF00_Cb(); } break;
-	case 0xF3: { this->interrupt_master_enable = 0; this->ei_triggered = false; this->is_executing_instruction = false; } break; //DIsable interrupts immediately, if EI is set to trigger, we can disable it so we can keep the behaviour of EI then DI never enabling interrupts
+	case 0xF1: { ins_POP_XX(&registers.a, &registers.f); } break;
+	case 0xF2: { ins_LD_A_bFF00_Cb(); } break;
+	case 0xF3: { interrupt_master_enable = 0; ei_triggered = false; is_executing_instruction = false; } break; //DIsable interrupts immediately, if EI is set to trigger, we can disable it so we can keep the behaviour of EI then DI never enabling interrupts
 	//case 0xF4: { } break;
-	case 0xF5: { this->ins_PUSH_XX(this->registers.getAF()); } break;
-	case 0xF6: { this->ins_OR_A_u8(); } break;
-	case 0xF7: { this->ins_RST(0x30); } break;
+	case 0xF5: { ins_PUSH_XX(registers.getAF()); } break;
+	case 0xF6: { ins_OR_A_u8(); } break;
+	case 0xF7: { ins_RST(0x30); } break;
 
-	case 0xF8: { this->ins_LD_HL_SP_i8(); } break;
-	case 0xF9: { this->ins_LD_SP_HL(); } break;
-	case 0xFA: { this->ins_LD_A_bu16b(); } break;
-	case 0xFB: { this->ei_triggered = true; this->is_executing_instruction = false; return; } break; // EI is set to trigger, only activates after next instruction finishes note the early return
+	case 0xF8: { ins_LD_HL_SP_i8(); } break;
+	case 0xF9: { ins_LD_SP_HL(); } break;
+	case 0xFA: { ins_LD_A_bu16b(); } break;
+	case 0xFB: { ei_triggered = true; is_executing_instruction = false; return; } break; // EI is set to trigger, only activates after next instruction finishes note the early return
 	//case 0xFC: { } break;
 	//case 0xFD: { } break;
-	case 0xFE: { this->ins_CP_A_u8(); } break;
-	case 0xFF: { this->ins_RST(0x38); } break;
+	case 0xFE: { ins_CP_A_u8(); } break;
+	case 0xFF: { ins_RST(0x38); } break;
 	default:
 		{
-			printf("ILLEGAL OPCODE CALL %0.2X \n", this->current_running_opcode);
+			printf("ILLEGAL OPCODE CALL %0.2X \n", current_running_opcode);
 			// treat as nop
 			is_executing_instruction = false;
 			break;
@@ -842,302 +842,302 @@ void CPU::instructionHandler()
 void CPU::instructionHandlerCB()
 {
 	//fetch cb instruction
-	if (!this->is_executing_cb)
+	if (!is_executing_cb)
 	{
-		this->current_running_cb = this->getByteFromPC();
-		this->is_executing_cb = true;
+		current_running_cb = getByteFromPC();
+		is_executing_cb = true;
 		return;
 	}
 
-	switch (this->current_running_cb)
+	switch (current_running_cb)
 	{
-	case 0x00: { this->ins_RLC(&this->registers.b); } break;
-	case 0x01: { this->ins_RLC(&this->registers.c); } break;
-	case 0x02: { this->ins_RLC(&this->registers.d); } break;
-	case 0x03: { this->ins_RLC(&this->registers.e); } break;
-	case 0x04: { this->ins_RLC(&this->registers.h); } break;
-	case 0x05: { this->ins_RLC(&this->registers.l); } break;
-	case 0x06: { this->ins_RLC_bHLb(); } break;
-	case 0x07: { this->ins_RLC(&this->registers.a); } break;
+	case 0x00: { ins_RLC(&registers.b); } break;
+	case 0x01: { ins_RLC(&registers.c); } break;
+	case 0x02: { ins_RLC(&registers.d); } break;
+	case 0x03: { ins_RLC(&registers.e); } break;
+	case 0x04: { ins_RLC(&registers.h); } break;
+	case 0x05: { ins_RLC(&registers.l); } break;
+	case 0x06: { ins_RLC_bHLb(); } break;
+	case 0x07: { ins_RLC(&registers.a); } break;
 
-	case 0x08: { this->ins_RRC(&this->registers.b); } break;
-	case 0x09: { this->ins_RRC(&this->registers.c); } break;
-	case 0x0A: { this->ins_RRC(&this->registers.d); } break;
-	case 0x0B: { this->ins_RRC(&this->registers.e); } break;
-	case 0x0C: { this->ins_RRC(&this->registers.h); } break;
-	case 0x0D: { this->ins_RRC(&this->registers.l); } break;
-	case 0x0E: { this->ins_RRC_bHLb(); } break;
-	case 0x0F: { this->ins_RRC(&this->registers.a); } break;
+	case 0x08: { ins_RRC(&registers.b); } break;
+	case 0x09: { ins_RRC(&registers.c); } break;
+	case 0x0A: { ins_RRC(&registers.d); } break;
+	case 0x0B: { ins_RRC(&registers.e); } break;
+	case 0x0C: { ins_RRC(&registers.h); } break;
+	case 0x0D: { ins_RRC(&registers.l); } break;
+	case 0x0E: { ins_RRC_bHLb(); } break;
+	case 0x0F: { ins_RRC(&registers.a); } break;
 
-	case 0x10: { this->ins_RL(&this->registers.b); } break;
-	case 0x11: { this->ins_RL(&this->registers.c); } break;
-	case 0x12: { this->ins_RL(&this->registers.d); } break;
-	case 0x13: { this->ins_RL(&this->registers.e); } break;
-	case 0x14: { this->ins_RL(&this->registers.h); } break;
-	case 0x15: { this->ins_RL(&this->registers.l); } break;
-	case 0x16: { this->ins_RL_bHLb(); } break;
-	case 0x17: { this->ins_RL(&this->registers.a); } break;
+	case 0x10: { ins_RL(&registers.b); } break;
+	case 0x11: { ins_RL(&registers.c); } break;
+	case 0x12: { ins_RL(&registers.d); } break;
+	case 0x13: { ins_RL(&registers.e); } break;
+	case 0x14: { ins_RL(&registers.h); } break;
+	case 0x15: { ins_RL(&registers.l); } break;
+	case 0x16: { ins_RL_bHLb(); } break;
+	case 0x17: { ins_RL(&registers.a); } break;
 
-	case 0x18: { this->ins_RR(&this->registers.b); } break;
-	case 0x19: { this->ins_RR(&this->registers.c); } break;
-	case 0x1A: { this->ins_RR(&this->registers.d); } break;
-	case 0x1B: { this->ins_RR(&this->registers.e); } break;
-	case 0x1C: { this->ins_RR(&this->registers.h); } break;
-	case 0x1D: { this->ins_RR(&this->registers.l); } break;
-	case 0x1E: { this->ins_RR_bHLb(); } break;
-	case 0x1F: { this->ins_RR(&this->registers.a); } break;
+	case 0x18: { ins_RR(&registers.b); } break;
+	case 0x19: { ins_RR(&registers.c); } break;
+	case 0x1A: { ins_RR(&registers.d); } break;
+	case 0x1B: { ins_RR(&registers.e); } break;
+	case 0x1C: { ins_RR(&registers.h); } break;
+	case 0x1D: { ins_RR(&registers.l); } break;
+	case 0x1E: { ins_RR_bHLb(); } break;
+	case 0x1F: { ins_RR(&registers.a); } break;
 
-	case 0x20: { this->ins_SLA(&this->registers.b); } break;
-	case 0x21: { this->ins_SLA(&this->registers.c); } break;
-	case 0x22: { this->ins_SLA(&this->registers.d); } break;
-	case 0x23: { this->ins_SLA(&this->registers.e); } break;
-	case 0x24: { this->ins_SLA(&this->registers.h); } break;
-	case 0x25: { this->ins_SLA(&this->registers.l); } break;
-	case 0x26: { this->ins_SLA_bHLb(); } break;
-	case 0x27: { this->ins_SLA(&this->registers.a); } break;
+	case 0x20: { ins_SLA(&registers.b); } break;
+	case 0x21: { ins_SLA(&registers.c); } break;
+	case 0x22: { ins_SLA(&registers.d); } break;
+	case 0x23: { ins_SLA(&registers.e); } break;
+	case 0x24: { ins_SLA(&registers.h); } break;
+	case 0x25: { ins_SLA(&registers.l); } break;
+	case 0x26: { ins_SLA_bHLb(); } break;
+	case 0x27: { ins_SLA(&registers.a); } break;
 
-	case 0x28: { this->ins_SRA(&this->registers.b); } break;
-	case 0x29: { this->ins_SRA(&this->registers.c); } break;
-	case 0x2A: { this->ins_SRA(&this->registers.d); } break;
-	case 0x2B: { this->ins_SRA(&this->registers.e); } break;
-	case 0x2C: { this->ins_SRA(&this->registers.h); } break;
-	case 0x2D: { this->ins_SRA(&this->registers.l); } break;
-	case 0x2E: { this->ins_SRA_bHLb(); } break;
-	case 0x2F: { this->ins_SRA(&this->registers.a); } break;
+	case 0x28: { ins_SRA(&registers.b); } break;
+	case 0x29: { ins_SRA(&registers.c); } break;
+	case 0x2A: { ins_SRA(&registers.d); } break;
+	case 0x2B: { ins_SRA(&registers.e); } break;
+	case 0x2C: { ins_SRA(&registers.h); } break;
+	case 0x2D: { ins_SRA(&registers.l); } break;
+	case 0x2E: { ins_SRA_bHLb(); } break;
+	case 0x2F: { ins_SRA(&registers.a); } break;
 
-	case 0x30: { this->ins_SWAP(&this->registers.b); } break;
-	case 0x31: { this->ins_SWAP(&this->registers.c); } break;
-	case 0x32: { this->ins_SWAP(&this->registers.d); } break;
-	case 0x33: { this->ins_SWAP(&this->registers.e); } break;
-	case 0x34: { this->ins_SWAP(&this->registers.h); } break;
-	case 0x35: { this->ins_SWAP(&this->registers.l); } break;
-	case 0x36: { this->ins_SWAP_bHLb(); } break;
-	case 0x37: { this->ins_SWAP(&this->registers.a); } break;
+	case 0x30: { ins_SWAP(&registers.b); } break;
+	case 0x31: { ins_SWAP(&registers.c); } break;
+	case 0x32: { ins_SWAP(&registers.d); } break;
+	case 0x33: { ins_SWAP(&registers.e); } break;
+	case 0x34: { ins_SWAP(&registers.h); } break;
+	case 0x35: { ins_SWAP(&registers.l); } break;
+	case 0x36: { ins_SWAP_bHLb(); } break;
+	case 0x37: { ins_SWAP(&registers.a); } break;
 
-	case 0x38: { this->ins_SRL(&this->registers.b); } break;
-	case 0x39: { this->ins_SRL(&this->registers.c); } break;
-	case 0x3A: { this->ins_SRL(&this->registers.d); } break;
-	case 0x3B: { this->ins_SRL(&this->registers.e); } break;
-	case 0x3C: { this->ins_SRL(&this->registers.h); } break;
-	case 0x3D: { this->ins_SRL(&this->registers.l); } break;
-	case 0x3E: { this->ins_SRL_bHLb(); } break;
-	case 0x3F: { this->ins_SRL(&this->registers.a); } break;
+	case 0x38: { ins_SRL(&registers.b); } break;
+	case 0x39: { ins_SRL(&registers.c); } break;
+	case 0x3A: { ins_SRL(&registers.d); } break;
+	case 0x3B: { ins_SRL(&registers.e); } break;
+	case 0x3C: { ins_SRL(&registers.h); } break;
+	case 0x3D: { ins_SRL(&registers.l); } break;
+	case 0x3E: { ins_SRL_bHLb(); } break;
+	case 0x3F: { ins_SRL(&registers.a); } break;
 
-	case 0x40: { this->ins_BIT_b_r(0, &this->registers.b); } break;
-	case 0x41: { this->ins_BIT_b_r(0, &this->registers.c); } break;
-	case 0x42: { this->ins_BIT_b_r(0, &this->registers.d); } break;
-	case 0x43: { this->ins_BIT_b_r(0, &this->registers.e); } break;
-	case 0x44: { this->ins_BIT_b_r(0, &this->registers.h); } break;
-	case 0x45: { this->ins_BIT_b_r(0, &this->registers.l); } break;
-	case 0x46: { this->ins_BIT_b_r_bHLb(0); } break;
-	case 0x47: { this->ins_BIT_b_r(0, &this->registers.a); } break;
+	case 0x40: { ins_BIT_b_r(0, &registers.b); } break;
+	case 0x41: { ins_BIT_b_r(0, &registers.c); } break;
+	case 0x42: { ins_BIT_b_r(0, &registers.d); } break;
+	case 0x43: { ins_BIT_b_r(0, &registers.e); } break;
+	case 0x44: { ins_BIT_b_r(0, &registers.h); } break;
+	case 0x45: { ins_BIT_b_r(0, &registers.l); } break;
+	case 0x46: { ins_BIT_b_r_bHLb(0); } break;
+	case 0x47: { ins_BIT_b_r(0, &registers.a); } break;
 
-	case 0x48: { this->ins_BIT_b_r(1, &this->registers.b); } break;
-	case 0x49: { this->ins_BIT_b_r(1, &this->registers.c); } break;
-	case 0x4A: { this->ins_BIT_b_r(1, &this->registers.d); } break;
-	case 0x4B: { this->ins_BIT_b_r(1, &this->registers.e); } break;
-	case 0x4C: { this->ins_BIT_b_r(1, &this->registers.h); } break;
-	case 0x4D: { this->ins_BIT_b_r(1, &this->registers.l); } break;
-	case 0x4E: { this->ins_BIT_b_r_bHLb(1); } break;
-	case 0x4F: { this->ins_BIT_b_r(1, &this->registers.a); } break;
+	case 0x48: { ins_BIT_b_r(1, &registers.b); } break;
+	case 0x49: { ins_BIT_b_r(1, &registers.c); } break;
+	case 0x4A: { ins_BIT_b_r(1, &registers.d); } break;
+	case 0x4B: { ins_BIT_b_r(1, &registers.e); } break;
+	case 0x4C: { ins_BIT_b_r(1, &registers.h); } break;
+	case 0x4D: { ins_BIT_b_r(1, &registers.l); } break;
+	case 0x4E: { ins_BIT_b_r_bHLb(1); } break;
+	case 0x4F: { ins_BIT_b_r(1, &registers.a); } break;
 
-	case 0x50: { this->ins_BIT_b_r(2, &this->registers.b); } break;
-	case 0x51: { this->ins_BIT_b_r(2, &this->registers.c); } break;
-	case 0x52: { this->ins_BIT_b_r(2, &this->registers.d); } break;
-	case 0x53: { this->ins_BIT_b_r(2, &this->registers.e); } break;
-	case 0x54: { this->ins_BIT_b_r(2, &this->registers.h); } break;
-	case 0x55: { this->ins_BIT_b_r(2, &this->registers.l); } break;
-	case 0x56: { this->ins_BIT_b_r_bHLb(2); } break;
-	case 0x57: { this->ins_BIT_b_r(2, &this->registers.a); } break;
+	case 0x50: { ins_BIT_b_r(2, &registers.b); } break;
+	case 0x51: { ins_BIT_b_r(2, &registers.c); } break;
+	case 0x52: { ins_BIT_b_r(2, &registers.d); } break;
+	case 0x53: { ins_BIT_b_r(2, &registers.e); } break;
+	case 0x54: { ins_BIT_b_r(2, &registers.h); } break;
+	case 0x55: { ins_BIT_b_r(2, &registers.l); } break;
+	case 0x56: { ins_BIT_b_r_bHLb(2); } break;
+	case 0x57: { ins_BIT_b_r(2, &registers.a); } break;
 
-	case 0x58: { this->ins_BIT_b_r(3, &this->registers.b); } break;
-	case 0x59: { this->ins_BIT_b_r(3, &this->registers.c); } break;
-	case 0x5A: { this->ins_BIT_b_r(3, &this->registers.d); } break;
-	case 0x5B: { this->ins_BIT_b_r(3, &this->registers.e); } break;
-	case 0x5C: { this->ins_BIT_b_r(3, &this->registers.h); } break;
-	case 0x5D: { this->ins_BIT_b_r(3, &this->registers.l); } break;
-	case 0x5E: { this->ins_BIT_b_r_bHLb(3); } break;
-	case 0x5F: { this->ins_BIT_b_r(3, &this->registers.a); } break;
+	case 0x58: { ins_BIT_b_r(3, &registers.b); } break;
+	case 0x59: { ins_BIT_b_r(3, &registers.c); } break;
+	case 0x5A: { ins_BIT_b_r(3, &registers.d); } break;
+	case 0x5B: { ins_BIT_b_r(3, &registers.e); } break;
+	case 0x5C: { ins_BIT_b_r(3, &registers.h); } break;
+	case 0x5D: { ins_BIT_b_r(3, &registers.l); } break;
+	case 0x5E: { ins_BIT_b_r_bHLb(3); } break;
+	case 0x5F: { ins_BIT_b_r(3, &registers.a); } break;
 
-	case 0x60: { this->ins_BIT_b_r(4, &this->registers.b); } break;
-	case 0x61: { this->ins_BIT_b_r(4, &this->registers.c); } break;
-	case 0x62: { this->ins_BIT_b_r(4, &this->registers.d); } break;
-	case 0x63: { this->ins_BIT_b_r(4, &this->registers.e); } break;
-	case 0x64: { this->ins_BIT_b_r(4, &this->registers.h); } break;
-	case 0x65: { this->ins_BIT_b_r(4, &this->registers.l); } break;
-	case 0x66: { this->ins_BIT_b_r_bHLb(4); } break;
-	case 0x67: { this->ins_BIT_b_r(4, &this->registers.a); } break;
+	case 0x60: { ins_BIT_b_r(4, &registers.b); } break;
+	case 0x61: { ins_BIT_b_r(4, &registers.c); } break;
+	case 0x62: { ins_BIT_b_r(4, &registers.d); } break;
+	case 0x63: { ins_BIT_b_r(4, &registers.e); } break;
+	case 0x64: { ins_BIT_b_r(4, &registers.h); } break;
+	case 0x65: { ins_BIT_b_r(4, &registers.l); } break;
+	case 0x66: { ins_BIT_b_r_bHLb(4); } break;
+	case 0x67: { ins_BIT_b_r(4, &registers.a); } break;
 
-	case 0x68: { this->ins_BIT_b_r(5, &this->registers.b); } break;
-	case 0x69: { this->ins_BIT_b_r(5, &this->registers.c); } break;
-	case 0x6A: { this->ins_BIT_b_r(5, &this->registers.d); } break;
-	case 0x6B: { this->ins_BIT_b_r(5, &this->registers.e); } break;
-	case 0x6C: { this->ins_BIT_b_r(5, &this->registers.h); } break;
-	case 0x6D: { this->ins_BIT_b_r(5, &this->registers.l); } break;
-	case 0x6E: { this->ins_BIT_b_r_bHLb(5); } break;
-	case 0x6F: { this->ins_BIT_b_r(5, &this->registers.a); } break;
+	case 0x68: { ins_BIT_b_r(5, &registers.b); } break;
+	case 0x69: { ins_BIT_b_r(5, &registers.c); } break;
+	case 0x6A: { ins_BIT_b_r(5, &registers.d); } break;
+	case 0x6B: { ins_BIT_b_r(5, &registers.e); } break;
+	case 0x6C: { ins_BIT_b_r(5, &registers.h); } break;
+	case 0x6D: { ins_BIT_b_r(5, &registers.l); } break;
+	case 0x6E: { ins_BIT_b_r_bHLb(5); } break;
+	case 0x6F: { ins_BIT_b_r(5, &registers.a); } break;
 
-	case 0x70: { this->ins_BIT_b_r(6, &this->registers.b); } break;
-	case 0x71: { this->ins_BIT_b_r(6, &this->registers.c); } break;
-	case 0x72: { this->ins_BIT_b_r(6, &this->registers.d); } break;
-	case 0x73: { this->ins_BIT_b_r(6, &this->registers.e); } break;
-	case 0x74: { this->ins_BIT_b_r(6, &this->registers.h); } break;
-	case 0x75: { this->ins_BIT_b_r(6, &this->registers.l); } break;
-	case 0x76: { this->ins_BIT_b_r_bHLb(6); } break;
-	case 0x77: { this->ins_BIT_b_r(6, &this->registers.a); } break;
+	case 0x70: { ins_BIT_b_r(6, &registers.b); } break;
+	case 0x71: { ins_BIT_b_r(6, &registers.c); } break;
+	case 0x72: { ins_BIT_b_r(6, &registers.d); } break;
+	case 0x73: { ins_BIT_b_r(6, &registers.e); } break;
+	case 0x74: { ins_BIT_b_r(6, &registers.h); } break;
+	case 0x75: { ins_BIT_b_r(6, &registers.l); } break;
+	case 0x76: { ins_BIT_b_r_bHLb(6); } break;
+	case 0x77: { ins_BIT_b_r(6, &registers.a); } break;
 
-	case 0x78: { this->ins_BIT_b_r(7, &this->registers.b); } break;
-	case 0x79: { this->ins_BIT_b_r(7, &this->registers.c); } break;
-	case 0x7A: { this->ins_BIT_b_r(7, &this->registers.d); } break;
-	case 0x7B: { this->ins_BIT_b_r(7, &this->registers.e); } break;
-	case 0x7C: { this->ins_BIT_b_r(7, &this->registers.h); } break;
-	case 0x7D: { this->ins_BIT_b_r(7, &this->registers.l); } break;
-	case 0x7E: { this->ins_BIT_b_r_bHLb(7); } break;
-	case 0x7F: { this->ins_BIT_b_r(7, &this->registers.a); } break;
+	case 0x78: { ins_BIT_b_r(7, &registers.b); } break;
+	case 0x79: { ins_BIT_b_r(7, &registers.c); } break;
+	case 0x7A: { ins_BIT_b_r(7, &registers.d); } break;
+	case 0x7B: { ins_BIT_b_r(7, &registers.e); } break;
+	case 0x7C: { ins_BIT_b_r(7, &registers.h); } break;
+	case 0x7D: { ins_BIT_b_r(7, &registers.l); } break;
+	case 0x7E: { ins_BIT_b_r_bHLb(7); } break;
+	case 0x7F: { ins_BIT_b_r(7, &registers.a); } break;
 
-	case 0x80: { this->ins_RES_b_r(0, &this->registers.b); } break;
-	case 0x81: { this->ins_RES_b_r(0, &this->registers.c); } break;
-	case 0x82: { this->ins_RES_b_r(0, &this->registers.d); } break;
-	case 0x83: { this->ins_RES_b_r(0, &this->registers.e); } break;
-	case 0x84: { this->ins_RES_b_r(0, &this->registers.h); } break;
-	case 0x85: { this->ins_RES_b_r(0, &this->registers.l); } break;
-	case 0x86: { this->ins_RES_b_r_bHLb(0); } break;
-	case 0x87: { this->ins_RES_b_r(0, &this->registers.a); } break;
+	case 0x80: { ins_RES_b_r(0, &registers.b); } break;
+	case 0x81: { ins_RES_b_r(0, &registers.c); } break;
+	case 0x82: { ins_RES_b_r(0, &registers.d); } break;
+	case 0x83: { ins_RES_b_r(0, &registers.e); } break;
+	case 0x84: { ins_RES_b_r(0, &registers.h); } break;
+	case 0x85: { ins_RES_b_r(0, &registers.l); } break;
+	case 0x86: { ins_RES_b_r_bHLb(0); } break;
+	case 0x87: { ins_RES_b_r(0, &registers.a); } break;
 
-	case 0x88: { this->ins_RES_b_r(1, &this->registers.b); } break;
-	case 0x89: { this->ins_RES_b_r(1, &this->registers.c); } break;
-	case 0x8A: { this->ins_RES_b_r(1, &this->registers.d); } break;
-	case 0x8B: { this->ins_RES_b_r(1, &this->registers.e); } break;
-	case 0x8C: { this->ins_RES_b_r(1, &this->registers.h); } break;
-	case 0x8D: { this->ins_RES_b_r(1, &this->registers.l); } break;
-	case 0x8E: { this->ins_RES_b_r_bHLb(1); } break;
-	case 0x8F: { this->ins_RES_b_r(1, &this->registers.a); } break;
+	case 0x88: { ins_RES_b_r(1, &registers.b); } break;
+	case 0x89: { ins_RES_b_r(1, &registers.c); } break;
+	case 0x8A: { ins_RES_b_r(1, &registers.d); } break;
+	case 0x8B: { ins_RES_b_r(1, &registers.e); } break;
+	case 0x8C: { ins_RES_b_r(1, &registers.h); } break;
+	case 0x8D: { ins_RES_b_r(1, &registers.l); } break;
+	case 0x8E: { ins_RES_b_r_bHLb(1); } break;
+	case 0x8F: { ins_RES_b_r(1, &registers.a); } break;
 
-	case 0x90: { this->ins_RES_b_r(2, &this->registers.b); } break;
-	case 0x91: { this->ins_RES_b_r(2, &this->registers.c); } break;
-	case 0x92: { this->ins_RES_b_r(2, &this->registers.d); } break;
-	case 0x93: { this->ins_RES_b_r(2, &this->registers.e); } break;
-	case 0x94: { this->ins_RES_b_r(2, &this->registers.h); } break;
-	case 0x95: { this->ins_RES_b_r(2, &this->registers.l); } break;
-	case 0x96: { this->ins_RES_b_r_bHLb(2); } break;
-	case 0x97: { this->ins_RES_b_r(2, &this->registers.a); } break;
+	case 0x90: { ins_RES_b_r(2, &registers.b); } break;
+	case 0x91: { ins_RES_b_r(2, &registers.c); } break;
+	case 0x92: { ins_RES_b_r(2, &registers.d); } break;
+	case 0x93: { ins_RES_b_r(2, &registers.e); } break;
+	case 0x94: { ins_RES_b_r(2, &registers.h); } break;
+	case 0x95: { ins_RES_b_r(2, &registers.l); } break;
+	case 0x96: { ins_RES_b_r_bHLb(2); } break;
+	case 0x97: { ins_RES_b_r(2, &registers.a); } break;
 
-	case 0x98: { this->ins_RES_b_r(3, &this->registers.b); } break;
-	case 0x99: { this->ins_RES_b_r(3, &this->registers.c); } break;
-	case 0x9A: { this->ins_RES_b_r(3, &this->registers.d); } break;
-	case 0x9B: { this->ins_RES_b_r(3, &this->registers.e); } break;
-	case 0x9C: { this->ins_RES_b_r(3, &this->registers.h); } break;
-	case 0x9D: { this->ins_RES_b_r(3, &this->registers.l); } break;
-	case 0x9E: { this->ins_RES_b_r_bHLb(3); } break;
-	case 0x9F: { this->ins_RES_b_r(3, &this->registers.a); } break;
+	case 0x98: { ins_RES_b_r(3, &registers.b); } break;
+	case 0x99: { ins_RES_b_r(3, &registers.c); } break;
+	case 0x9A: { ins_RES_b_r(3, &registers.d); } break;
+	case 0x9B: { ins_RES_b_r(3, &registers.e); } break;
+	case 0x9C: { ins_RES_b_r(3, &registers.h); } break;
+	case 0x9D: { ins_RES_b_r(3, &registers.l); } break;
+	case 0x9E: { ins_RES_b_r_bHLb(3); } break;
+	case 0x9F: { ins_RES_b_r(3, &registers.a); } break;
 
-	case 0xA0: { this->ins_RES_b_r(4, &this->registers.b); } break;
-	case 0xA1: { this->ins_RES_b_r(4, &this->registers.c); } break;
-	case 0xA2: { this->ins_RES_b_r(4, &this->registers.d); } break;
-	case 0xA3: { this->ins_RES_b_r(4, &this->registers.e); } break;
-	case 0xA4: { this->ins_RES_b_r(4, &this->registers.h); } break;
-	case 0xA5: { this->ins_RES_b_r(4, &this->registers.l); } break;
-	case 0xA6: { this->ins_RES_b_r_bHLb(4); } break;
-	case 0xA7: { this->ins_RES_b_r(4, &this->registers.a); } break;
+	case 0xA0: { ins_RES_b_r(4, &registers.b); } break;
+	case 0xA1: { ins_RES_b_r(4, &registers.c); } break;
+	case 0xA2: { ins_RES_b_r(4, &registers.d); } break;
+	case 0xA3: { ins_RES_b_r(4, &registers.e); } break;
+	case 0xA4: { ins_RES_b_r(4, &registers.h); } break;
+	case 0xA5: { ins_RES_b_r(4, &registers.l); } break;
+	case 0xA6: { ins_RES_b_r_bHLb(4); } break;
+	case 0xA7: { ins_RES_b_r(4, &registers.a); } break;
 
-	case 0xA8: { this->ins_RES_b_r(5, &this->registers.b); } break;
-	case 0xA9: { this->ins_RES_b_r(5, &this->registers.c); } break;
-	case 0xAA: { this->ins_RES_b_r(5, &this->registers.d); } break;
-	case 0xAB: { this->ins_RES_b_r(5, &this->registers.e); } break;
-	case 0xAC: { this->ins_RES_b_r(5, &this->registers.h); } break;
-	case 0xAD: { this->ins_RES_b_r(5, &this->registers.l); } break;
-	case 0xAE: { this->ins_RES_b_r_bHLb(5); } break;
-	case 0xAF: { this->ins_RES_b_r(5, &this->registers.a); } break;
+	case 0xA8: { ins_RES_b_r(5, &registers.b); } break;
+	case 0xA9: { ins_RES_b_r(5, &registers.c); } break;
+	case 0xAA: { ins_RES_b_r(5, &registers.d); } break;
+	case 0xAB: { ins_RES_b_r(5, &registers.e); } break;
+	case 0xAC: { ins_RES_b_r(5, &registers.h); } break;
+	case 0xAD: { ins_RES_b_r(5, &registers.l); } break;
+	case 0xAE: { ins_RES_b_r_bHLb(5); } break;
+	case 0xAF: { ins_RES_b_r(5, &registers.a); } break;
 
-	case 0xB0: { this->ins_RES_b_r(6, &this->registers.b); } break;
-	case 0xB1: { this->ins_RES_b_r(6, &this->registers.c); } break;
-	case 0xB2: { this->ins_RES_b_r(6, &this->registers.d); } break;
-	case 0xB3: { this->ins_RES_b_r(6, &this->registers.e); } break;
-	case 0xB4: { this->ins_RES_b_r(6, &this->registers.h); } break;
-	case 0xB5: { this->ins_RES_b_r(6, &this->registers.l); } break;
-	case 0xB6: { this->ins_RES_b_r_bHLb(6); } break;
-	case 0xB7: { this->ins_RES_b_r(6, &this->registers.a); } break;
+	case 0xB0: { ins_RES_b_r(6, &registers.b); } break;
+	case 0xB1: { ins_RES_b_r(6, &registers.c); } break;
+	case 0xB2: { ins_RES_b_r(6, &registers.d); } break;
+	case 0xB3: { ins_RES_b_r(6, &registers.e); } break;
+	case 0xB4: { ins_RES_b_r(6, &registers.h); } break;
+	case 0xB5: { ins_RES_b_r(6, &registers.l); } break;
+	case 0xB6: { ins_RES_b_r_bHLb(6); } break;
+	case 0xB7: { ins_RES_b_r(6, &registers.a); } break;
 
-	case 0xB8: { this->ins_RES_b_r(7, &this->registers.b); } break;
-	case 0xB9: { this->ins_RES_b_r(7, &this->registers.c); } break;
-	case 0xBA: { this->ins_RES_b_r(7, &this->registers.d); } break;
-	case 0xBB: { this->ins_RES_b_r(7, &this->registers.e); } break;
-	case 0xBC: { this->ins_RES_b_r(7, &this->registers.h); } break;
-	case 0xBD: { this->ins_RES_b_r(7, &this->registers.l); } break;
-	case 0xBE: { this->ins_RES_b_r_bHLb(7); } break;
-	case 0xBF: { this->ins_RES_b_r(7, &this->registers.a); } break;
+	case 0xB8: { ins_RES_b_r(7, &registers.b); } break;
+	case 0xB9: { ins_RES_b_r(7, &registers.c); } break;
+	case 0xBA: { ins_RES_b_r(7, &registers.d); } break;
+	case 0xBB: { ins_RES_b_r(7, &registers.e); } break;
+	case 0xBC: { ins_RES_b_r(7, &registers.h); } break;
+	case 0xBD: { ins_RES_b_r(7, &registers.l); } break;
+	case 0xBE: { ins_RES_b_r_bHLb(7); } break;
+	case 0xBF: { ins_RES_b_r(7, &registers.a); } break;
 
-	case 0xC0: { this->ins_SET_b_r(0, &this->registers.b); } break;
-	case 0xC1: { this->ins_SET_b_r(0, &this->registers.c); } break;
-	case 0xC2: { this->ins_SET_b_r(0, &this->registers.d); } break;
-	case 0xC3: { this->ins_SET_b_r(0, &this->registers.e); } break;
-	case 0xC4: { this->ins_SET_b_r(0, &this->registers.h); } break;
-	case 0xC5: { this->ins_SET_b_r(0, &this->registers.l); } break;
-	case 0xC6: { this->ins_SET_b_r_bHLb(0); } break;
-	case 0xC7: { this->ins_SET_b_r(0, &this->registers.a); } break;
+	case 0xC0: { ins_SET_b_r(0, &registers.b); } break;
+	case 0xC1: { ins_SET_b_r(0, &registers.c); } break;
+	case 0xC2: { ins_SET_b_r(0, &registers.d); } break;
+	case 0xC3: { ins_SET_b_r(0, &registers.e); } break;
+	case 0xC4: { ins_SET_b_r(0, &registers.h); } break;
+	case 0xC5: { ins_SET_b_r(0, &registers.l); } break;
+	case 0xC6: { ins_SET_b_r_bHLb(0); } break;
+	case 0xC7: { ins_SET_b_r(0, &registers.a); } break;
 
-	case 0xC8: { this->ins_SET_b_r(1, &this->registers.b); } break;
-	case 0xC9: { this->ins_SET_b_r(1, &this->registers.c); } break;
-	case 0xCA: { this->ins_SET_b_r(1, &this->registers.d); } break;
-	case 0xCB: { this->ins_SET_b_r(1, &this->registers.e); } break;
-	case 0xCC: { this->ins_SET_b_r(1, &this->registers.h); } break;
-	case 0xCD: { this->ins_SET_b_r(1, &this->registers.l); } break;
-	case 0xCE: { this->ins_SET_b_r_bHLb(1); } break;
-	case 0xCF: { this->ins_SET_b_r(1, &this->registers.a); } break;
+	case 0xC8: { ins_SET_b_r(1, &registers.b); } break;
+	case 0xC9: { ins_SET_b_r(1, &registers.c); } break;
+	case 0xCA: { ins_SET_b_r(1, &registers.d); } break;
+	case 0xCB: { ins_SET_b_r(1, &registers.e); } break;
+	case 0xCC: { ins_SET_b_r(1, &registers.h); } break;
+	case 0xCD: { ins_SET_b_r(1, &registers.l); } break;
+	case 0xCE: { ins_SET_b_r_bHLb(1); } break;
+	case 0xCF: { ins_SET_b_r(1, &registers.a); } break;
 
-	case 0xD0: { this->ins_SET_b_r(2, &this->registers.b); } break;
-	case 0xD1: { this->ins_SET_b_r(2, &this->registers.c); } break;
-	case 0xD2: { this->ins_SET_b_r(2, &this->registers.d); } break;
-	case 0xD3: { this->ins_SET_b_r(2, &this->registers.e); } break;
-	case 0xD4: { this->ins_SET_b_r(2, &this->registers.h); } break;
-	case 0xD5: { this->ins_SET_b_r(2, &this->registers.l); } break;
-	case 0xD6: { this->ins_SET_b_r_bHLb(2); } break;
-	case 0xD7: { this->ins_SET_b_r(2, &this->registers.a); } break;
+	case 0xD0: { ins_SET_b_r(2, &registers.b); } break;
+	case 0xD1: { ins_SET_b_r(2, &registers.c); } break;
+	case 0xD2: { ins_SET_b_r(2, &registers.d); } break;
+	case 0xD3: { ins_SET_b_r(2, &registers.e); } break;
+	case 0xD4: { ins_SET_b_r(2, &registers.h); } break;
+	case 0xD5: { ins_SET_b_r(2, &registers.l); } break;
+	case 0xD6: { ins_SET_b_r_bHLb(2); } break;
+	case 0xD7: { ins_SET_b_r(2, &registers.a); } break;
 
-	case 0xD8: { this->ins_SET_b_r(3, &this->registers.b); } break;
-	case 0xD9: { this->ins_SET_b_r(3, &this->registers.c); } break;
-	case 0xDA: { this->ins_SET_b_r(3, &this->registers.d); } break;
-	case 0xDB: { this->ins_SET_b_r(3, &this->registers.e); } break;
-	case 0xDC: { this->ins_SET_b_r(3, &this->registers.h); } break;
-	case 0xDD: { this->ins_SET_b_r(3, &this->registers.l); } break;
-	case 0xDE: { this->ins_SET_b_r_bHLb(3); } break;
-	case 0xDF: { this->ins_SET_b_r(3, &this->registers.a); } break;
+	case 0xD8: { ins_SET_b_r(3, &registers.b); } break;
+	case 0xD9: { ins_SET_b_r(3, &registers.c); } break;
+	case 0xDA: { ins_SET_b_r(3, &registers.d); } break;
+	case 0xDB: { ins_SET_b_r(3, &registers.e); } break;
+	case 0xDC: { ins_SET_b_r(3, &registers.h); } break;
+	case 0xDD: { ins_SET_b_r(3, &registers.l); } break;
+	case 0xDE: { ins_SET_b_r_bHLb(3); } break;
+	case 0xDF: { ins_SET_b_r(3, &registers.a); } break;
 
-	case 0xE0: { this->ins_SET_b_r(4, &this->registers.b); } break;
-	case 0xE1: { this->ins_SET_b_r(4, &this->registers.c); } break;
-	case 0xE2: { this->ins_SET_b_r(4, &this->registers.d); } break;
-	case 0xE3: { this->ins_SET_b_r(4, &this->registers.e); } break;
-	case 0xE4: { this->ins_SET_b_r(4, &this->registers.h); } break;
-	case 0xE5: { this->ins_SET_b_r(4, &this->registers.l); } break;
-	case 0xE6: { this->ins_SET_b_r_bHLb(4); } break;
-	case 0xE7: { this->ins_SET_b_r(4, &this->registers.a); } break;
+	case 0xE0: { ins_SET_b_r(4, &registers.b); } break;
+	case 0xE1: { ins_SET_b_r(4, &registers.c); } break;
+	case 0xE2: { ins_SET_b_r(4, &registers.d); } break;
+	case 0xE3: { ins_SET_b_r(4, &registers.e); } break;
+	case 0xE4: { ins_SET_b_r(4, &registers.h); } break;
+	case 0xE5: { ins_SET_b_r(4, &registers.l); } break;
+	case 0xE6: { ins_SET_b_r_bHLb(4); } break;
+	case 0xE7: { ins_SET_b_r(4, &registers.a); } break;
 
-	case 0xE8: { this->ins_SET_b_r(5, &this->registers.b); } break;
-	case 0xE9: { this->ins_SET_b_r(5, &this->registers.c); } break;
-	case 0xEA: { this->ins_SET_b_r(5, &this->registers.d); } break;
-	case 0xEB: { this->ins_SET_b_r(5, &this->registers.e); } break;
-	case 0xEC: { this->ins_SET_b_r(5, &this->registers.h); } break;
-	case 0xED: { this->ins_SET_b_r(5, &this->registers.l); } break;
-	case 0xEE: { this->ins_SET_b_r_bHLb(5); } break;
-	case 0xEF: { this->ins_SET_b_r(5, &this->registers.a); } break;
+	case 0xE8: { ins_SET_b_r(5, &registers.b); } break;
+	case 0xE9: { ins_SET_b_r(5, &registers.c); } break;
+	case 0xEA: { ins_SET_b_r(5, &registers.d); } break;
+	case 0xEB: { ins_SET_b_r(5, &registers.e); } break;
+	case 0xEC: { ins_SET_b_r(5, &registers.h); } break;
+	case 0xED: { ins_SET_b_r(5, &registers.l); } break;
+	case 0xEE: { ins_SET_b_r_bHLb(5); } break;
+	case 0xEF: { ins_SET_b_r(5, &registers.a); } break;
 
-	case 0xF0: { this->ins_SET_b_r(6, &this->registers.b); } break;
-	case 0xF1: { this->ins_SET_b_r(6, &this->registers.c); } break;
-	case 0xF2: { this->ins_SET_b_r(6, &this->registers.d); } break;
-	case 0xF3: { this->ins_SET_b_r(6, &this->registers.e); } break;
-	case 0xF4: { this->ins_SET_b_r(6, &this->registers.h); } break;
-	case 0xF5: { this->ins_SET_b_r(6, &this->registers.l); } break;
-	case 0xF6: { this->ins_SET_b_r_bHLb(6); } break;
-	case 0xF7: { this->ins_SET_b_r(6, &this->registers.a); } break;
+	case 0xF0: { ins_SET_b_r(6, &registers.b); } break;
+	case 0xF1: { ins_SET_b_r(6, &registers.c); } break;
+	case 0xF2: { ins_SET_b_r(6, &registers.d); } break;
+	case 0xF3: { ins_SET_b_r(6, &registers.e); } break;
+	case 0xF4: { ins_SET_b_r(6, &registers.h); } break;
+	case 0xF5: { ins_SET_b_r(6, &registers.l); } break;
+	case 0xF6: { ins_SET_b_r_bHLb(6); } break;
+	case 0xF7: { ins_SET_b_r(6, &registers.a); } break;
 
-	case 0xF8: { this->ins_SET_b_r(7, &this->registers.b); } break;
-	case 0xF9: { this->ins_SET_b_r(7, &this->registers.c); } break;
-	case 0xFA: { this->ins_SET_b_r(7, &this->registers.d); } break;
-	case 0xFB: { this->ins_SET_b_r(7, &this->registers.e); } break;
-	case 0xFC: { this->ins_SET_b_r(7, &this->registers.h); } break;
-	case 0xFD: { this->ins_SET_b_r(7, &this->registers.l); } break;
-	case 0xFE: { this->ins_SET_b_r_bHLb(7); } break;
-	case 0xFF: { this->ins_SET_b_r(7, &this->registers.a); } break;
+	case 0xF8: { ins_SET_b_r(7, &registers.b); } break;
+	case 0xF9: { ins_SET_b_r(7, &registers.c); } break;
+	case 0xFA: { ins_SET_b_r(7, &registers.d); } break;
+	case 0xFB: { ins_SET_b_r(7, &registers.e); } break;
+	case 0xFC: { ins_SET_b_r(7, &registers.h); } break;
+	case 0xFD: { ins_SET_b_r(7, &registers.l); } break;
+	case 0xFE: { ins_SET_b_r_bHLb(7); } break;
+	case 0xFF: { ins_SET_b_r(7, &registers.a); } break;
 	}
 }
 void CPU::instructionHandlerSTOP()
@@ -1191,13 +1191,13 @@ void CPU::instructionHandlerSTOP()
 /* template
 void X(const Byte* register_val, const Word data)
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
 	case 0:
 	{
 		//logic
 
-		this->mcycles_used++;
+		mcycles_used++;
 		break;
 	}
 
@@ -1205,7 +1205,7 @@ void X(const Byte* register_val, const Word data)
 	{
 		//logic
 
-		this->mcycles_used++;
+		mcycles_used++;
 		break;
 	}
 
@@ -1213,7 +1213,7 @@ void X(const Byte* register_val, const Word data)
 	{
 		//logic
 
-		this->is_executing_instruction = false;
+		is_executing_instruction = false;
 		break;
 	}
 
@@ -1247,32 +1247,32 @@ void X(const Byte* register_val, const Word data)
 // 0x01,0x11,0x21
 void CPU::ins_LD_XX_u16(Byte* const reigster_one, Byte* const reigster_two)
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: *reigster_two = this->getByteFromPC(); this->mcycles_used++; break;
-	case 2: *reigster_one = this->getByteFromPC(); this->is_executing_instruction = false;
+	case 0: mcycles_used++; break;
+	case 1: *reigster_two = getByteFromPC(); mcycles_used++; break;
+	case 2: *reigster_one = getByteFromPC(); is_executing_instruction = false;
 	}
 }
 
 // 0x031
 void CPU::ins_LD_SP_u16(Word* const register_word)
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: *register_word = (*register_word & 0xFF00) | this->getByteFromPC(); this->mcycles_used++; break;
-	case 2: *register_word = (*register_word & 0x00FF) | (this->getByteFromPC() << 0x8); this->is_executing_instruction = false;
+	case 0: mcycles_used++; break;
+	case 1: *register_word = (*register_word & 0xFF00) | getByteFromPC(); mcycles_used++; break;
+	case 2: *register_word = (*register_word & 0x00FF) | (getByteFromPC() << 0x8); is_executing_instruction = false;
 	}
 }
 
 // 0x02, 0x12, 0x70 - 0x75, 0x77, 0xE2
 void CPU::ins_LD_bXXb_Y(const Word register_wordvalue, Byte* const register_byte)
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->setMemory(register_wordvalue, *register_byte); this->is_executing_instruction = false;
+	case 0: mcycles_used++; break;
+	case 1: setMemory(register_wordvalue, *register_byte); is_executing_instruction = false;
 	}
 }
 
@@ -1280,243 +1280,243 @@ void CPU::ins_LD_bXXb_Y(const Word register_wordvalue, Byte* const register_byte
 void CPU::ins_LD_bHLb_Apm(bool add)
 {
 
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
+	case 0: mcycles_used++; break;
 	case 1:
 	{
-		Word hl = this->registers.getHL();
-		this->setMemory(hl, this->registers.a);
-		add ? this->registers.setHL(hl + 1) : this->registers.setHL(hl - 1);
-		this->is_executing_instruction = false;
+		Word hl = registers.getHL();
+		setMemory(hl, registers.a);
+		add ? registers.setHL(hl + 1) : registers.setHL(hl - 1);
+		is_executing_instruction = false;
 	}
 	}
 }
 
 void CPU::ins_INC_XX(Byte* reigster_one, Byte* reigster_two)
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
 	case 0:
 	{
-		Word newValue = this->registers.getWord(reigster_one, reigster_two) + 1;
-		this->instruction_cache[0] = (newValue & 0xFF00) >> 8;
+		Word newValue = registers.getWord(reigster_one, reigster_two) + 1;
+		instruction_cache[0] = (newValue & 0xFF00) >> 8;
 		*reigster_two = newValue & 0x00FF;
-		this->mcycles_used++;
+		mcycles_used++;
 		break;
 	}
 	case 1:
-		*reigster_one = (this->instruction_cache[0]);
-		this->is_executing_instruction = false;
+		*reigster_one = (instruction_cache[0]);
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_INC_SP()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->registers.sp++; this->is_executing_instruction = false;
+	case 0: mcycles_used++; break;
+	case 1: registers.sp++; is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_INC_X(Byte* register_byte)
 {
-	this->registers.setFlag(h, this->checkCarry(*register_byte, 1, 4));
+	registers.setFlag(h, checkCarry(*register_byte, 1, 4));
 
 	(*register_byte)++;
 
-	(*register_byte == 0x0) ? this->registers.setFlag(z, 1) : this->registers.setFlag(z, 0);
-	this->registers.setFlag(n, 0);
+	(*register_byte == 0x0) ? registers.setFlag(z, 1) : registers.setFlag(z, 0);
+	registers.setFlag(n, 0);
 
-	this->is_executing_instruction = false;
+	is_executing_instruction = false;
 }
 
 void CPU::ins_INC_bHLb()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
+	case 0: mcycles_used++; break;
+	case 1: instruction_cache[0] = getMemory(registers.getHL()); mcycles_used++; break;
 	case 2:
-		Word address = this->registers.getHL();
-		Byte temp = this->instruction_cache[0];
+		Word address = registers.getHL();
+		Byte temp = instruction_cache[0];
 
-		this->setMemory(address, (temp + 1));
+		setMemory(address, (temp + 1));
 
-		this->registers.setFlag(h, this->checkCarry(temp, 1, 4));
-		this->registers.setFlag(z, (this->getMemory(address) == 0x0));
-		this->registers.setFlag(n, 0);
+		registers.setFlag(h, checkCarry(temp, 1, 4));
+		registers.setFlag(z, (getMemory(address) == 0x0));
+		registers.setFlag(n, 0);
 
-		this->is_executing_instruction = false;
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_DEC_X(Byte* register_byte)
 {
-	this->registers.setFlag(h, this->checkBorrow(*register_byte, 1, 4));
+	registers.setFlag(h, checkBorrow(*register_byte, 1, 4));
 	(*register_byte)--;
 
-	this->registers.setFlag(z, (*register_byte == 0x0));
-	this->registers.setFlag(n, 1);
+	registers.setFlag(z, (*register_byte == 0x0));
+	registers.setFlag(n, 1);
 
-	this->is_executing_instruction = false;
+	is_executing_instruction = false;
 }
 
 void CPU::ins_DEC_bHLb()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0:  this->mcycles_used++; break;
-	case 1:  this->mcycles_used++; break;
+	case 0:  mcycles_used++; break;
+	case 1:  mcycles_used++; break;
 	case 2:
-		Word address = this->registers.getHL();
-		Byte temp = this->getMemory(address);
+		Word address = registers.getHL();
+		Byte temp = getMemory(address);
 
-		this->registers.setFlag(h, this->checkBorrow(temp, 1, 4));
-		this->setMemory(address, (temp - 1));
-		this->registers.setFlag(z, (this->getMemory(address) == 0x0));
-		this->registers.setFlag(n, 1);
+		registers.setFlag(h, checkBorrow(temp, 1, 4));
+		setMemory(address, (temp - 1));
+		registers.setFlag(z, (getMemory(address) == 0x0));
+		registers.setFlag(n, 1);
 
-		this->is_executing_instruction = false;
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_LD_X_u8(Byte* const register_byte)
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0:  this->mcycles_used++; break;
-	case 1: *register_byte = this->getByteFromPC(); this->is_executing_instruction = false;
+	case 0:  mcycles_used++; break;
+	case 1: *register_byte = getByteFromPC(); is_executing_instruction = false;
 	}
 }
 
 // 0x36
 void CPU::ins_LD_bHLb_u8()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->mcycles_used++; break;
+	case 0: mcycles_used++; break;
+	case 1: mcycles_used++; break;
 	case 2:
-		this->setMemory(this->registers.getHL(), this->getByteFromPC());
-		this->is_executing_instruction = false;
+		setMemory(registers.getHL(), getByteFromPC());
+		is_executing_instruction = false;
 	}
 }
 
 
 void CPU::ins_CPL()
 {
-	this->registers.a = ~this->registers.a;
-	this->registers.setFlag(n, true);
-	this->registers.setFlag(h, true);
-	this->is_executing_instruction = false;
+	registers.a = ~registers.a;
+	registers.setFlag(n, true);
+	registers.setFlag(h, true);
+	is_executing_instruction = false;
 }
 
 void CPU::ins_CCF()
 {
-	this->registers.setFlag(n, 0);
-	this->registers.setFlag(h, 0);
-	this->registers.setFlag(c, !this->registers.getFlag(c));
-	this->is_executing_instruction = false;
+	registers.setFlag(n, 0);
+	registers.setFlag(h, 0);
+	registers.setFlag(c, !registers.getFlag(c));
+	is_executing_instruction = false;
 }
 
 void CPU::ins_SCF()
 {
-	this->registers.setFlag(n, 0);
-	this->registers.setFlag(h, 0);
-	this->registers.setFlag(c, 1);
-	this->is_executing_instruction = false;
+	registers.setFlag(n, 0);
+	registers.setFlag(h, 0);
+	registers.setFlag(c, 1);
+	is_executing_instruction = false;
 }
 
 void CPU::ins_RLCA()
 {
 	//set c flag to whatever is the value of the leftest bit from register a
-	this->registers.setFlag(c, (this->registers.a & 0x80));
-	this->registers.setFlag(n, 0);
-	this->registers.setFlag(h, 0);
+	registers.setFlag(c, (registers.a & 0x80));
+	registers.setFlag(n, 0);
+	registers.setFlag(h, 0);
 
 	// move everything to the left by one, toggle bit 0 with bit 7 shifted right 7 places
-	this->registers.a = (this->registers.a << 1) | (this->registers.a >> (7));
+	registers.a = (registers.a << 1) | (registers.a >> (7));
 
 	// z is reset
-	this->registers.setFlag(z, 0);
+	registers.setFlag(z, 0);
 
-	this->is_executing_instruction = false;
+	is_executing_instruction = false;
 }
 
 void CPU::ins_RLA()
 {
 	// swap leftest most bit with the carry flag, then rotate to the left
 
-	Byte flagCarry = this->registers.getFlag(c);
-	bool registerCarry = ((this->registers.a & 0x80) >> 7);
+	Byte flagCarry = registers.getFlag(c);
+	bool registerCarry = ((registers.a & 0x80) >> 7);
 
-	this->registers.a = (this->registers.a << 1) | (flagCarry);
+	registers.a = (registers.a << 1) | (flagCarry);
 
-	this->registers.setFlag(c, registerCarry);
-	this->registers.setFlag(n, 0);
-	this->registers.setFlag(h, 0);
-	this->registers.setFlag(z, 0);
+	registers.setFlag(c, registerCarry);
+	registers.setFlag(n, 0);
+	registers.setFlag(h, 0);
+	registers.setFlag(z, 0);
 
 
-	this->is_executing_instruction = false;
+	is_executing_instruction = false;
 }
 
 void CPU::ins_RRCA()
 {
-	this->registers.setFlag(c, this->registers.a & 0x1);
+	registers.setFlag(c, registers.a & 0x1);
 
-	this->registers.a = (this->registers.a >> 1) | (this->registers.a << (7));
+	registers.a = (registers.a >> 1) | (registers.a << (7));
 
-	this->registers.setFlag(n, 0);
-	this->registers.setFlag(h, 0);
-	this->registers.setFlag(z, 0);
+	registers.setFlag(n, 0);
+	registers.setFlag(h, 0);
+	registers.setFlag(z, 0);
 
 
-	this->is_executing_instruction = false;
+	is_executing_instruction = false;
 }
 
 void CPU::ins_RRA()
 {
-	Byte flagCarry = this->registers.getFlag(c);
-	bool registerCarry = (this->registers.a & 0x1);
+	Byte flagCarry = registers.getFlag(c);
+	bool registerCarry = (registers.a & 0x1);
 
-	this->registers.a = (this->registers.a >> 1) | (flagCarry << (7));
+	registers.a = (registers.a >> 1) | (flagCarry << (7));
 
-	this->registers.setFlag(c, registerCarry);
-	this->registers.setFlag(n, 0);
-	this->registers.setFlag(h, 0);
-	this->registers.setFlag(z, 0);
+	registers.setFlag(c, registerCarry);
+	registers.setFlag(n, 0);
+	registers.setFlag(h, 0);
+	registers.setFlag(z, 0);
 
 
-	this->is_executing_instruction = false;
+	is_executing_instruction = false;
 }
 
 //0x08
 void CPU::ins_LD_bu16b_SP()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->instruction_cache[0] = this->getByteFromPC(); this->mcycles_used++; break;
-	case 2: this->instruction_cache[1] = this->getByteFromPC(); this->mcycles_used++; break;
+	case 0: mcycles_used++; break;
+	case 1: instruction_cache[0] = getByteFromPC(); mcycles_used++; break;
+	case 2: instruction_cache[1] = getByteFromPC(); mcycles_used++; break;
 	case 3:
 	{
-		Word address = (this->instruction_cache[1] << 8) | this->instruction_cache[0];
-		if (this->instruction_cache[1] == 0x91 || this->instruction_cache[1] == 0xFF)
+		Word address = (instruction_cache[1] << 8) | instruction_cache[0];
+		if (instruction_cache[1] == 0x91 || instruction_cache[1] == 0xFF)
 		{
 			printf("");
 		}
-		this->setMemory(address, (this->registers.sp & 0xFF));
-		this->mcycles_used++; break;
+		setMemory(address, (registers.sp & 0xFF));
+		mcycles_used++; break;
 	}
 	case 4:
 	{
-		Word address = (this->instruction_cache[1] << 8) | this->instruction_cache[0];
+		Word address = (instruction_cache[1] << 8) | instruction_cache[0];
 	
-		this->setMemory(address + 1, (this->registers.sp >> 8));
-		this->is_executing_instruction = false;
+		setMemory(address + 1, (registers.sp >> 8));
+		is_executing_instruction = false;
 	}
 	}
 }
@@ -1524,585 +1524,585 @@ void CPU::ins_LD_bu16b_SP()
 // 0x18
 void CPU::ins_JR_i8(const enum eJumpCondition condition)
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0:  this->mcycles_used++; break;
+	case 0:  mcycles_used++; break;
 	case 1:
-		this->instruction_cache[0] = this->getByteFromPC();
-		checkJumpCondition(condition) ? this->mcycles_used++ : this->is_executing_instruction = false;
+		instruction_cache[0] = getByteFromPC();
+		checkJumpCondition(condition) ? mcycles_used++ : is_executing_instruction = false;
 		break;
 	case 2:
-		this->registers.pc += (Byte_s)this->instruction_cache[0];
-		this->is_executing_instruction = false;
+		registers.pc += (Byte_s)instruction_cache[0];
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_ADD_HL_XX(Byte* const reigster_one, Byte* const reigster_two)
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
 	case 0:
 	{
-		Word HLvalue = this->registers.getHL();
+		Word HLvalue = registers.getHL();
 		Word register_word = (*reigster_one << 8) | *reigster_two;
 		Word sum = HLvalue + register_word;
-		this->instruction_cache[0] = sum >> 8;
+		instruction_cache[0] = sum >> 8;
 
-		this->registers.setFlag(c, this->checkCarry(HLvalue, register_word, 16));
-		this->registers.setFlag(h, this->checkCarry(HLvalue, register_word, 12));
-		this->registers.setFlag(n, 0);
-		this->registers.l = sum & 0xFF;
+		registers.setFlag(c, checkCarry(HLvalue, register_word, 16));
+		registers.setFlag(h, checkCarry(HLvalue, register_word, 12));
+		registers.setFlag(n, 0);
+		registers.l = sum & 0xFF;
 
-		this->mcycles_used++;
+		mcycles_used++;
 		break;
 	}
 	case 1:
-		this->registers.h = this->instruction_cache[0];
-		this->is_executing_instruction = false;
+		registers.h = instruction_cache[0];
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_ADD_HL_SP()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
 	case 0:
 	{
-		Word HLvalue = this->registers.getHL();
-		Word sum = HLvalue + this->registers.sp;
-		this->instruction_cache[0] = sum >> 8;
+		Word HLvalue = registers.getHL();
+		Word sum = HLvalue + registers.sp;
+		instruction_cache[0] = sum >> 8;
 
-		this->registers.setFlag(c, this->checkCarry(HLvalue, this->registers.sp, 16));
-		this->registers.setFlag(h, this->checkCarry(HLvalue, this->registers.sp, 12));
-		this->registers.setFlag(n, 0);
-		this->registers.l = sum & 0xFF;
+		registers.setFlag(c, checkCarry(HLvalue, registers.sp, 16));
+		registers.setFlag(h, checkCarry(HLvalue, registers.sp, 12));
+		registers.setFlag(n, 0);
+		registers.l = sum & 0xFF;
 
-		this->mcycles_used++; break;
+		mcycles_used++; break;
 	}
 	case 1:
-		this->registers.h = this->instruction_cache[0];
-		this->is_executing_instruction = false;
+		registers.h = instruction_cache[0];
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_ADD_A_X(Byte* const register_byte)
 {
-	this->registers.setFlag(c, this->checkCarry(this->registers.a, *register_byte, 8));
-	this->registers.setFlag(h, this->checkCarry(this->registers.a, *register_byte, 4));
+	registers.setFlag(c, checkCarry(registers.a, *register_byte, 8));
+	registers.setFlag(h, checkCarry(registers.a, *register_byte, 4));
 
 	// perform addition
-	this->registers.a += *register_byte;
+	registers.a += *register_byte;
 
 	//evaluate z flag an clear the n flag
-	this->registers.setFlag(z, (this->registers.a == 0x0));
-	this->registers.setFlag(n, 0);
+	registers.setFlag(z, (registers.a == 0x0));
+	registers.setFlag(n, 0);
 
-	this->is_executing_instruction = false;
+	is_executing_instruction = false;
 }
 
 void CPU::ins_ADD_A_bHLb()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0:  this->mcycles_used++; break;
+	case 0:  mcycles_used++; break;
 	case 1:
-		Byte immediateValue = this->getMemory(this->registers.getHL());
-		this->registers.setFlag(c, this->checkCarry(this->registers.a, immediateValue, 8));
-		this->registers.setFlag(h, this->checkCarry(this->registers.a, immediateValue, 4));
+		Byte immediateValue = getMemory(registers.getHL());
+		registers.setFlag(c, checkCarry(registers.a, immediateValue, 8));
+		registers.setFlag(h, checkCarry(registers.a, immediateValue, 4));
 
 		// perform addition
-		this->registers.a += immediateValue;
+		registers.a += immediateValue;
 
 		//evaluate z flag an clear the n flag
-		this->registers.setFlag(z, (this->registers.a == 0x0));
-		this->registers.setFlag(n, 0);
+		registers.setFlag(z, (registers.a == 0x0));
+		registers.setFlag(n, 0);
 
-		this->is_executing_instruction = false;
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_ADD_A_u8()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0:	this->mcycles_used++; break;
+	case 0:	mcycles_used++; break;
 	case 1:
-		Byte immediateValue = this->getByteFromPC();
-		this->registers.setFlag(c, this->checkCarry(this->registers.a, immediateValue, 8));
-		this->registers.setFlag(h, this->checkCarry(this->registers.a, immediateValue, 4));
+		Byte immediateValue = getByteFromPC();
+		registers.setFlag(c, checkCarry(registers.a, immediateValue, 8));
+		registers.setFlag(h, checkCarry(registers.a, immediateValue, 4));
 
 		// perform addition
-		this->registers.a += immediateValue;
+		registers.a += immediateValue;
 
 		//evaluate z flag an clear the n flag
-		this->registers.setFlag(z, (this->registers.a == 0x0));
-		this->registers.setFlag(n, 0);
+		registers.setFlag(z, (registers.a == 0x0));
+		registers.setFlag(n, 0);
 
-		this->is_executing_instruction = false;
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_LD_X_Y(Byte* const reigster_one, Byte* const reigster_two)
 {
 	*reigster_one = *reigster_two;
-	this->is_executing_instruction = false;
+	is_executing_instruction = false;
 }
 
 void CPU::ins_LD_X_bYYb(Byte* const left_register, Byte* const rightreigster_one, Byte* const rightreigster_two, const Byte_s add_to_hl)
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0:  this->mcycles_used++; break;
+	case 0:  mcycles_used++; break;
 	case 1:
-		*left_register = this->getMemory((*rightreigster_one << 8) | *rightreigster_two);
+		*left_register = getMemory((*rightreigster_one << 8) | *rightreigster_two);
 		if (add_to_hl != NULL)
-			this->registers.setHL(this->registers.getHL() + add_to_hl);
-		this->is_executing_instruction = false;
+			registers.setHL(registers.getHL() + add_to_hl);
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_DEC_XX(Byte* reigster_one, Byte* reigster_two)
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
 	case 0:
 	{
-		Word sum = this->registers.getWord(reigster_one, reigster_two) - 1;
-		this->instruction_cache[0] = sum >> 8;
+		Word sum = registers.getWord(reigster_one, reigster_two) - 1;
+		instruction_cache[0] = sum >> 8;
 		*reigster_two = (sum & 0xFF);
-		this->mcycles_used++; break;
+		mcycles_used++; break;
 	}
 	case 1:
-		*reigster_one = this->instruction_cache[0];
-		this->is_executing_instruction = false;
+		*reigster_one = instruction_cache[0];
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_DEC_SP()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->registers.sp--; this->is_executing_instruction = false;
+	case 0: mcycles_used++; break;
+	case 1: registers.sp--; is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_ADC_A_X(const Byte* register_byte)
 {
-	Byte a = this->registers.a;
+	Byte a = registers.a;
 	Byte b = *register_byte;
-	Byte C = (int)this->registers.getFlag(c);
+	Byte C = (int)registers.getFlag(c);
 
-	this->registers.a = a + b + C;
+	registers.a = a + b + C;
 
-	this->registers.setFlag(z, (this->registers.a == 0x0));
-	this->registers.setFlag(n, 0);
-	this->registers.setFlag(c, this->checkCarry(a, b, 8, C));
-	this->registers.setFlag(h, this->checkCarry(a, b, 4, C));
+	registers.setFlag(z, (registers.a == 0x0));
+	registers.setFlag(n, 0);
+	registers.setFlag(c, checkCarry(a, b, 8, C));
+	registers.setFlag(h, checkCarry(a, b, 4, C));
 
-	this->is_executing_instruction = false;
+	is_executing_instruction = false;
 }
 
 void CPU::ins_ADC_A_bHLb()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0:  this->mcycles_used++; break;
+	case 0:  mcycles_used++; break;
 	case 1:
-		Byte a = this->registers.a;
-		Byte b = this->getMemory(this->registers.getHL());
-		Byte C = (int)this->registers.getFlag(c);
+		Byte a = registers.a;
+		Byte b = getMemory(registers.getHL());
+		Byte C = (int)registers.getFlag(c);
 
-		this->registers.a = a + b + C;
+		registers.a = a + b + C;
 
-		this->registers.setFlag(z, (this->registers.a == 0x0));
-		this->registers.setFlag(n, 0);
-		this->registers.setFlag(c, this->checkCarry(a, b, 8, C));
-		this->registers.setFlag(h, this->checkCarry(a, b, 4, C));
+		registers.setFlag(z, (registers.a == 0x0));
+		registers.setFlag(n, 0);
+		registers.setFlag(c, checkCarry(a, b, 8, C));
+		registers.setFlag(h, checkCarry(a, b, 4, C));
 
-		this->is_executing_instruction = false;
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_ADC_A_u8()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0:  this->mcycles_used++; break;
+	case 0:  mcycles_used++; break;
 	case 1:
-		Byte a = this->registers.a;
-		Byte b = this->getByteFromPC();
-		Byte C = (int)this->registers.getFlag(c);
+		Byte a = registers.a;
+		Byte b = getByteFromPC();
+		Byte C = (int)registers.getFlag(c);
 
-		this->registers.a = a + b + C;
+		registers.a = a + b + C;
 
-		this->registers.setFlag(z, (this->registers.a == 0x0));
-		this->registers.setFlag(n, 0);
-		this->registers.setFlag(c, this->checkCarry(a, b, 8, C));
-		this->registers.setFlag(h, this->checkCarry(a, b, 4, C));
+		registers.setFlag(z, (registers.a == 0x0));
+		registers.setFlag(n, 0);
+		registers.setFlag(c, checkCarry(a, b, 8, C));
+		registers.setFlag(h, checkCarry(a, b, 4, C));
 
-		this->is_executing_instruction = false;
+		is_executing_instruction = false;
 	}
 }
 
 
 void CPU::ins_SUB_A_X(Byte* const register_byte)
 {
-	this->registers.setFlag(c, this->checkBorrow(this->registers.a, *register_byte, 8));
-	this->registers.setFlag(h, this->checkBorrow(this->registers.a, *register_byte, 4));
+	registers.setFlag(c, checkBorrow(registers.a, *register_byte, 8));
+	registers.setFlag(h, checkBorrow(registers.a, *register_byte, 4));
 
 	// perform addition
-	this->registers.a -= *register_byte;
+	registers.a -= *register_byte;
 
 	//evaluate z flag an clear the n flag
-	this->registers.setFlag(z, (this->registers.a == 0x0));
-	this->registers.setFlag(n, 1);
+	registers.setFlag(z, (registers.a == 0x0));
+	registers.setFlag(n, 1);
 
-	this->is_executing_instruction = false;
+	is_executing_instruction = false;
 }
 
 void CPU::ins_SUB_A_u8()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0:  this->mcycles_used++; break;
+	case 0:  mcycles_used++; break;
 	case 1:
 
-		Byte immediateByte = this->getByteFromPC();
+		Byte immediateByte = getByteFromPC();
 
-		this->registers.setFlag(c, this->checkBorrow(this->registers.a, immediateByte, 8));
-		this->registers.setFlag(h, this->checkBorrow(this->registers.a, immediateByte, 4));
+		registers.setFlag(c, checkBorrow(registers.a, immediateByte, 8));
+		registers.setFlag(h, checkBorrow(registers.a, immediateByte, 4));
 
 		// perform addition
-		this->registers.a -= immediateByte;
+		registers.a -= immediateByte;
 
 		//evaluate z flag an clear the n flag
-		this->registers.setFlag(z, (this->registers.a == 0x0));
-		this->registers.setFlag(n, 1);
+		registers.setFlag(z, (registers.a == 0x0));
+		registers.setFlag(n, 1);
 
-		this->is_executing_instruction = false;
+		is_executing_instruction = false;
 	}
 }
 
 
 void CPU::ins_SUB_A_bHLb()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0:  this->mcycles_used++; break;
+	case 0:  mcycles_used++; break;
 	case 1:
 
-		Byte immediateByte = this->getMemory(this->registers.getHL());
+		Byte immediateByte = getMemory(registers.getHL());
 
-		this->registers.setFlag(c, this->checkBorrow(this->registers.a, immediateByte, 8));
-		this->registers.setFlag(h, this->checkBorrow(this->registers.a, immediateByte, 4));
+		registers.setFlag(c, checkBorrow(registers.a, immediateByte, 8));
+		registers.setFlag(h, checkBorrow(registers.a, immediateByte, 4));
 
 		// perform addition
-		this->registers.a -= immediateByte;
+		registers.a -= immediateByte;
 
 		//evaluate z flag an clear the n flag
-		this->registers.setFlag(z, (this->registers.a == 0x0));
-		this->registers.setFlag(n, 1);
-		this->is_executing_instruction = false;
+		registers.setFlag(z, (registers.a == 0x0));
+		registers.setFlag(n, 1);
+		is_executing_instruction = false;
 	}
 }
 
 
 void CPU::ins_SBC_A_X(Byte* const register_byte)
 {
-	Byte a = this->registers.a;
+	Byte a = registers.a;
 	Byte b = *register_byte;
-	Byte C = (int)this->registers.getFlag(c);
+	Byte C = (int)registers.getFlag(c);
 
-	this->registers.a = a - b - C;
+	registers.a = a - b - C;
 
-	this->registers.setFlag(z, (this->registers.a == 0x0));
-	this->registers.setFlag(n, 1);
-	this->registers.setFlag(c, this->checkBorrow(a, b, 8, C));
-	this->registers.setFlag(h, this->checkBorrow(a, b, 4, C));
+	registers.setFlag(z, (registers.a == 0x0));
+	registers.setFlag(n, 1);
+	registers.setFlag(c, checkBorrow(a, b, 8, C));
+	registers.setFlag(h, checkBorrow(a, b, 4, C));
 
 
-	this->is_executing_instruction = false;
+	is_executing_instruction = false;
 }
 
 void CPU::ins_SBC_A_u8()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0:  this->mcycles_used++; break;
+	case 0:  mcycles_used++; break;
 	case 1:
-		Byte a = this->registers.a;
-		Byte b = this->getByteFromPC();
-		Byte C = (int)this->registers.getFlag(c);
+		Byte a = registers.a;
+		Byte b = getByteFromPC();
+		Byte C = (int)registers.getFlag(c);
 
-		this->registers.a = a - b - C;
+		registers.a = a - b - C;
 
-		this->registers.setFlag(z, (this->registers.a == 0x0));
-		this->registers.setFlag(n, 1);
-		this->registers.setFlag(c, this->checkBorrow(a, b, 8, C));
-		this->registers.setFlag(h, this->checkBorrow(a, b, 4, C));
-		this->is_executing_instruction = false;
+		registers.setFlag(z, (registers.a == 0x0));
+		registers.setFlag(n, 1);
+		registers.setFlag(c, checkBorrow(a, b, 8, C));
+		registers.setFlag(h, checkBorrow(a, b, 4, C));
+		is_executing_instruction = false;
 	}
 }
 
 
 void CPU::ins_SBC_A_bHLb()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0:  this->mcycles_used++; break;
+	case 0:  mcycles_used++; break;
 	case 1:
-		Byte a = this->registers.a;
-		Byte b = this->getMemory(this->registers.getHL());
-		Byte C = (int)this->registers.getFlag(c);
+		Byte a = registers.a;
+		Byte b = getMemory(registers.getHL());
+		Byte C = (int)registers.getFlag(c);
 
-		this->registers.a = a - b - C;
+		registers.a = a - b - C;
 
-		this->registers.setFlag(z, (this->registers.a == 0x0));
-		this->registers.setFlag(n, 1);
-		this->registers.setFlag(c, this->checkBorrow(a, b, 8, C));
-		this->registers.setFlag(h, this->checkBorrow(a, b, 4, C));
+		registers.setFlag(z, (registers.a == 0x0));
+		registers.setFlag(n, 1);
+		registers.setFlag(c, checkBorrow(a, b, 8, C));
+		registers.setFlag(h, checkBorrow(a, b, 4, C));
 
-		this->is_executing_instruction = false;
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_AND_A_X(Byte* const register_byte)
 {
-	this->registers.a &= *register_byte;
+	registers.a &= *register_byte;
 
 	//evaluate z flag an clear the n flag
-	this->registers.setFlag(z, (this->registers.a == 0x0));
-	this->registers.setFlag(h, 1);
-	this->registers.setFlag(n, 0);
-	this->registers.setFlag(c, 0);
+	registers.setFlag(z, (registers.a == 0x0));
+	registers.setFlag(h, 1);
+	registers.setFlag(n, 0);
+	registers.setFlag(c, 0);
 
-	this->is_executing_instruction = false;
+	is_executing_instruction = false;
 }
 
 void CPU::ins_AND_A_u8()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0:  this->mcycles_used++; break;
+	case 0:  mcycles_used++; break;
 	case 1:
-		this->registers.a &= this->getByteFromPC();
+		registers.a &= getByteFromPC();
 
 		//evaluate z flag an clear the n flag
-		this->registers.setFlag(z, (this->registers.a == 0x0));
-		this->registers.setFlag(h, 1);
-		this->registers.setFlag(n, 0);
-		this->registers.setFlag(c, 0);
+		registers.setFlag(z, (registers.a == 0x0));
+		registers.setFlag(h, 1);
+		registers.setFlag(n, 0);
+		registers.setFlag(c, 0);
 
-		this->is_executing_instruction = false;
+		is_executing_instruction = false;
 	}
 }
 
 
 void CPU::ins_AND_A_bHLb()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0:  this->mcycles_used++; break;
+	case 0:  mcycles_used++; break;
 	case 1:
-		this->registers.a &= this->getMemory(this->registers.getHL());
+		registers.a &= getMemory(registers.getHL());
 
 		//evaluate z flag an clear the n flag
-		this->registers.setFlag(z, (this->registers.a == 0x0));
-		this->registers.setFlag(h, 1);
-		this->registers.setFlag(n, 0);
-		this->registers.setFlag(c, 0);
+		registers.setFlag(z, (registers.a == 0x0));
+		registers.setFlag(h, 1);
+		registers.setFlag(n, 0);
+		registers.setFlag(c, 0);
 
-		this->is_executing_instruction = false;
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_XOR_A_X(Byte* const register_byte)
 {
-	this->registers.a ^= *register_byte;
+	registers.a ^= *register_byte;
 
 	//evaluate z flag an clear the n flag
-	this->registers.setFlag(z, (this->registers.a == 0x0));
-	this->registers.setFlag(h, 0);
-	this->registers.setFlag(n, 0);
-	this->registers.setFlag(c, 0);
+	registers.setFlag(z, (registers.a == 0x0));
+	registers.setFlag(h, 0);
+	registers.setFlag(n, 0);
+	registers.setFlag(c, 0);
 
-	this->is_executing_instruction = false;
+	is_executing_instruction = false;
 }
 
 void CPU::ins_XOR_A_u8()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0:  this->mcycles_used++; break;
+	case 0:  mcycles_used++; break;
 	case 1:
-		this->registers.a ^= this->getByteFromPC();
+		registers.a ^= getByteFromPC();
 
 		//evaluate z flag an clear the n flag
-		this->registers.setFlag(z, (this->registers.a == 0x0));
-		this->registers.setFlag(h, 0);
-		this->registers.setFlag(n, 0);
-		this->registers.setFlag(c, 0);
+		registers.setFlag(z, (registers.a == 0x0));
+		registers.setFlag(h, 0);
+		registers.setFlag(n, 0);
+		registers.setFlag(c, 0);
 
-		this->is_executing_instruction = false;
+		is_executing_instruction = false;
 	}
 }
 
 
 void CPU::ins_XOR_A_bHLb()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0:  this->mcycles_used++; break;
+	case 0:  mcycles_used++; break;
 	case 1:
-		this->registers.a ^= this->getMemory(this->registers.getHL());
+		registers.a ^= getMemory(registers.getHL());
 
 		//evaluate z flag an clear the n flag
-		this->registers.setFlag(z, (this->registers.a == 0x0));
-		this->registers.setFlag(h, 0);
-		this->registers.setFlag(n, 0);
-		this->registers.setFlag(c, 0);
+		registers.setFlag(z, (registers.a == 0x0));
+		registers.setFlag(h, 0);
+		registers.setFlag(n, 0);
+		registers.setFlag(c, 0);
 
-		this->is_executing_instruction = false;
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_OR_A_X(Byte* const register_byte)
 {
-	this->registers.a |= *register_byte;
+	registers.a |= *register_byte;
 
 	//evaluate z flag an clear the n flag
-	this->registers.setFlag(z, (this->registers.a == 0x0));
-	this->registers.setFlag(h, 0);
-	this->registers.setFlag(n, 0);
-	this->registers.setFlag(c, 0);
+	registers.setFlag(z, (registers.a == 0x0));
+	registers.setFlag(h, 0);
+	registers.setFlag(n, 0);
+	registers.setFlag(c, 0);
 
 
-	this->is_executing_instruction = false;
+	is_executing_instruction = false;
 }
 
 void CPU::ins_OR_A_u8()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0:  this->mcycles_used++; break;
+	case 0:  mcycles_used++; break;
 	case 1:
-		this->registers.a |= this->getByteFromPC();
+		registers.a |= getByteFromPC();
 
 		//evaluate z flag an clear the n flag
-		this->registers.setFlag(z, (this->registers.a == 0x0));
-		this->registers.setFlag(h, 0);
-		this->registers.setFlag(n, 0);
-		this->registers.setFlag(c, 0);
+		registers.setFlag(z, (registers.a == 0x0));
+		registers.setFlag(h, 0);
+		registers.setFlag(n, 0);
+		registers.setFlag(c, 0);
 
-		this->is_executing_instruction = false;
+		is_executing_instruction = false;
 	}
 }
 
 
 void CPU::ins_OR_A_bHLb()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0:  this->mcycles_used++; break;
+	case 0:  mcycles_used++; break;
 	case 1:
-		this->registers.a |= this->getMemory(this->registers.getHL());
+		registers.a |= getMemory(registers.getHL());
 
 		//evaluate z flag an clear the n flag
-		this->registers.setFlag(z, (this->registers.a == 0x0));
-		this->registers.setFlag(h, 0);
-		this->registers.setFlag(n, 0);
-		this->registers.setFlag(c, 0);
+		registers.setFlag(z, (registers.a == 0x0));
+		registers.setFlag(h, 0);
+		registers.setFlag(n, 0);
+		registers.setFlag(c, 0);
 
-		this->is_executing_instruction = false;
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_CP_A_X(Byte* const register_byte)
 {
-	this->registers.setFlag(c, this->checkBorrow(this->registers.a, *register_byte, 8));
-	this->registers.setFlag(h, this->checkBorrow(this->registers.a, *register_byte, 4));
+	registers.setFlag(c, checkBorrow(registers.a, *register_byte, 8));
+	registers.setFlag(h, checkBorrow(registers.a, *register_byte, 4));
 
 	//evaluate z flag an clear the n flag
-	this->registers.setFlag(z, (this->registers.a == *register_byte));
-	this->registers.setFlag(n, 1);
+	registers.setFlag(z, (registers.a == *register_byte));
+	registers.setFlag(n, 1);
 
 
-	this->is_executing_instruction = false;
+	is_executing_instruction = false;
 }
 
 void CPU::ins_CP_A_u8()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0:  this->mcycles_used++; break;
+	case 0:  mcycles_used++; break;
 	case 1:
-		Byte immediateValue = this->getByteFromPC();
-		this->registers.setFlag(c, this->checkBorrow(this->registers.a, immediateValue, 8));
-		this->registers.setFlag(h, this->checkBorrow(this->registers.a, immediateValue, 4));
-		this->registers.setFlag(z, (this->registers.a == immediateValue));
-		this->registers.setFlag(n, 1);
+		Byte immediateValue = getByteFromPC();
+		registers.setFlag(c, checkBorrow(registers.a, immediateValue, 8));
+		registers.setFlag(h, checkBorrow(registers.a, immediateValue, 4));
+		registers.setFlag(z, (registers.a == immediateValue));
+		registers.setFlag(n, 1);
 
-		this->is_executing_instruction = false;
+		is_executing_instruction = false;
 	}
 }
 
 
 void CPU::ins_CP_A_bHLb()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0:  this->mcycles_used++; break;
+	case 0:  mcycles_used++; break;
 	case 1:
-		Byte immediateValue = this->getMemory(this->registers.getHL());
-		this->registers.setFlag(c, this->checkBorrow(this->registers.a, immediateValue, 8));
-		this->registers.setFlag(h, this->checkBorrow(this->registers.a, immediateValue, 4));
-		this->registers.setFlag(z, (this->registers.a == immediateValue));
-		this->registers.setFlag(n, 1);
+		Byte immediateValue = getMemory(registers.getHL());
+		registers.setFlag(c, checkBorrow(registers.a, immediateValue, 8));
+		registers.setFlag(h, checkBorrow(registers.a, immediateValue, 4));
+		registers.setFlag(z, (registers.a == immediateValue));
+		registers.setFlag(n, 1);
 
-		this->is_executing_instruction = false;
+		is_executing_instruction = false;
 	}
 }
 
 
 void CPU::ins_POP_XX(Byte* reigster_one, Byte* reigster_two)
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0:  this->mcycles_used++; break;
+	case 0:  mcycles_used++; break;
 	case 1:
-		*reigster_two = this->getMemory(this->registers.sp++);
-		if (reigster_two == &this->registers.f)
+		*reigster_two = getMemory(registers.sp++);
+		if (reigster_two == &registers.f)
 			*reigster_two &= 0xF0;
 
 
-		this->mcycles_used++; break;
+		mcycles_used++; break;
 	case 2:
-		*reigster_one = this->getMemory(this->registers.sp++);
-		if (reigster_one == &this->registers.f)
+		*reigster_one = getMemory(registers.sp++);
+		if (reigster_one == &registers.f)
 			*reigster_one &= 0xF0;
 
-		this->is_executing_instruction = false;
+		is_executing_instruction = false;
 	}
 }
 
 
 void CPU::ins_PUSH_XX(const Word reigster_word_value)
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->mcycles_used++; break;
+	case 0: mcycles_used++; break;
+	case 1: mcycles_used++; break;
 	case 2:
 		// move low byte to higher (sp)
-		this->setMemory(--this->registers.sp, (reigster_word_value >> 8));
+		setMemory(--registers.sp, (reigster_word_value >> 8));
 
-		this->mcycles_used++; break;
+		mcycles_used++; break;
 	case 3:
 		// move high byte to lower (sp)
-		this->setMemory(--this->registers.sp, (reigster_word_value & 0xff));
+		setMemory(--registers.sp, (reigster_word_value & 0xff));
 
-		this->is_executing_instruction = false;
+		is_executing_instruction = false;
 	}
 }
 
@@ -2110,51 +2110,51 @@ void CPU::ins_PUSH_XX(const Word reigster_word_value)
 
 void CPU::ins_JP_u16(const enum eJumpCondition condition)
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->instruction_cache[0] = this->getByteFromPC(); this->mcycles_used++; break;
+	case 0: mcycles_used++; break;
+	case 1: instruction_cache[0] = getByteFromPC(); mcycles_used++; break;
 	case 2: 
-		this->instruction_cache[1] = this->getByteFromPC();
-		checkJumpCondition(condition) ? this->mcycles_used++ : this->is_executing_instruction = false; break;
+		instruction_cache[1] = getByteFromPC();
+		checkJumpCondition(condition) ? mcycles_used++ : is_executing_instruction = false; break;
 	case 3:
-		this->registers.pc = (instruction_cache[1] << 8) | instruction_cache[0];
-		this->is_executing_instruction = false;
+		registers.pc = (instruction_cache[1] << 8) | instruction_cache[0];
+		is_executing_instruction = false;
 	}
 }
 
 //this and standard RET (and by extension RETI) are completely different, one would expect it to be 3m-4m but instead it is 2m-5m, which is longer than RET's 4m, for this reason I will have to treat it as a different instruction.
 void CPU::ins_RET_CC(const enum eJumpCondition condition)
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: checkJumpCondition(condition) ? this->mcycles_used++ : this->is_executing_instruction = false; break;
-	case 2: this->instruction_cache[0] = this->getMemory(this->registers.sp++); this->mcycles_used++; break;
-	case 3: this->instruction_cache[1] = this->getMemory(this->registers.sp++); this->mcycles_used++; break;
-	case 4: this->registers.pc = (instruction_cache[1] << 8) | instruction_cache[0]; this->is_executing_instruction = false;
+	case 0: mcycles_used++; break;
+	case 1: checkJumpCondition(condition) ? mcycles_used++ : is_executing_instruction = false; break;
+	case 2: instruction_cache[0] = getMemory(registers.sp++); mcycles_used++; break;
+	case 3: instruction_cache[1] = getMemory(registers.sp++); mcycles_used++; break;
+	case 4: registers.pc = (instruction_cache[1] << 8) | instruction_cache[0]; is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_RET()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->instruction_cache[0] = this->getMemory(this->registers.sp++); this->mcycles_used++; break;
-	case 2: this->instruction_cache[1] = this->getMemory(this->registers.sp++); this->mcycles_used++; break;
-	case 3: this->registers.pc = (instruction_cache[1] << 8) | instruction_cache[0]; this->is_executing_instruction = false;
+	case 0: mcycles_used++; break;
+	case 1: instruction_cache[0] = getMemory(registers.sp++); mcycles_used++; break;
+	case 2: instruction_cache[1] = getMemory(registers.sp++); mcycles_used++; break;
+	case 3: registers.pc = (instruction_cache[1] << 8) | instruction_cache[0]; is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_RETI()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->instruction_cache[0] = this->getMemory(this->registers.sp++); this->mcycles_used++; break;
-	case 2: this->instruction_cache[1] = this->getMemory(this->registers.sp++); this->mcycles_used++; break;
-	case 3: this->registers.pc = (instruction_cache[1] << 8) | instruction_cache[0]; this->interrupt_master_enable = true; this->is_executing_instruction = false;
+	case 0: mcycles_used++; break;
+	case 1: instruction_cache[0] = getMemory(registers.sp++); mcycles_used++; break;
+	case 2: instruction_cache[1] = getMemory(registers.sp++); mcycles_used++; break;
+	case 3: registers.pc = (instruction_cache[1] << 8) | instruction_cache[0]; interrupt_master_enable = true; is_executing_instruction = false;
 	}
 }
 
@@ -2162,163 +2162,163 @@ void CPU::ins_RETI()
 
 void CPU::ins_JP_HL()
 {
-	this->registers.pc = this->registers.getHL();
-	this->is_executing_instruction = false;
+	registers.pc = registers.getHL();
+	is_executing_instruction = false;
 }
 
 // call is correct
 void CPU::ins_CALL_u16(const enum eJumpCondition condition)
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->instruction_cache[0] = this->getByteFromPC(); this->mcycles_used++; break;
+	case 0: mcycles_used++; break;
+	case 1: instruction_cache[0] = getByteFromPC(); mcycles_used++; break;
 	case 2: 
-		this->instruction_cache[1] = this->getByteFromPC();
-		checkJumpCondition(condition) ? this->mcycles_used++ : this->is_executing_instruction = false; break;
-	case 3: this->mcycles_used++; break; // strange behaviour since a short call is only 3m long
+		instruction_cache[1] = getByteFromPC();
+		checkJumpCondition(condition) ? mcycles_used++ : is_executing_instruction = false; break;
+	case 3: mcycles_used++; break; // strange behaviour since a short call is only 3m long
 	case 4:
-		this->setMemory(--this->registers.sp, this->registers.getLowByte(&this->registers.pc));
-		this->mcycles_used++; break;
+		setMemory(--registers.sp, registers.getLowByte(&registers.pc));
+		mcycles_used++; break;
 	case 5:
-		this->setMemory(--this->registers.sp, this->registers.getHighByte(&this->registers.pc));
-		this->registers.pc = (instruction_cache[1] << 8) | instruction_cache[0];
-		this->is_executing_instruction = false;
+		setMemory(--registers.sp, registers.getHighByte(&registers.pc));
+		registers.pc = (instruction_cache[1] << 8) | instruction_cache[0];
+		is_executing_instruction = false;
 	}
 }
 
 
 void CPU::ins_RST(Byte jumpVector)
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->mcycles_used++; break;
+	case 0: mcycles_used++; break;
+	case 1: mcycles_used++; break;
 	case 2:
-		this->setMemory(--this->registers.sp, this->registers.getLowByte(&this->registers.pc));
-		this->mcycles_used++; break;
+		setMemory(--registers.sp, registers.getLowByte(&registers.pc));
+		mcycles_used++; break;
 	case 3:
-		this->setMemory(--this->registers.sp, this->registers.getHighByte(&this->registers.pc));
-		this->registers.pc = 0x0000 + jumpVector;
-		this->is_executing_instruction = false;
+		setMemory(--registers.sp, registers.getHighByte(&registers.pc));
+		registers.pc = 0x0000 + jumpVector;
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_LD_bFF00_u8b_A()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->instruction_cache[0] = this->getByteFromPC(); this->mcycles_used++; break;
+	case 0: mcycles_used++; break;
+	case 1: instruction_cache[0] = getByteFromPC(); mcycles_used++; break;
 	case 2:
-		this->setMemory(0xFF00 + this->instruction_cache[0], this->registers.a);
-		this->is_executing_instruction = false;
+		setMemory(0xFF00 + instruction_cache[0], registers.a);
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_LD_A_bFF00_u8b()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->instruction_cache[0] = this->getByteFromPC(); this->mcycles_used++; break;
+	case 0: mcycles_used++; break;
+	case 1: instruction_cache[0] = getByteFromPC(); mcycles_used++; break;
 	case 2:
-		this->registers.a = this->getMemory(0xFF00 + this->instruction_cache[0]);
-		this->is_executing_instruction = false;
+		registers.a = getMemory(0xFF00 + instruction_cache[0]);
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_LD_A_bFF00_Cb()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->registers.a = this->getMemory(0xFF00 + this->registers.c); this->is_executing_instruction = false;
+	case 0: mcycles_used++; break;
+	case 1: registers.a = getMemory(0xFF00 + registers.c); is_executing_instruction = false;
 	}
 }
 
 
 void CPU::ins_ADD_SP_i8()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0:  this->mcycles_used++; break;
-	case 1: this->instruction_cache[0] = this->getByteFromPC(); this->mcycles_used++; break;
+	case 0:  mcycles_used++; break;
+	case 1: instruction_cache[0] = getByteFromPC(); mcycles_used++; break;
 	case 2:
 	{
-		Byte_s value = (Byte_s)this->instruction_cache[0];
+		Byte_s value = (Byte_s)instruction_cache[0];
 		registers.setFlag(h, (registers.sp & 0xF) + (value & 0xF) > 0xF);
 		registers.setFlag(c, (registers.sp & 0xFF) + (value & 0xFF) > 0xFF);
 
-		this->registers.setFlag(z, 0);
-		this->registers.setFlag(n, 0);
+		registers.setFlag(z, 0);
+		registers.setFlag(n, 0);
 
-		Word sum = (this->registers.sp + value);
+		Word sum = (registers.sp + value);
 		instruction_cache[1] = sum >> 8;
-		this->registers.setLowByte(&this->registers.sp, sum & 0xFF);
+		registers.setLowByte(&registers.sp, sum & 0xFF);
 
-		this->mcycles_used++; break;
+		mcycles_used++; break;
 	}
 	case 3:
-		this->registers.setHighByte(&this->registers.sp, instruction_cache[1]);
-		this->is_executing_instruction = false;
+		registers.setHighByte(&registers.sp, instruction_cache[1]);
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_LD_HL_SP_i8()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0:  this->mcycles_used++; break;
-	case 1: this->instruction_cache[0] = this->getByteFromPC(); this->mcycles_used++; break;
+	case 0:  mcycles_used++; break;
+	case 1: instruction_cache[0] = getByteFromPC(); mcycles_used++; break;
 	case 2:
-		Byte_s value = (Byte_s)this->instruction_cache[0];
-		Word sum = this->registers.sp + value;
-		this->registers.setFlag(z, 0);
-		this->registers.setFlag(n, 0);
+		Byte_s value = (Byte_s)instruction_cache[0];
+		Word sum = registers.sp + value;
+		registers.setFlag(z, 0);
+		registers.setFlag(n, 0);
 		registers.setFlag(h, (registers.sp & 0xF) + (value & 0xF) > 0xF);
 		registers.setFlag(c, (registers.sp & 0xFF) + (value & 0xFF) > 0xFF);
 
-		this->registers.setHL(sum);
+		registers.setHL(sum);
 
-		this->is_executing_instruction = false;
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_LD_SP_HL()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->registers.sp = this->registers.getHL(); this->is_executing_instruction = false;
+	case 0: mcycles_used++; break;
+	case 1: registers.sp = registers.getHL(); is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_LD_bu16b_A()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->instruction_cache[0] = this->getByteFromPC(); this->mcycles_used++; break;
-	case 2: this->instruction_cache[1] = this->getByteFromPC(); this->mcycles_used++; break;
+	case 0: mcycles_used++; break;
+	case 1: instruction_cache[0] = getByteFromPC(); mcycles_used++; break;
+	case 2: instruction_cache[1] = getByteFromPC(); mcycles_used++; break;
 	case 3:
-		this->setMemory((this->instruction_cache[1] << 8) | this->instruction_cache[0], this->registers.a);
-		this->is_executing_instruction = false;
+		setMemory((instruction_cache[1] << 8) | instruction_cache[0], registers.a);
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_LD_A_bu16b()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->instruction_cache[0] = this->getByteFromPC(); this->mcycles_used++; break;
-	case 2: this->instruction_cache[1] = this->getByteFromPC(); this->mcycles_used++; break;
+	case 0: mcycles_used++; break;
+	case 1: instruction_cache[0] = getByteFromPC(); mcycles_used++; break;
+	case 2: instruction_cache[1] = getByteFromPC(); mcycles_used++; break;
 	case 3:
 	{
-		Word address = (this->instruction_cache[1] << 8) | this->instruction_cache[0];
-		this->registers.a = this->getMemory(address);
-		this->is_executing_instruction = false;
+		Word address = (instruction_cache[1] << 8) | instruction_cache[0];
+		registers.a = getMemory(address);
+		is_executing_instruction = false;
 	}
 	}
 }
@@ -2326,337 +2326,337 @@ void CPU::ins_LD_A_bu16b()
 
 void CPU::ins_RLC(Byte* reigster_one)
 {
-	this->registers.setFlag(n, 0);
-	this->registers.setFlag(h, 0);
-	this->registers.setFlag(c, ((*reigster_one & 0x80) >> 7));
+	registers.setFlag(n, 0);
+	registers.setFlag(h, 0);
+	registers.setFlag(c, ((*reigster_one & 0x80) >> 7));
 	*reigster_one = ((*reigster_one << 1) | (*reigster_one >> 7));
 
-	this->registers.setFlag(z, (*reigster_one == 0));
+	registers.setFlag(z, (*reigster_one == 0));
 
-	this->is_executing_cb = false;
-	this->is_executing_instruction = false;
+	is_executing_cb = false;
+	is_executing_instruction = false;
 
 }
 
 void CPU::ins_RLC_bHLb()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
+	case 0: mcycles_used++; break;
+	case 1: instruction_cache[0] = getMemory(registers.getHL()); mcycles_used++; break;
 	case 2:
 
-		this->registers.setFlag(n, 0);
-		this->registers.setFlag(h, 0);
-		Byte temp = this->instruction_cache[0];
+		registers.setFlag(n, 0);
+		registers.setFlag(h, 0);
+		Byte temp = instruction_cache[0];
 		Byte result = ((temp << 1) | (temp >> 7));
-		this->registers.setFlag(c, ((temp & 0x80) >> 7));
-		this->setMemory(this->registers.getHL(), result);
-		this->registers.setFlag(z, (result == 0));
+		registers.setFlag(c, ((temp & 0x80) >> 7));
+		setMemory(registers.getHL(), result);
+		registers.setFlag(z, (result == 0));
 
-		this->is_executing_cb = false;
-		this->is_executing_instruction = false;
+		is_executing_cb = false;
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_RL(Byte* reigster_one)
 {
-	Byte flagCarry = this->registers.getFlag(c);
+	Byte flagCarry = registers.getFlag(c);
 	bool newCarry = 0;
 
-	this->registers.setFlag(n, 0);
-	this->registers.setFlag(h, 0);
+	registers.setFlag(n, 0);
+	registers.setFlag(h, 0);
 
 	newCarry = ((*reigster_one & 0x80) >> 7);
 	*reigster_one = ((*reigster_one << 1) | (flagCarry));
 
-	this->registers.setFlag(c, newCarry);
-	this->registers.setFlag(z, (*reigster_one == 0));
+	registers.setFlag(c, newCarry);
+	registers.setFlag(z, (*reigster_one == 0));
 
-	this->is_executing_cb = false;
-	this->is_executing_instruction = false;
+	is_executing_cb = false;
+	is_executing_instruction = false;
 
 }
 
 void CPU::ins_RL_bHLb()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
+	case 0: mcycles_used++; break;
+	case 1: instruction_cache[0] = getMemory(registers.getHL()); mcycles_used++; break;
 	case 2:
 
-		Byte flagCarry = this->registers.getFlag(c);
+		Byte flagCarry = registers.getFlag(c);
 		bool newCarry = 0;
 
-		this->registers.setFlag(n, 0);
-		this->registers.setFlag(h, 0);
+		registers.setFlag(n, 0);
+		registers.setFlag(h, 0);
 
-		Byte temp = this->instruction_cache[0];
+		Byte temp = instruction_cache[0];
 		Byte result = ((temp << 1) | (flagCarry));
 		newCarry = ((temp & 0x80) >> 7);
-		this->setMemory(this->registers.getHL(), result);
+		setMemory(registers.getHL(), result);
 
-		this->registers.setFlag(c, newCarry);
-		this->registers.setFlag(z, (result == 0));
+		registers.setFlag(c, newCarry);
+		registers.setFlag(z, (result == 0));
 
-		this->is_executing_cb = false;
-		this->is_executing_instruction = false;
+		is_executing_cb = false;
+		is_executing_instruction = false;
 	}
 }
 
 
 void CPU::ins_RRC(Byte* reigster_one)
 {
-	this->registers.setFlag(n, 0);
-	this->registers.setFlag(h, 0);
-	this->registers.setFlag(c, (*reigster_one & 0x1));
+	registers.setFlag(n, 0);
+	registers.setFlag(h, 0);
+	registers.setFlag(c, (*reigster_one & 0x1));
 	*reigster_one = ((*reigster_one >> 1) | (*reigster_one << 7));
 
-	this->registers.setFlag(z, (*reigster_one == 0));
+	registers.setFlag(z, (*reigster_one == 0));
 
-	this->is_executing_cb = false;
-	this->is_executing_instruction = false;
+	is_executing_cb = false;
+	is_executing_instruction = false;
 
 }
 
 void CPU::ins_RRC_bHLb()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
+	case 0: mcycles_used++; break;
+	case 1: instruction_cache[0] = getMemory(registers.getHL()); mcycles_used++; break;
 	case 2:
 
-		this->registers.setFlag(n, 0);
-		this->registers.setFlag(h, 0);
-		Byte temp = this->instruction_cache[0];
+		registers.setFlag(n, 0);
+		registers.setFlag(h, 0);
+		Byte temp = instruction_cache[0];
 		Byte result = ((temp >> 1) | (temp << 7));
-		this->registers.setFlag(c, (temp & 0x1));
-		this->setMemory(this->registers.getHL(), result);
-		this->registers.setFlag(z, (result == 0));
+		registers.setFlag(c, (temp & 0x1));
+		setMemory(registers.getHL(), result);
+		registers.setFlag(z, (result == 0));
 
-		this->is_executing_cb = false;
-		this->is_executing_instruction = false;
+		is_executing_cb = false;
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_RR(Byte* reigster_one)
 {
-	Byte flagCarry = this->registers.getFlag(c);
+	Byte flagCarry = registers.getFlag(c);
 	bool newCarry = 0;
 
-	this->registers.setFlag(n, 0);
-	this->registers.setFlag(h, 0);
+	registers.setFlag(n, 0);
+	registers.setFlag(h, 0);
 
 	newCarry = (*reigster_one & 0x1);
 	*reigster_one = ((*reigster_one >> 1) | (flagCarry << 7));
 
-	this->registers.setFlag(c, newCarry);
-	this->registers.setFlag(z, (*reigster_one == 0));
+	registers.setFlag(c, newCarry);
+	registers.setFlag(z, (*reigster_one == 0));
 
-	this->is_executing_cb = false;
-	this->is_executing_instruction = false;
+	is_executing_cb = false;
+	is_executing_instruction = false;
 
 }
 
 void CPU::ins_RR_bHLb()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
+	case 0: mcycles_used++; break;
+	case 1: instruction_cache[0] = getMemory(registers.getHL()); mcycles_used++; break;
 	case 2:
 
-		Byte flagCarry = this->registers.getFlag(c);
+		Byte flagCarry = registers.getFlag(c);
 		bool newCarry = 0;
 
-		this->registers.setFlag(n, 0);
-		this->registers.setFlag(h, 0);
+		registers.setFlag(n, 0);
+		registers.setFlag(h, 0);
 
-		Byte temp = this->instruction_cache[0];
+		Byte temp = instruction_cache[0];
 		Byte result = ((temp >> 1) | (flagCarry << 7));
 		newCarry = (temp & 0x01);
-		this->setMemory(this->registers.getHL(), result);
+		setMemory(registers.getHL(), result);
 
-		this->registers.setFlag(c, newCarry);
-		this->registers.setFlag(z, (result == 0));
+		registers.setFlag(c, newCarry);
+		registers.setFlag(z, (result == 0));
 
-		this->is_executing_cb = false;
-		this->is_executing_instruction = false;
+		is_executing_cb = false;
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_SLA(Byte* reigster_one)
 {
-	this->registers.setFlag(n, 0);
-	this->registers.setFlag(h, 0);
+	registers.setFlag(n, 0);
+	registers.setFlag(h, 0);
 
-	this->registers.setFlag(c, (*reigster_one & 0x80) >> 7);
+	registers.setFlag(c, (*reigster_one & 0x80) >> 7);
 	*reigster_one = *reigster_one << 1;
-	this->registers.setFlag(z, (*reigster_one == 0));
+	registers.setFlag(z, (*reigster_one == 0));
 
-	this->is_executing_cb = false;
-	this->is_executing_instruction = false;
+	is_executing_cb = false;
+	is_executing_instruction = false;
 
 }
 
 void CPU::ins_SLA_bHLb()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
+	case 0: mcycles_used++; break;
+	case 1: instruction_cache[0] = getMemory(registers.getHL()); mcycles_used++; break;
 	case 2:
 
-		this->registers.setFlag(n, 0);
-		this->registers.setFlag(h, 0);
+		registers.setFlag(n, 0);
+		registers.setFlag(h, 0);
 
-		Byte temp = this->instruction_cache[0];
+		Byte temp = instruction_cache[0];
 		Byte result = temp << 1;
 
-		this->registers.setFlag(c, (temp & 0x80) >> 7);
-		this->setMemory(this->registers.getHL(), result);
+		registers.setFlag(c, (temp & 0x80) >> 7);
+		setMemory(registers.getHL(), result);
 
-		this->registers.setFlag(z, (result == 0));
+		registers.setFlag(z, (result == 0));
 
-		this->is_executing_cb = false;
-		this->is_executing_instruction = false;
+		is_executing_cb = false;
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_SRA(Byte* reigster_one)
 {
-	this->registers.setFlag(n, 0);
-	this->registers.setFlag(h, 0);
-	this->registers.setFlag(c, *reigster_one & 0x1);
+	registers.setFlag(n, 0);
+	registers.setFlag(h, 0);
+	registers.setFlag(c, *reigster_one & 0x1);
 	Byte bit7 = *reigster_one >> 7;
 
 	*reigster_one = (*reigster_one >> 1) | (bit7 << 7);
-	this->registers.setFlag(z, (*reigster_one == 0));
+	registers.setFlag(z, (*reigster_one == 0));
 
-	this->is_executing_cb = false;
-	this->is_executing_instruction = false;
+	is_executing_cb = false;
+	is_executing_instruction = false;
 
 }
 
 void CPU::ins_SRA_bHLb()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
+	case 0: mcycles_used++; break;
+	case 1: instruction_cache[0] = getMemory(registers.getHL()); mcycles_used++; break;
 	case 2:
 
-		this->registers.setFlag(n, 0);
-		this->registers.setFlag(h, 0);
+		registers.setFlag(n, 0);
+		registers.setFlag(h, 0);
 
-		Byte temp = this->instruction_cache[0];
-		this->registers.setFlag(c, temp & 0x1);
+		Byte temp = instruction_cache[0];
+		registers.setFlag(c, temp & 0x1);
 		Byte bit7 = temp >> 7;
 
 		Byte result = (temp >> 1) | (bit7 << 7);
-		this->setMemory(this->registers.getHL(), result);
+		setMemory(registers.getHL(), result);
 
-		this->registers.setFlag(z, (result == 0));
+		registers.setFlag(z, (result == 0));
 
-		this->is_executing_cb = false;
-		this->is_executing_instruction = false;
+		is_executing_cb = false;
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_SRL(Byte* reigster_one)
 {
-	this->registers.setFlag(n, 0);
-	this->registers.setFlag(h, 0);
-	this->registers.setFlag(c, *reigster_one & 0x1);
+	registers.setFlag(n, 0);
+	registers.setFlag(h, 0);
+	registers.setFlag(c, *reigster_one & 0x1);
 	*reigster_one = *reigster_one >> 1;
-	this->registers.setFlag(z, (*reigster_one == 0));
+	registers.setFlag(z, (*reigster_one == 0));
 
-	this->is_executing_cb = false;
-	this->is_executing_instruction = false;
+	is_executing_cb = false;
+	is_executing_instruction = false;
 
 }
 
 void CPU::ins_SRL_bHLb()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
+	case 0: mcycles_used++; break;
+	case 1: instruction_cache[0] = getMemory(registers.getHL()); mcycles_used++; break;
 	case 2:
 
-		this->registers.setFlag(n, 0);
-		this->registers.setFlag(h, 0);
-		Byte temp = this->instruction_cache[0];
+		registers.setFlag(n, 0);
+		registers.setFlag(h, 0);
+		Byte temp = instruction_cache[0];
 		Byte result = temp >> 1;
-		this->registers.setFlag(c, temp & 0x1);
-		this->setMemory(this->registers.getHL(), result);
-		this->registers.setFlag(z, (result == 0));
+		registers.setFlag(c, temp & 0x1);
+		setMemory(registers.getHL(), result);
+		registers.setFlag(z, (result == 0));
 
-		this->is_executing_cb = false;
-		this->is_executing_instruction = false;
+		is_executing_cb = false;
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_SWAP(Byte* reigster_one)
 {
-	*reigster_one = (this->getNibble(*reigster_one, false) << 4) + this->getNibble(*reigster_one, true);
-	this->registers.setFlag(z, (*reigster_one == 0x0));
-	this->registers.setFlag(n, false);
-	this->registers.setFlag(h, false);
-	this->registers.setFlag(c, false);
+	*reigster_one = (getNibble(*reigster_one, false) << 4) + getNibble(*reigster_one, true);
+	registers.setFlag(z, (*reigster_one == 0x0));
+	registers.setFlag(n, false);
+	registers.setFlag(h, false);
+	registers.setFlag(c, false);
 
-	this->is_executing_cb = false;
-	this->is_executing_instruction = false;
+	is_executing_cb = false;
+	is_executing_instruction = false;
 
 }
 
 void CPU::ins_SWAP_bHLb()
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1: this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
+	case 0: mcycles_used++; break;
+	case 1: instruction_cache[0] = getMemory(registers.getHL()); mcycles_used++; break;
 	case 2:
 
-		Byte temp = this->instruction_cache[0];
-		Byte swappedTemp = (this->getNibble(temp, false) << 4) + this->getNibble(temp, true);
-		this->setMemory(this->registers.getHL(), swappedTemp);
-		this->registers.setFlag(z, (swappedTemp == 0x0));
-		this->registers.setFlag(n, false);
-		this->registers.setFlag(h, false);
-		this->registers.setFlag(c, false);
+		Byte temp = instruction_cache[0];
+		Byte swappedTemp = (getNibble(temp, false) << 4) + getNibble(temp, true);
+		setMemory(registers.getHL(), swappedTemp);
+		registers.setFlag(z, (swappedTemp == 0x0));
+		registers.setFlag(n, false);
+		registers.setFlag(h, false);
+		registers.setFlag(c, false);
 
-		this->is_executing_cb = false;
-		this->is_executing_instruction = false;
+		is_executing_cb = false;
+		is_executing_instruction = false;
 	}
 }
 
 void CPU::ins_BIT_b_r(Byte bit, Byte* reigster_one)
 {
-	this->registers.setFlag(n, 0);
-	this->registers.setFlag(h, 1);
-	this->registers.setFlag(z, ((*reigster_one & (1 << bit)) == 0));
+	registers.setFlag(n, 0);
+	registers.setFlag(h, 1);
+	registers.setFlag(z, ((*reigster_one & (1 << bit)) == 0));
 
-	this->is_executing_cb = false;
-	this->is_executing_instruction = false;
+	is_executing_cb = false;
+	is_executing_instruction = false;
 }
 
 void CPU::ins_BIT_b_r_bHLb(Byte bit)
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
+	case 0: mcycles_used++; break;
 	case 1:
 
-		this->instruction_cache[0] = this->getMemory(this->registers.getHL());
-		this->registers.setFlag(n, 0);
-		this->registers.setFlag(h, 1);
-		this->registers.setFlag(z, ((this->instruction_cache[0] & (1 << bit)) == 0));
+		instruction_cache[0] = getMemory(registers.getHL());
+		registers.setFlag(n, 0);
+		registers.setFlag(h, 1);
+		registers.setFlag(z, ((instruction_cache[0] & (1 << bit)) == 0));
 
-		this->is_executing_cb = false;
-		this->is_executing_instruction = false;
+		is_executing_cb = false;
+		is_executing_instruction = false;
 	}
 }
 
@@ -2664,24 +2664,24 @@ void CPU::ins_RES_b_r(Byte bit, Byte* reigster_one)
 {
 	*reigster_one &= ~(1 << bit);
 
-	this->is_executing_cb = false;
-	this->is_executing_instruction = false;
+	is_executing_cb = false;
+	is_executing_instruction = false;
 }
 
 void CPU::ins_RES_b_r_bHLb(Byte bit)
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1:	this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
+	case 0: mcycles_used++; break;
+	case 1:	instruction_cache[0] = getMemory(registers.getHL()); mcycles_used++; break;
 	case 2:
 
-		Byte temp = this->instruction_cache[0];
+		Byte temp = instruction_cache[0];
 		temp &= ~(1 << bit);
-		this->setMemory(this->registers.getHL(), temp);
+		setMemory(registers.getHL(), temp);
 
-		this->is_executing_cb = false;
-		this->is_executing_instruction = false;
+		is_executing_cb = false;
+		is_executing_instruction = false;
 	}
 }
 
@@ -2689,24 +2689,24 @@ void CPU::ins_SET_b_r(Byte bit, Byte* reigster_one)
 {
 	*reigster_one |= (1 << bit);
 
-	this->is_executing_cb = false;
-	this->is_executing_instruction = false;
+	is_executing_cb = false;
+	is_executing_instruction = false;
 }
 
 void CPU::ins_SET_b_r_bHLb(Byte bit)
 {
-	switch (this->mcycles_used)
+	switch (mcycles_used)
 	{
-	case 0: this->mcycles_used++; break;
-	case 1:	this->instruction_cache[0] = this->getMemory(this->registers.getHL()); this->mcycles_used++; break;
+	case 0: mcycles_used++; break;
+	case 1:	instruction_cache[0] = getMemory(registers.getHL()); mcycles_used++; break;
 	case 2:
 
-		Byte temp = this->instruction_cache[0];
+		Byte temp = instruction_cache[0];
 		temp |= (1 << bit);
-		this->setMemory(this->registers.getHL(), temp);
+		setMemory(registers.getHL(), temp);
 
-		this->is_executing_cb = false;
-		this->is_executing_instruction = false;
+		is_executing_cb = false;
+		is_executing_instruction = false;
 	}
 }
 
@@ -2734,22 +2734,22 @@ void CPU::ins_DAA()
 	Byte adjust = 0;
 	bool setFlagC = false;
 
-	if (this->registers.getFlag(h) || (!this->registers.getFlag(n) && (this->registers.a & 0xF) > 9))
+	if (registers.getFlag(h) || (!registers.getFlag(n) && (registers.a & 0xF) > 9))
 		adjust |= 0x6;
 
-	if (this->registers.getFlag(c) || (!this->registers.getFlag(n) && this->registers.a > 0x99))
+	if (registers.getFlag(c) || (!registers.getFlag(n) && registers.a > 0x99))
 	{
 		adjust |= 0x60;
 		setFlagC = true;
 	}
 	
-	this->registers.a += (this->registers.getFlag(n)) ? -adjust : adjust;
+	registers.a += (registers.getFlag(n)) ? -adjust : adjust;
 
-	this->registers.setFlag(z, (this->registers.a == 0));
-	this->registers.setFlag(c, setFlagC);
-	this->registers.setFlag(h, 0);
+	registers.setFlag(z, (registers.a == 0));
+	registers.setFlag(c, setFlagC);
+	registers.setFlag(h, 0);
 
-	this->is_executing_instruction = false;
+	is_executing_instruction = false;
 }
 
 
