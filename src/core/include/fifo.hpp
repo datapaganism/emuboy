@@ -36,9 +36,9 @@ enum eFetcherState
 	While this doesn't sound like a PixelFIFO queue, we can track which pixel needs to popped next as the front of the queue will no longer hold the first-out element. By letting the front chase the tail in circles in this buffer, we avoid the uncessary shifting of elements and increase performance of the emulation, allowing to run the emulator on lower hardware or allow headroom for futher complexity to be implemented.
 
 */
-constexpr int fifo_max_size = 16;
-template <class T = FIFOPixel, int max_size = fifo_max_size>
-using FIFOStack = Stack<FIFOPixel, fifo_max_size>;
+//constexpr int fifo_max_size = 16;
+//template <class T = FIFOPixel, int max_size = fifo_max_size>
+//using FIFOStack = Stack<FIFOPixel, fifo_max_size>;
 
 //: public FIFOStack<>
 class PixelFIFO 
