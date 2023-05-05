@@ -83,3 +83,48 @@ TEST_F(CPUtest, increment_timers_tima_256KHz_to_overflow2)
 	ASSERT_EQ(bus.cycleSystemOneInstruction(),1);
 
 }
+
+TEST_F(CPUtest, increment_timers_tima_4KHz)
+{
+	bus.setMemory(0xFF07, (0b11111100 | 0b00000000), debug);
+
+	// in 64 m cycles, the div timer increments by 1
+	for (int i = 0; i < 256-1; i++)
+		bus.cpu.updateTimers(4);
+
+	ASSERT_EQ(bus.getMemory(TIMA, debug), 0x00);
+
+	bus.cpu.updateTimers(4);
+
+	ASSERT_EQ(bus.getMemory(TIMA, debug), 0x01);
+}
+
+TEST_F(CPUtest, increment_timers_tima_65KHz)
+{
+	bus.setMemory(0xFF07, (0b11111100 | 0b00000010), debug);
+
+	// in 64 m cycles, the div timer increments by 1
+	for (int i = 0; i < 64/4 - 1; i++)
+		bus.cpu.updateTimers(4);
+
+	ASSERT_EQ(bus.getMemory(TIMA, debug), 0x00);
+
+	bus.cpu.updateTimers(4);
+
+	ASSERT_EQ(bus.getMemory(TIMA, debug), 0x01);
+}
+
+TEST_F(CPUtest, increment_timers_tima_16KHz)
+{
+	bus.setMemory(0xFF07, (0b11111100 | 0b00000011), debug);
+
+	// in 64 m cycles, the div timer increments by 1
+	for (int i = 0; i < (256 / 4) - 1; i++)
+		bus.cpu.updateTimers(4);
+
+	ASSERT_EQ(bus.getMemory(TIMA, debug), 0x00);
+
+	bus.cpu.updateTimers(4);
+
+	ASSERT_EQ(bus.getMemory(TIMA, debug), 0x01);
+}
