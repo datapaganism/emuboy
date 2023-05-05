@@ -153,6 +153,8 @@ namespace {
 		return final_tests;
     }
 
+
+
 	//std::string PrintToString(const Test& test)
 	//{
 	//	std::stringstream ss;
@@ -250,7 +252,8 @@ TEST_P(SM83Test, opcode)
 
 }
 
-const std::string folder_path = "C:\\dev\\datapaganism\\emuboy\\tests\\v1";
+//const std::string folder_path = "C:\\dev\\datapaganism\\emuboy\\tests\\v1";
+const std::string folder_path = "D:\\dev\\emuboy\\tests\\v1";
 std::vector<std::string> pathsOfJSONTests(std::string folder_path)
 {
 	std::vector<std::string> paths;
@@ -277,6 +280,7 @@ std::vector<Test> ManyTests(std::vector<std::string> paths)
 	}
 	return b;
 };
+
 
 
 
