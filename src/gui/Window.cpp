@@ -1,4 +1,5 @@
 #include "Window.hpp"
+#include "Window.hpp"
 #include <iostream>
 #include <sstream>    
 #include "../../core/include/config.hpp"
@@ -10,6 +11,9 @@ Window::Window(int width, int height, int scaling, const char* title, bool shown
 	this->width = ((width != NULL) ? width : DEFAULT_SCREEN_WIDTH);
 	this->height = ((height != NULL) ? height : DEFAULT_SCREEN_HEIGHT);
 	this->scaling = scaling;
+
+	start_width = width;
+	start_height = height;
 
 	this->window = SDL_CreateWindow(this->title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, this->width * this->scaling, this->height * this->scaling, ((shown_on_start) ? SDL_WINDOW_SHOWN : SDL_WINDOW_HIDDEN) | SDL_WINDOW_RESIZABLE);
 	if (this->window != nullptr)
@@ -196,4 +200,18 @@ void Window::updateCaption()
 	std::stringstream caption;
 	caption << this->title << " - ID: " << this->window_id << " MouseFocus:" << ((this->mouse_focus) ? "On" : "Off") << " KeyboardFocus:" << ((this->keyboard_focus) ? "On" : "Off");
 	SDL_SetWindowTitle(this->window, caption.str().c_str());
+}
+
+
+void Window::updateScaling(bool scale_up)
+{
+	(scale_up) ? scaling++ : scaling--;
+
+	if (scaling < scaling_min)
+		scaling = scaling_min;
+	else
+	if (scaling > scaling_max)
+		scaling = scaling_max;
+
+	SDL_SetWindowSize(window, start_width* scaling, start_height* scaling);
 }

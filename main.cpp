@@ -43,12 +43,16 @@
 
 int main(int argc, char* argv[])
 {
-    /*if (argc == 1)
+    /*
+    if (argc == 1)
     {
-        std::cout << "Usage:\nemuboy.exe <PATH TO ROM> <PATH TO BOOTROM>\n";
-        return 0;
-    }*/
+        std::cout << "Usage:\nemuboy.exe <PATH TO ROM> <PATH TO BOOTROM (Optional)>\n\n";
+        std::cout << "Controls:\nArrow Keys = D-Pad\nB, N = Start, Select\nA, S = a, b\n\n";
+        std::cout << "Extra:\n2, 3 = VRAM Viewer, BG Map Viewer\n[, ] = change address range of BG MAP viewer\n8 = change colour palette\nP = pause\nSPACE = toggle fast forward\n+, - = scaling\n";
 
+        return 0;
+    }
+    */
     std::string rom_path = ((argv[1] != NULL) ? argv[1] : "..\\..\\..\\roms\\blargg\\full.gb");
     std::string bootrom_path = ((argv[2] != NULL) ? argv[2] : "..\\..\\..\\bios\\bios.bin");
 

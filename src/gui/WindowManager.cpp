@@ -93,6 +93,21 @@ void WindowManager::run()
                     break;
                 }
             }
+            if (e.type == SDL_KEYUP)
+            {
+                
+                switch (e.key.keysym.sym)
+                {
+                case SDLK_EQUALS:
+                    for (auto& window : windows)
+                        window.get()->updateScaling(true);
+                    break;
+                case SDLK_MINUS:
+                    for (auto& window : windows)
+                        window.get()->updateScaling(false);
+                    break;
+                }
+            }
         }
 
         // tick at custom frequency

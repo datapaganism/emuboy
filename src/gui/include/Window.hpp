@@ -44,6 +44,8 @@ public:
 
 	virtual void updateCaption();
 
+	void updateScaling(bool scale_up);
+
 
 	int window_id = -1;
 	SDL_Renderer* renderer = nullptr;
@@ -56,7 +58,14 @@ protected:
 
 	int width = 0;
 	int height = 0;
+
+	int start_width = 0;
+	int start_height = 0;
+
+
 	int scaling = 0;
+	int scaling_min = 1;
+	int scaling_max = 10;
 
 	bool mouse_focus = false;
 	bool keyboard_focus = false;
