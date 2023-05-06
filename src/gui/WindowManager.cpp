@@ -55,10 +55,14 @@ void WindowManager::run()
     bool quit = false;
     bool pause = false;
 
-    uint64_t ticks_now = 0, ticks_previous = 0;
-    double tick_delta = 0;
+    uint64_t frame_start = 0;
+    uint64_t frame_end = 0;
+    double frame_time = 0;
+
     while (!quit)
     {
+        frame_start = SDL_GetTicks64();
+
         SDL_Event e;
         while (SDL_PollEvent(&e) != 0)
         {
@@ -110,53 +114,26 @@ void WindowManager::run()
             }
         }
 
-        // tick at custom frequency
-        ticks_now = SDL_GetTicks64();
-        tick_delta = ticks_now - ticks_previous;
-
-        // every 16.7ms we update the emulation state
-        if (fast_forward)
+        if (!pause)
         {
-            if (!pause)
+            for (auto& window : this->windows)
             {
-                for (auto& window : this->windows)
-                {
-                    window.get()->updateState();
-                    window.get()->render();
-                }
-            }
-        }
-        else if (tick_delta >= FRAMETIME)
-        {
-            ticks_previous = ticks_now;
-                // render each window
-            if (!pause)
-            {
-                for (auto& window : this->windows)
-                {
-                    window.get()->updateState();
-                    window.get()->render();
-                }
+                window.get()->updateState();
+                window.get()->render();
             }
         }
 
-        //bool allWindowsClosed = true;
-
-        //for (auto& window : this->windows)
-        //{
-        //    if (window.get()->isShown())
-        //        allWindowsClosed = false; break;
-        //}
-
-        ////if all windows closed
-        //if (allWindowsClosed)
-        //    quit = true;
-
-        // if main window closed
         if (!this->windows[0].get()->isShown())
             quit = true;
+
+        frame_end = SDL_GetTicks64() - frame_start;
+
+
+        if (!fast_forward && frame_end < FRAMETIME)
+        {
+            SDL_Delay(FRAMETIME - frame_end);
+        }
     }
-    
 }
 
 bool WindowManager::getInitSuccess()
