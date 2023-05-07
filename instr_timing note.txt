@@ -1,3 +1,0 @@
-0x42A6 init_timer starts
-f5
-f3
