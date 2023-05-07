@@ -18,6 +18,17 @@ add_executable(${PROJECT_NAME} main.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE core gui ${SDL2_LIBRARIES})
 #set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE 1)
 
+
+if (WIN32)
+    add_custom_command(
+        TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different "$<TARGET_FILE:SDL2::SDL2>" "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
+        VERBATIM
+    )
+endif()    
+
+
+
 enable_testing()
 
 add_subdirectory(tests)
@@ -26,8 +37,6 @@ add_subdirectory(tests)
 add_executable(heap_vs_stack tests/heap_vs_stack.cpp)
 target_link_libraries(heap_vs_stack PRIVATE core)
 
-
-    
 
 
 
